@@ -1,23 +1,24 @@
-.manager-header {
+.manager-sidebar {
+  display: flex;
+  flex: 0 0 240px;
+  flex-direction: column;
+  min-height: 100vh;
+  padding: 24px 16px;
   background: #fff;
-  border-bottom: 1px solid #e5e7eb;
+  border-right: 1px solid #e5e7eb;
 }
 
 .manager-nav {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 8px;
-  max-width: 1200px;
-  min-height: 64px;
-  margin: 0 auto;
-  padding: 0 24px;
 }
 
-.manager-nav__link {
+.nav-link {
   display: inline-flex;
   align-items: center;
-  min-height: 40px;
-  padding: 0 14px;
+  min-height: 44px;
+  padding: 0 12px;
   border-radius: 8px;
   color: #4b5563;
   font-size: 15px;
@@ -28,8 +29,13 @@
     color 150ms ease;
 }
 
-@media (max-width: 480px) {
-  .manager-nav {
-    padding: 0 12px;
-  }
+.nav-link:hover,
+.nav-link.active {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.nav-link:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
 }
