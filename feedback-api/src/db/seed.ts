@@ -17,16 +17,16 @@ async function seed() {
   // 1. USUARIOS
     await await User.bulkCreate([
     { name :"director" ,email: "director@example.com", passwordHash: adminPasswordHash, role: "director" },
-    { name : "anager"  ,email: "manager@example.com", passwordHash: userPasswordHash },
+    { name : "manager"  ,email: "manager@example.com", passwordHash: userPasswordHash },
 
 ]);
 
-  console.log("✅ Database created and loaded:");
-  console.log(`   ${await User.count()} users`);
-  await sequelize.close();
+    console.log("✅ Database created and loaded:");
+    console.log(`   ${await User.count()} users`);
+    await sequelize.close();
 }
 
 seed().catch((error) => {
-  console.error("❌ Error loading the database:", error);
-  process.exit(1);
+    console.error("❌ Error loading the database:", error);
+    process.exit(1);
 });

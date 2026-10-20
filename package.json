@@ -20,6 +20,6 @@
   "scripts": {
     "seed": "tsx feedback-api/src/db/seed.ts",
     "start": "node dist/server.js",
-    "dev": "tsx watch src/server.ts"
+    "dev": "tsx  feedback-api/src/server.ts"
   }
 }

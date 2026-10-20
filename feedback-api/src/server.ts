@@ -2,6 +2,7 @@
 import "dotenv/config"; 
 import express, { Request, Response } from "express";
 import { sequelize } from "./db/connection.ts";
+import userRoutes from "./routes/user.routes.ts";
 
 require('dotenv').config(); 
 
@@ -18,6 +19,8 @@ app.use((req, res, next) => {
 app.get("/", (req: Request, res: Response) => {
   res.json({ message: "Library API running", docs: `http://localhost:${PORT}/docs` });
 });
+
+app.use('/auth', userRoutes);
 
 
 
