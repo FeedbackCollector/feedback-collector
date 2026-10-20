@@ -13,6 +13,24 @@ interface LoginProps {
     logout: () => void;
 }
 
+interface RegisterProps {
+    name: string;
+    email: string;
+    password: string;
+    confirmPassword: string;
+    isAuthenticated: boolean; 
+    error: string;        
+    setNameInput: (name: string) => void;    
+    setEmailInput: (email: string) => void;
+    setPasswordInput: (password: string) => void;
+    setConfirmPasswordInput: (confirmPassword: string) => void;
+    createAccount: () => void;
+    loginSubmit: () => boolean; 
+    logout: () => void;
+}
+
+
+
 export const useLoginForm = create<LoginProps>()(
     persist(
         (set, get) => ({
@@ -52,4 +70,50 @@ export const useLoginForm = create<LoginProps>()(
         }), 
         { name: 'User-Storage' }
     )
+)
+
+export const useRegisterForm = create<RegisterProps>() (
+
+    persist(
+        (set, get) => ({
+            name: '',
+            email: '',
+            password: '',
+            confirmPassword: '',
+            isAuthenticated: false,
+            error: '',
+
+            setPasswordInput: (password) => set({ password, error: '' }), 
+            setEmailInput: (email) => set({ email, error: '' }),
+            setNameInput: (name) => set({ name, error: '' }),
+            setConfirmPasswordInput: (confirmPassword) => set({ confirmPassword, error: '' }),
+
+            createAccount: () => {
+                const { email, password, confirmPassword, name } = get();
+
+                if (!name.trim() || !email.trim() || !password.trim() || !confirmPassword.trim()) {
+                    set({ error: 'Please, complete all fields.' });
+                    return;
+                }
+
+                if (password !== confirmPassword) {
+                    set({ error: 'Passwords do not match.' });
+                    return;
+                }
+
+                //Aca hay que cambiarlo y llamar a la API, no al JSON
+                // UserData.credentials.push({ email, password, name });
+                // set({ error: 'Account created successfully.' });
+            },
+
+           
+            loginSubmit: () => {
+                
+                return false; 
+            },
+
+            logout: () => set({ name: '', email: '', password: '', confirmPassword: '', isAuthenticated: false, error: '' }),
+        }), 
+        { name: 'User-Storage' }
+)
 )
