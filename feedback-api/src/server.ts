@@ -1,13 +1,7 @@
 
 import "dotenv/config"; 
-
 import express, { Request, Response } from "express";
-import missionsRouter from './routes/missions.routes.ts';
 import { sequelize } from "./db/connection.ts";
-import asignedRoutes from "./routes/asigned.routes.ts";
-import authRoutes from "./routes/users.routes.ts";
-import docsRouter from "./utils/doc.ts";
-import adventurerRoutes from "./routes/adventurer.routes.ts";
 
 require('dotenv').config(); 
 
@@ -25,11 +19,7 @@ app.get("/", (req: Request, res: Response) => {
   res.json({ message: "Library API running", docs: `http://localhost:${PORT}/docs` });
 });
 
-app.use("/docs", docsRouter);
-app.use("/missions", missionsRouter);
-app.use('/asigned', asignedRoutes);
-app.use('/auth', authRoutes);
-app.use('/adventurer', adventurerRoutes);
+
 
 
 
