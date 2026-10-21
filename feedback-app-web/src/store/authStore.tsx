@@ -101,8 +101,8 @@ export const useAuthStore = create<AuthState>()(
                     return false;
                 }
 
-                // Conectar API!!!. Por ahora simulamos
-                set({ activeForm: 'login', error: '' }); // Te manda al login, despues de registrarse
+                // Nota: Conectar API!!!. Por ahora simulamos
+                set({ activeForm: 'login', error: '' }); // Te manda al login, despues de registrarte
                 alert('Account created successfully! Please log in.');
                 return true;
             },
