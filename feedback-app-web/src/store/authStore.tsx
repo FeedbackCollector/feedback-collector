@@ -1,119 +1,125 @@
-import { create } from 'zustand'
+import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import UserData from '../data/userData.json'; 
+import UserData from '../data/userData.json';
 
-interface LoginProps {
-    email: string;
-    password: string;
-    isAuthenticated: boolean; 
-    error: string;            
-    setPasswordInput: (password: string) => void;
-    setEmailInput: (email: string) => void;
-    loginSubmit: () => boolean; 
+
+export type FormType = 'login' | 'register';
+
+interface AuthState {
+
+    activeForm: FormType;
+    isAuthenticated: boolean;
+    error: string;
+    switchForm: (form: FormType) => void;
+    clearError: () => void;
+
+
+    loginEmail: string;
+    loginPassword: string;
+    setLoginEmail: (email: string) => void;
+    setLoginPassword: (password: string) => void;
+    loginSubmit: () => boolean;
+
+
+    regName: string;
+    regEmail: string;
+    regPassword: string;
+    regConfirmPassword: string;
+    setRegName: (name: string) => void;
+    setRegEmail: (email: string) => void;
+    setRegPassword: (password: string) => void;
+    setRegConfirmPassword: (confirmPassword: string) => void;
+    createAccount: () => boolean;
+
+
     logout: () => void;
 }
 
-interface RegisterProps {
-    name: string;
-    email: string;
-    password: string;
-    confirmPassword: string;
-    isAuthenticated: boolean; 
-    error: string;        
-    setNameInput: (name: string) => void;    
-    setEmailInput: (email: string) => void;
-    setPasswordInput: (password: string) => void;
-    setConfirmPasswordInput: (confirmPassword: string) => void;
-    createAccount: () => void;
-    loginSubmit: () => boolean; 
-    logout: () => void;
-}
-
-
-
-export const useLoginForm = create<LoginProps>()(
+export const useAuthStore = create<AuthState>()(
     persist(
         (set, get) => ({
-            
-            email: '',
-            password: '',
+
+            activeForm: 'login',
             isAuthenticated: false,
             error: '',
 
-            setPasswordInput: (password) => set({ password, error: '' }), 
-            setEmailInput: (email) => set({ email, error: '' }),
+            loginEmail: '',
+            loginPassword: '',
+            regName: '',
+            regEmail: '',
+            regPassword: '',
+            regConfirmPassword: '',
+
+
+            switchForm: (form) => set({ activeForm: form, error: '' }),
+            clearError: () => set({ error: '' }),
+
+
+            setLoginEmail: (loginEmail) => set({ loginEmail, error: '' }),
+            setLoginPassword: (loginPassword) => set({ loginPassword, error: '' }),
+
+
+            setRegName: (regName) => set({ regName, error: '' }),
+            setRegEmail: (regEmail) => set({ regEmail, error: '' }),
+            setRegPassword: (regPassword) => set({ regPassword, error: '' }),
+            setRegConfirmPassword: (regConfirmPassword) => set({ regConfirmPassword, error: '' }),
+
 
             loginSubmit: () => {
-                const { email, password } = get();
+                const { loginEmail, loginPassword } = get();
 
-                
-                if (!email.trim() || !password.trim()) {
+                if (!loginEmail.trim() || !loginPassword.trim()) {
                     set({ error: 'Please, complete all fields.' });
                     return false;
                 }
 
-                
+
                 const userFound = UserData.credentials.find(
-                    (user) => user.email === email && user.password === password
+                    (user) => user.email === loginEmail && user.password === loginPassword
                 );
 
                 if (userFound) {
                     set({ isAuthenticated: true, error: '' });
-                    return true; // Datos correctos
+                    return true;
                 } else {
                     set({ error: 'Email or password are incorrect.', isAuthenticated: false });
-                    return false; // Datos incorrectos
+                    return false;
                 }
             },
 
-            logout: () => set({ password: '', email: '', isAuthenticated: false, error: '' }),
-        }), 
-        { name: 'User-Storage' }
-    )
-)
-
-export const useRegisterForm = create<RegisterProps>() (
-
-    persist(
-        (set, get) => ({
-            name: '',
-            email: '',
-            password: '',
-            confirmPassword: '',
-            isAuthenticated: false,
-            error: '',
-
-            setPasswordInput: (password) => set({ password, error: '' }), 
-            setEmailInput: (email) => set({ email, error: '' }),
-            setNameInput: (name) => set({ name, error: '' }),
-            setConfirmPasswordInput: (confirmPassword) => set({ confirmPassword, error: '' }),
 
             createAccount: () => {
-                const { email, password, confirmPassword, name } = get();
+                const { regName, regEmail, regPassword, regConfirmPassword } = get();
 
-                if (!name.trim() || !email.trim() || !password.trim() || !confirmPassword.trim()) {
+                if (!regName.trim() || !regEmail.trim() || !regPassword.trim() || !regConfirmPassword.trim()) {
                     set({ error: 'Please, complete all fields.' });
-                    return;
+                    return false;
                 }
 
-                if (password !== confirmPassword) {
+                if (regPassword !== regConfirmPassword) {
                     set({ error: 'Passwords do not match.' });
-                    return;
+                    return false;
                 }
 
-                //Aca hay que cambiarlo y llamar a la API, no al JSON
-                // UserData.credentials.push({ email, password, name });
-                // set({ error: 'Account created successfully.' });
+                // Conectar API!!!. Por ahora simulamos
+                set({ activeForm: 'login', error: '' }); // Te manda al login, despues de registrarse
+                alert('Account created successfully! Please log in.');
+                return true;
             },
 
-           
-            loginSubmit: () => {
-                
-                return false; 
-            },
 
-            logout: () => set({ name: '', email: '', password: '', confirmPassword: '', isAuthenticated: false, error: '' }),
-        }), 
+            logout: () => set({
+                activeForm: 'login',
+                isAuthenticated: false,
+                error: '',
+                loginEmail: '',
+                loginPassword: '',
+                regName: '',
+                regEmail: '',
+                regPassword: '',
+                regConfirmPassword: ''
+            }),
+        }),
         { name: 'User-Storage' }
-)
-)
+    )
+);
