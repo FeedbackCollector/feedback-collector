@@ -8,7 +8,7 @@ function App() {
       <NavBar />
       <main className="app-content">
         <Routes>
-          <Route path="/" element={null} />
+          <Route path="/MyICs" element={null} />
           <Route path="/feedback-log" element={null} />
         </Routes>
       </main>
