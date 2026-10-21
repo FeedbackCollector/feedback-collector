@@ -17,7 +17,7 @@ async function seed() {
   // 1. USUARIOS
     await await User.bulkCreate([
     { name :"director" ,email: "director@example.com", passwordHash: adminPasswordHash, role: "director" },
-    { name : "manager"  ,email: "manager@example.com", passwordHash: userPasswordHash },
+    { name : "manager"  ,email: "manager@example.com", passwordHash: userPasswordHash, area_id: 2 },
 
 ]);
 
