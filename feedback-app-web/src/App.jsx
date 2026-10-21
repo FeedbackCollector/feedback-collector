@@ -1,6 +1,7 @@
 import { Route, Routes } from 'react-router-dom'
 import { NavBar } from './Components/Manager-Nav'
 import './App.css'
+import MyICs from './pages/MyICs'
 
 function App() {
   return (
@@ -8,7 +9,7 @@ function App() {
       <NavBar />
       <main className="app-content">
         <Routes>
-          <Route path="/" element={null} />
+          <Route path="/MyICs" element={<MyICs/>} />
           <Route path="/feedback-log" element={null} />
         </Routes>
       </main>
