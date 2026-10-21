@@ -1,1 +1,9 @@
-// aqui hay que hacer la pagina my ics, por lo que hay que conectar el componente MyICs.
+import ObtainICs from "../Components/ShowICs";
+export default function MyICs (){
+
+    return(
+    <div className="MyICs-containers">
+        <ObtainICs/>
+    </div>
+    )
+}

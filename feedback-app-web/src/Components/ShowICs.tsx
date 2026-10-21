@@ -30,7 +30,7 @@ function ObtainICs() {
 
   if (ics.length === 0) {
     return (
-      <div>
+      <div className="show-ics-empty">
         <i className="fa-solid fa-user-group"></i>
         <p>You don't have any Individual Contributors assigned yet. The Director assigns ICs to each manager.</p>
       </div>
@@ -38,11 +38,11 @@ function ObtainICs() {
   }
 
   return (
-    <ul>
-      {ics.map((item) => (
-        <li key={item.id}>{item.name}</li>
-      ))}
-    </ul>
+      <ul>
+        {ics.map((item) => (
+          <li key={item.id}>{item.name}</li>
+        ))}
+      </ul>
   );
 }
 
