@@ -54,7 +54,7 @@ function Login() {
             <h1 className="tittle">Feedback Collector</h1>
             <label className="subtitle">Track feedback and performance for your team</label>
 
-            {/* Switcher visual de palabras fijas */}
+            
             <div className="switch-tabs">
                 <button 
                     type="button" 
