@@ -256,8 +256,10 @@ body {
   border-color: var(--primary);
   color: var(--surface);
 }
+/*===================*/
+/*   TABS & TABLES   */
+/*===================*/
 
-/* TABS & TABLES */
 .tabs {
   display: flex;
   gap: 16px;
@@ -310,6 +312,8 @@ body {
 /*=============*/
 
 .box {
+  margin: 20px;
+  padding: 20px;
   background-color: var(--surface);
   border-radius: 8px;
   padding: 24px;
@@ -507,4 +511,24 @@ body {
 
 .animate-slide-up {
   animation: slideUp 0.25s ease-out forwards;
+}
+
+/*=============*/
+/*   COLUMNS   */
+/*=============*/
+
+.box-columns{
+  display: flex;
+  flex-direction: column;
+}
+
+.box-row{
+  display: flex;
+  flex-direction: row;
+}
+
+.box-grid{
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  gap: 10px;
 }
