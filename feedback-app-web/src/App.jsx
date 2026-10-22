@@ -9,6 +9,7 @@ function App() {
     <div className="app-layout">
       <NavBar />
       <main className="app-content">
+        <Header />
         <Routes>
           <Route path="/MyICs" element={<MyICs/>} />
           <Route path="/feedback-log" element={null} />
