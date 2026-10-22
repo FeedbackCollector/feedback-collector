@@ -1,3 +1,7 @@
+h1{
+  font-size: ;
+}
+
 .manager-sidebar {
   display: flex;
   flex: 0 0 240px;
@@ -29,9 +33,13 @@
     color 150ms ease;
 }
 
-.nav-link:hover,
-.nav-link.active {
+.nav-link:hover {
   background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.nav-link.active {
+  background: #dbebff;
   color: #1d4ed8;
 }
 
