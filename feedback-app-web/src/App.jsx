@@ -1,4 +1,4 @@
-import { createBrowserRouter, Outlet, RouterProvider } from 'react-router-dom'
+import { createBrowserRouter, Outlet, RouterProvider, Route, Routes } from 'react-router-dom'
 import { Header } from './Components/Header'
 import { NavBar } from './Components/Manager-Nav'
 import './App.css'
