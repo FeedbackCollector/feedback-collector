@@ -1,5 +1,6 @@
 h1{
-  font-size: ;
+  font-size: 1.1rem;
+  color: #4B286D;
 }
 
 .manager-sidebar {
@@ -12,10 +13,23 @@ h1{
   border-right: 1px solid #e5e7eb;
 }
 
+.manager-sidebar-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.manager-sidebar-header img {
+  width: 22px;
+  height: 22px;
+}
+
 .manager-nav {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  margin-top: 5%;
 }
 
 .nav-link {
