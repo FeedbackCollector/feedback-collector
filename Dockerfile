@@ -13,6 +13,8 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci --omit=dev
 COPY --from=build /app/feedback-api/dist ./feedback-api/dist
+# indica a Node que el JS compilado es ESM ("type": "module" de feedback-api)
+COPY --from=build /app/feedback-api/package.json ./feedback-api/package.json
 EXPOSE 3000
 USER node
 CMD ["node", "feedback-api/dist/server.js"]

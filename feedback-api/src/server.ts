@@ -3,6 +3,7 @@ import "dotenv/config";
 import express, { Request, Response } from "express";
 import { sequelize } from "./db/connection.ts";
 import userRoutes from "./routes/user.routes.ts";
+import icRoutes from "./routes/ic.routes.ts"
 
 
 const app = express();
@@ -19,6 +20,7 @@ app.get("/", (req: Request, res: Response) => {
 });
 
 app.use('/auth', userRoutes);
+app.use('/ics', icRoutes);
 
 
 
