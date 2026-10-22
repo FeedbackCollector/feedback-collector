@@ -1,4 +1,5 @@
 import { Route, Routes } from 'react-router-dom'
+import { Header } from './Components/Header'
 import { NavBar } from './Components/Manager-Nav'
 import './App.css'
 import MyICs from './pages/MyICs'
