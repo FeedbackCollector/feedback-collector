@@ -1,22 +1,34 @@
-import { Route, Routes } from 'react-router-dom'
+import { createBrowserRouter, Outlet, RouterProvider } from 'react-router-dom'
 import { Header } from './Components/Header'
 import { NavBar } from './Components/Manager-Nav'
 import './App.css'
 import MyICs from './pages/MyICs'
 
-function App() {
+function AppLayout() {
   return (
     <div className="app-layout">
       <NavBar />
       <main className="app-content">
         <Header />
-        <Routes>
-          <Route path="/MyICs" element={<MyICs/>} />
-          <Route path="/feedback-log" element={null} />
-        </Routes>
+        <Outlet />
       </main>
     </div>
   )
+}
+
+const router = createBrowserRouter([
+  {
+    element: <AppLayout />,
+    children: [
+      { path: '/MyICs', element: <MyICs />, handle: { title: 'My ICs' } },
+      { path: '/feedback-log', element: null, handle: { title: 'FeedBack Log' } },
+      { path: '*', element: null },
+    ],
+  },
+])
+
+function App() {
+  return <RouterProvider router={router} />
 }
 
 export default App
