@@ -5,9 +5,13 @@ import { sequelize } from "./db/connection.ts";
 import userRoutes from "./routes/user.routes.ts";
 import icRoutes from "./routes/ic.routes.ts"
 
+import cors from "cors";
+
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
+app.use(cors());
+
 app.use(express.json()); // permite leer JSON del body en POST / PUT / PATCH
 
 app.use((req, res, next) => {
