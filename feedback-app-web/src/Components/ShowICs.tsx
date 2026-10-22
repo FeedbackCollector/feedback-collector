@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 
 
 type IC = {
-  id: number;
+  IC_id: number;
   name: string;
 };
 
@@ -12,11 +12,12 @@ function ObtainICs() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('AcaVaElEndpoint')                    // COLOCAR ENDPOINT
+    fetch('https://feedback-api-latest-moe8.onrender.com/ics')                    // COLOCAR ENDPOINT
       .then((response) => response.json())
-      .then((data) => {
-        setIcs(data ?? []);
+      .then((res) => {
+        setIcs(Array.isArray(res?.data) ? res.data : []);
         setLoading(false);
+        console.log("Retrieved data:", res);
       })
       .catch((error) => {
         console.error("Error retrieving data:", error);
@@ -40,7 +41,7 @@ function ObtainICs() {
   return (
       <ul>
         {ics.map((item) => (
-          <li key={item.id}>{item.name}</li>
+          <li key={item.IC_id}> {item.name}</li>
         ))}
       </ul>
   );
