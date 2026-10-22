@@ -2,6 +2,7 @@ import { createBrowserRouter, Outlet, RouterProvider } from 'react-router-dom'
 import { Header } from './Components/Header'
 import { NavBar } from './Components/Manager-Nav'
 import './App.css'
+import FeedbackLogSearchComp from './Components/Feedback-log-comp'
 import MyICs from './pages/MyICs'
 
 function AppLayout() {
@@ -10,7 +11,10 @@ function AppLayout() {
       <NavBar />
       <main className="app-content">
         <Header />
-        <Outlet />
+        <Routes>
+          <Route path="/feedback-log" element={ <FeedbackLogSearchComp/> } />
+          <Route path="/MyICs" element={<MyICs/>} />
+        </Routes>
       </main>
     </div>
   )
