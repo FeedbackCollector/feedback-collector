@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { registerService, loginService } from '../services/user.services.js';
+import { registerService, loginService } from '../services/user.services.ts';
 
 export async function register(req: Request, res: Response) {
     const result = await registerService(req.body.email, req.body.password , req.body.name , req.body.area_id);

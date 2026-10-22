@@ -1,0 +1,8 @@
+node_modules
+feedback-app-web
+feedback-api/dist
+.git
+.env
+.env.*
+*.log
+.DS_Store
