@@ -32,7 +32,7 @@ interface AuthState {
     logout: () => void;
 }
 
-// ⚠️ Asegúrate de que las rutas '/login' y '/usuarios' existan tal cual en esta URL
+
 const API_URL = 'https://feedback-api-latest-moe8.onrender.com/auth';
 
 export const useAuthStore = create<AuthState>()(
@@ -89,7 +89,6 @@ export const useAuthStore = create<AuthState>()(
                         set({ isAuthenticated: true, error: null });
                         return true;
                     } else {
-                        console.log("Error controlado desde el Backend:", datos); // 👈 Log de ayuda
                         set({ 
                             error: { field: 'loginPassword', message: datos.mensaje || 'Email or password are incorrect.' }, 
                             isAuthenticated: false 
@@ -97,7 +96,6 @@ export const useAuthStore = create<AuthState>()(
                         return false;
                     }
                 } catch (error) {
-                    console.error("Error crítico de conexión en Login:", error); // 👈 Log de ayuda
                     set({ error: { field: 'loginPassword', message: 'Server connection error.' } });
                     return false;
                 }
@@ -144,12 +142,10 @@ export const useAuthStore = create<AuthState>()(
                         alert('Account created successfully! Please log in.');
                         return true;
                     } else {
-                        console.log("Error controlado desde el Backend al registrar:", datos); // 👈 Log de ayuda
                         set({ error: { field: 'regEmail', message: datos.mensaje || 'Error creating account.' } });
                         return false;
                     }
                 } catch (error) {
-                    console.error("Error crítico de conexión al registrar:", error); // 👈 Log de ayuda
                     set({ error: { field: 'regName', message: 'Server connection error.' } });
                     return false;
                 }
