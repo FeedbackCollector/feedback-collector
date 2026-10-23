@@ -1,0 +1,227 @@
+:root {
+    --primary: #4B286D;
+    --primary-dk: #341C4D;
+    --primary-light: #F1EAF7;
+    --bg: #F4F4F7;
+    --surface: #FFFFFF;
+    --text: #17181A;
+    --text-muted: #676E73;
+    --border: #E3E6E8;
+    --danger: #E12339;
+}
+
+body {
+    background: linear-gradient(160deg, #F1EAF7 8.49%, #F4F4F7 58.3%);
+    min-height: 100vh;
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.feedback-container {
+    background-color: var(--surface);
+    padding: 35px 30px;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    width: 380px; 
+    font-family: 'Nunito Sans', Arial, sans-serif;
+}
+
+.brand-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 5px;
+}
+
+.brand-icon {
+    background-color: var(--primary);
+    color: white;
+    padding: 6px;
+    border-radius: 6px;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;  
+    height: 24px;
+}
+
+.tittle {
+    font-size: 20px;
+    font-weight: 700;
+    margin: 0;
+    color: var(--text);
+}
+
+.material-symbols-outlined {
+    font-family: 'Material Symbols Outlined';
+    font-weight: 400; 
+    font-style: normal;
+    font-size: 20px;   
+    line-height: 24px; 
+    letter-spacing: 0px;
+    display: inline-block;
+    text-transform: none;
+    word-wrap: normal;
+    white-space: nowrap;
+    direction: ltr;
+}
+
+.subtitle {
+    display: block;
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 30px;
+}
+
+.switch-tabs {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 30px;
+    position: relative;
+    border-bottom: 2px solid var(--border); 
+}
+
+.tab-btn {
+    background: none;
+    border: none;
+    font-size: 15px; 
+    font-weight: 600;
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: color 0.3s ease;
+    padding: 10px 0;
+    width: 50%;
+    text-align: center;
+    position: relative;
+    margin-bottom: -2px; 
+}
+
+.tab-btn::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 2px;
+    background-color: transparent;
+    transition: background-color 0.3s ease;
+}
+
+.tab-btn.active {
+    color: var(--primary);
+}
+
+.tab-btn.active::after {
+    background-color: var(--primary); 
+}
+
+.auth-form {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-row {
+    display: flex;
+    gap: 15px;
+    width: 100%;
+}
+
+.form-row .form-group {
+    flex: 1; 
+}
+
+.form-group {
+    opacity: 0;
+    max-height: 0;
+    overflow: hidden;
+    margin-bottom: 0;
+    display: flex;
+    flex-direction: column;
+    transition: opacity 0.3s ease, max-height 0.3s ease, margin-bottom 0.3s ease;
+}
+
+.form-group.show {
+    opacity: 1;
+    max-height: 120px; 
+    margin-bottom: 20px;
+}
+
+.label-field {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+    text-align: left;
+    letter-spacing: 0.03em;
+}
+
+.input-name,
+.input-password,
+.select-area {
+    width: 100%;
+    padding: 11px 14px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+    box-sizing: border-box;
+    outline: none;
+    color: var(--text);
+    background-color: var(--surface);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.select-area {
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://w3.org' viewBox='0 0 24 24' fill='%2317181A'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 18px;
+    padding-right: 35px;
+}
+
+.input-name:focus,
+.input-password:focus,
+.select-area:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(75, 40, 109, 0.1);
+}
+
+.input-name.input-invalid,
+.input-password.input-invalid,
+.select-area.input-invalid {
+    border-color: var(--danger);
+}
+
+.field-error {
+    color: var(--danger);
+    font-size: 12px;
+    margin-top: 5px;
+    display: block;
+    text-align: left;
+}
+
+.btn-get-into {
+    width: 100%;
+    padding: 13px;
+    background-color: var(--primary);
+    color: var(--surface);
+    border: none;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 10px;
+    transition: background-color 0.2s, opacity 0.2s;
+    opacity: 0.55; 
+}
+
+.btn-get-into:hover {
+    opacity: 0.9;
+    background-color: var(--primary-dk);
+}

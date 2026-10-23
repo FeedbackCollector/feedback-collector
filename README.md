@@ -11,5 +11,6 @@
 ### Install Sequalize
      npm install sequelize
 
+# Zustand Install
 
-
+- 'npm install zustand'
