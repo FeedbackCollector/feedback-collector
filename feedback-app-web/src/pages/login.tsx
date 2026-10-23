@@ -1,4 +1,4 @@
-import { useAuthStore } from "../store/authStore"; 
+import { useAuthStore } from "../store/authStore";
 // @ts-ignore CSS files are handled by the bundler.
 import "../styles/login.css";
 
@@ -29,11 +29,9 @@ function Login() {
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (activeForm === 'login') {
-            const success = loginSubmit();
-            if (success) console.log("Logged in successfully!");
+            loginSubmit();
         } else {
-            const success = createAccount();
-            if (success) console.log("Account created successfully!");
+            createAccount();
         }
     };
 
@@ -51,20 +49,24 @@ function Login() {
 
     return (
         <div className="feedback-container">
-            <h1 className="tittle">Feedback Collector</h1>
+            <div className="brand-header">
+                <div className="brand-icon">
+                    <span>📋</span> 
+                </div>
+                <h1 className="tittle">Feedback Collector</h1>
+            </div>
             <label className="subtitle">Track feedback and performance for your team</label>
 
-            
             <div className="switch-tabs">
-                <button 
-                    type="button" 
+                <button
+                    type="button"
                     className={`tab-btn ${activeForm === 'login' ? 'active' : ''}`}
                     onClick={() => switchForm('login')}
                 >
                     Login
                 </button>
-                <button 
-                    type="button" 
+                <button
+                    type="button"
                     className={`tab-btn ${activeForm === 'register' ? 'active' : ''}`}
                     onClick={() => switchForm('register')}
                 >
@@ -72,59 +74,82 @@ function Login() {
                 </button>
             </div>
 
-            {error && <p className="error-message">{error}</p>}
+            <form onSubmit={handleSubmit} className="auth-form" noValidate>
 
-            
-            <form onSubmit={handleSubmit} className="auth-form">
-                
                 
                 <div className={`form-group ${activeForm === 'register' ? 'show' : ''}`}>
+                    <label className="label-field">Name</label>
                     <input
-                        className="input-name"
+                        className={`input-name ${error?.field === 'regName' ? 'input-invalid' : ''}`}
                         type="text"
-                        placeholder="Name"
                         value={regName}
                         onChange={(e) => setRegName(e.target.value)}
                     />
+                    {error?.field === 'regName' && <span className="field-error">{error.message}</span>}
                 </div>
 
                
                 <div className="form-group show">
+                    <label className="label-field">Email</label>
                     <input
-                        className="input-name"
-                        type="text"
-                        placeholder="Email"
+                        className={`input-name ${
+                            (error?.field === 'loginEmail' || error?.field === 'regEmail') ? 'input-invalid' : ''
+                        }`}
+                        type="email"
                         value={activeForm === 'login' ? loginEmail : regEmail}
                         onChange={(e) => activeForm === 'login' ? setLoginEmail(e.target.value) : setRegEmail(e.target.value)}
                     />
+                    {activeForm === 'login' && error?.field === 'loginEmail' && <span className="field-error">{error.message}</span>}
+                    {activeForm === 'register' && error?.field === 'regEmail' && <span className="field-error">{error.message}</span>}
                 </div>
 
                 
-                <div className="form-group show">
-                    <input
-                        className="input-password"
-                        type="password"
-                        placeholder="Password"
-                        value={activeForm === 'login' ? loginPassword : regPassword}
-                        onChange={(e) => activeForm === 'login' ? setLoginPassword(e.target.value) : setRegPassword(e.target.value)}
-                    />
+                <div className={activeForm === 'register' ? 'form-row' : ''}>
+                   
+                    <div className="form-group show">
+                        <label className="label-field">Password</label>
+                        <input
+                            className={`input-password ${
+                                (error?.field === 'loginPassword' || error?.field === 'regPassword') ? 'input-invalid' : ''
+                            }`}
+                            type="password"
+                            value={activeForm === 'login' ? loginPassword : regPassword}
+                            onChange={(e) => activeForm === 'login' ? setLoginPassword(e.target.value) : setRegPassword(e.target.value)}
+                        />
+                        {activeForm === 'login' && error?.field === 'loginPassword' && <span className="field-error">{error.message}</span>}
+                        {activeForm === 'register' && error?.field === 'regPassword' && <span className="field-error">{error.message}</span>}
+                    </div>
+
+                    
+                    <div className={`form-group ${activeForm === 'register' ? 'show' : ''}`}>
+                        <label className="label-field">Confirm Password</label>
+                        <input
+                            className={`input-password ${error?.field === 'regConfirmPassword' ? 'input-invalid' : ''}`}
+                            type="password"
+                            value={regConfirmPassword}
+                            onChange={(e) => setRegConfirmPassword(e.target.value)}
+                        />
+                        {error?.field === 'regConfirmPassword' && <span className="field-error">{error.message}</span>}
+                    </div>
                 </div>
 
-                
+               
                 <div className={`form-group ${activeForm === 'register' ? 'show' : ''}`}>
-                    <input
-                        className="input-password"
-                        type="password"
-                        placeholder="Confirm Password"
-                        value={regConfirmPassword}
-                        onChange={(e) => setRegConfirmPassword(e.target.value)}
-                    />
+                    <label className="label-field">Area</label>
+                    <select className="select-area" defaultValue="Design">
+                        <option value="Design">Design</option>
+                        <option value="Delivery">Delivery</option>
+                        <option value="Engineering">Engineering</option>
+                        <option value="Product">Product</option>
+                    </select>
                 </div>
 
                 <button className="btn-get-into" type="submit">
-                    {activeForm === 'login' ? 'Sign In' : 'Sign Up'}
+                    {activeForm === 'login' ? 'Sign In' : 'Create Account'}
                 </button>
             </form>
+
+            
         </div>
     );
 }
