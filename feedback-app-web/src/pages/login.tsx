@@ -37,6 +37,7 @@ function Login() {
 
     if (isAuthenticated) {
         return (
+            
             <div className="feedback-container authenticated">
                 <h1 className="tittle">Welcome to Feedback Collector</h1>
                 <p>You are logged in successfully.</p>
@@ -51,7 +52,7 @@ function Login() {
         <div className="feedback-container">
             <div className="brand-header">
                 <div className="brand-icon">
-                    <span>📋</span> 
+                   <span className="material-symbols-outlined">chat</span>
                 </div>
                 <h1 className="tittle">Feedback Collector</h1>
             </div>
