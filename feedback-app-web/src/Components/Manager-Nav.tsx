@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import './Manager-Nav.css';
 import { User } from './User';
+import chatIcon from '../images/chat.png';
 
 const LINKS = [
   { label: 'MyICs', to: '/MyICs' },
@@ -11,7 +12,10 @@ export function NavBar({ links = LINKS }) {
   return (
   <>
     <aside className="manager-sidebar">
-      <h1>Feedback Collector</h1>
+      <div className="manager-sidebar-header">
+        <img src={chatIcon} alt="chaticon" width="32" height="32"/>
+        <h1>Feedback Collector</h1>
+      </div>
       <User />
       <nav className="manager-nav" aria-label="Navegación principal">
         {links.map((link) => (
