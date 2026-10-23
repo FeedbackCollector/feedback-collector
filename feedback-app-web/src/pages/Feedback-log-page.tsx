@@ -1,0 +1,6 @@
+import FeedbackLogSearchComp from "../Components/Feedback-log-comp";
+
+
+export default function FeedbackLog(){
+    return <FeedbackLogSearchComp />;
+}
