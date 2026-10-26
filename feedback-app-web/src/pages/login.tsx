@@ -1,4 +1,6 @@
 import { useAuthStore } from "../store/authStore";
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 // @ts-ignore CSS files are handled by the bundler.
 import "../styles/login.css";
 
@@ -25,6 +27,15 @@ function Login() {
     const setRegPassword = useAuthStore((state) => state.setRegPassword);
     const setRegConfirmPassword = useAuthStore((state) => state.setRegConfirmPassword);
     const createAccount = useAuthStore((state) => state.createAccount);
+
+
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        if (isAuthenticated) {
+            navigate("/MyICs", { replace: true });
+        }
+    }, [isAuthenticated, navigate]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
