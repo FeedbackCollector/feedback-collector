@@ -1,7 +1,7 @@
-import { BrowserRouter, Outlet, useLocation, useRoutes } from 'react-router-dom'
-import { useEffect, useState } from 'react'
+import { BrowserRouter, Navigate, Outlet, useLocation, useRoutes } from 'react-router-dom'
 import { Header } from './Components/Header'
 import { NavBar } from './Components/Manager-Nav'
+import { useAuthStore } from './store/authStore'
 import './App.css'
 import FeedbackLogSearchComp from './Components/Feedback-log-comp'
 import MyICs from './pages/MyICs'
@@ -10,7 +10,6 @@ import Management from './pages/Management'
 import MyManagement from './pages/MyManagement'
 import Login from './pages/login'
 
-const TOKEN_STORAGE_KEY = 'token'
 const VALID_ROLES = ['manager', 'director']
 
 const managerRoutes = [
@@ -24,46 +23,13 @@ const directorRoutes = [
   { path: '/my-management', title: 'My Management', element: <MyManagement /> },
 ]
 
-function readCurrentUser() {
-  const token = window.localStorage.getItem(TOKEN_STORAGE_KEY)
-  if (!token) {
-    return { user: null, error: 'No hay una sesión iniciada.' }
-  }
-
-  try {
-    const payload = token.split('.')[1]?.replace(/-/g, '+').replace(/_/g, '/')
-    if (!payload) throw new Error('Token inválido')
-
-    const claims = JSON.parse(
-      new TextDecoder().decode(
-        Uint8Array.from(window.atob(payload), (character) => character.charCodeAt(0)),
-      ),
-    )
-
-    if (typeof claims.exp === 'number' && claims.exp * 1000 <= Date.now()) {
-      return { user: null, error: 'La sesión expiró. Iniciá sesión nuevamente.' }
-    }
-
-    if (typeof claims.email !== 'string' || !VALID_ROLES.includes(claims.role)) {
-      return { user: null, error: 'La sesión no contiene un usuario o rol válido.' }
-    }
-
-    return { user: { email: claims.email, role: claims.role }, error: null }
-  } catch {
-    return { user: null, error: 'No se pudo leer la sesión. Iniciá sesión nuevamente.' }
-  }
-}
-
-function AppLayout({ user, links }) {
+function AppLayout({ links }) {
   const { pathname } = useLocation()
   const title = links.find(({ to }) => to === pathname)?.label ?? 'Página no encontrada'
 
   return (
     <div className="app-layout">
-      <NavBar
-        links={links}
-        user={user}
-      />
+      <NavBar links={links} />
       <main className="app-content">
         <Header title={title} />
         <Outlet />
@@ -72,28 +38,47 @@ function AppLayout({ user, links }) {
   )
 }
 
-const router = createBrowserRouter([
-  {
-    path: '/',
-    element: <Login />,
-  },
-  {
-    element: <AppLayout />,
-    children: [
-      ...visibleRoutes.map(({ path, title, element }) => ({
-        path,
-        element,
-        handle: { title },
-      })),
-      { path: '*', element: null },
-    ],
-  },
-])
+function AppRoutes() {
+  const user = useAuthStore((state) => state.user)
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+  const hasValidSession = isAuthenticated
+    && user !== null
+    && VALID_ROLES.includes(user.role)
+
+  const routes = hasValidSession
+    ? (() => {
+        const visibleRoutes = user.role === 'director'
+          ? [...managerRoutes, ...directorRoutes]
+          : managerRoutes
+        const links = visibleRoutes.map(({ path, title }) => ({ to: path, label: title }))
+
+        return [
+          {
+            element: <AppLayout links={links} />,
+            children: [
+              { index: true, element: <Navigate to="/MyICs" replace /> },
+              ...visibleRoutes.map(({ path, title, element }) => ({
+                path,
+                element,
+                handle: { title },
+              })),
+              { path: '*', element: <Navigate to="/MyICs" replace /> },
+            ],
+          },
+        ]
+      })()
+    : [
+      { path: '/', element: <Login /> },
+      { path: '*', element: <Navigate to="/" replace /> },
+    ]
+
+  return useRoutes(routes)
+}
 
 function App() {
   return (
     <BrowserRouter>
-      <AuthenticatedApp />
+      <AppRoutes />
     </BrowserRouter>
   )
 }
