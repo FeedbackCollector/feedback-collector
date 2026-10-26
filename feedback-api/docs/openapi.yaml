@@ -1,0 +1,461 @@
+openapi: 3.0.3
+info:
+  title: Feedback Collector API
+  version: 1.0.0
+  description: |
+    REST API for managing users (managers) and ICs (individual contributors).
+    Note: the IC endpoints currently do not require authentication.
+servers:
+  - url: http://localhost:3000
+    description: Local development
+tags:
+  - name: Health
+  - name: Auth
+  - name: ICs
+
+paths:
+  /:
+    get:
+      tags: [Health]
+      summary: API status
+      operationId: getRoot
+      responses:
+        "200":
+          description: API is running
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Library API running
+                  docs:
+                    type: string
+                    example: http://localhost:3000/docs
+
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a new user
+      description: Creates a user with the `manager` role.
+      operationId: register
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "201":
+          description: User created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Usuario creado
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationError"
+        "409":
+          description: Email already registered
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Email already registered
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Log in
+      description: Returns a JWT valid for one hour.
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    description: JWT containing `email` and `role`
+        "400":
+          description: Validation error or invalid credentials
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/ValidationError"
+                  - $ref: "#/components/schemas/Message"
+              examples:
+                invalidCredentials:
+                  summary: Invalid credentials
+                  value:
+                    message: Credenciales inválidas
+
+  /ics:
+    get:
+      tags: [ICs]
+      summary: List ICs
+      description: Paginated list ordered by `IC_id`. `name` and `title` are case-insensitive partial matches.
+      operationId: listICs
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+        - name: name
+          in: query
+          schema:
+            type: string
+        - name: title
+          in: query
+          schema:
+            type: string
+        - name: manager_id
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        "200":
+          description: Page of ICs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/IC"
+                  pagination:
+                    $ref: "#/components/schemas/Pagination"
+        "400":
+          description: Invalid search parameters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+              example:
+                message: Invalid search parameters
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+              example:
+                message: Error retrieving ICs
+    post:
+      tags: [ICs]
+      summary: Create an IC
+      operationId: createIC
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NewIC"
+      responses:
+        "201":
+          description: IC created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IC"
+        "400":
+          description: Invalid IC data, or `manager_id` does not belong to a manager
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+              examples:
+                invalidData:
+                  value:
+                    message: Invalid IC data
+                managerNotFound:
+                  value:
+                    message: Manager not found
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+              example:
+                message: Error creating the IC
+
+  /ics/{id}:
+    parameters:
+      - $ref: "#/components/parameters/ICId"
+    get:
+      tags: [ICs]
+      summary: Get an IC by id
+      operationId: getIC
+      responses:
+        "200":
+          description: The IC
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IC"
+        "400":
+          description: Invalid ID
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+              example:
+                message: Invalid ID
+        "404":
+          description: IC not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+              example:
+                message: IC not found
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+              example:
+                message: Error retrieving the IC
+    patch:
+      tags: [ICs]
+      summary: Update an IC
+      description: At least one field must be provided.
+      operationId: updateIC
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateIC"
+      responses:
+        "200":
+          description: Updated IC
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IC"
+        "400":
+          description: Invalid ID, invalid update data, or `manager_id` does not belong to a manager
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+              examples:
+                invalidId:
+                  value:
+                    message: Invalid ID
+                invalidData:
+                  value:
+                    message: Invalid update data
+                managerNotFound:
+                  value:
+                    message: Manager not found
+        "404":
+          description: IC not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+              example:
+                message: IC not found
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+              example:
+                message: Error updating the IC
+    delete:
+      tags: [ICs]
+      summary: Delete an IC
+      operationId: deleteIC
+      responses:
+        "204":
+          description: IC deleted (no content)
+        "400":
+          description: Invalid ID
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+              example:
+                message: Invalid ID
+        "404":
+          description: IC not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+              example:
+                message: IC not found
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+              example:
+                message: Error deleting the IC
+
+components:
+  parameters:
+    ICId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+  schemas:
+    Message:
+      type: object
+      properties:
+        message:
+          type: string
+    ValidationError:
+      type: object
+      properties:
+        status:
+          type: string
+          example: error
+        code:
+          type: string
+          example: VALIDATION_ERROR
+        message:
+          type: string
+          example: The submitted data is invalid.
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              message:
+                type: string
+    RegisterRequest:
+      type: object
+      required: [name, email, password, area_id]
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 100
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+          maxLength: 72
+          format: password
+        area_id:
+          type: integer
+          minimum: 1
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+          format: password
+    IC:
+      type: object
+      properties:
+        IC_id:
+          type: integer
+        name:
+          type: string
+          maxLength: 200
+        title:
+          type: string
+          maxLength: 200
+        manager_id:
+          type: integer
+        entries:
+          type: integer
+    NewIC:
+      type: object
+      required: [name, title, manager_id, entries]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        manager_id:
+          type: integer
+          minimum: 1
+        entries:
+          type: integer
+          minimum: 0
+    UpdateIC:
+      type: object
+      minProperties: 1
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        manager_id:
+          type: integer
+          minimum: 1
+        entries:
+          type: integer
+          minimum: 0
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        totalPages:
+          type: integer
