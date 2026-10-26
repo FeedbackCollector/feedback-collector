@@ -6,3 +6,11 @@
      
 ### React-router-dom 
      npm install react-router-dom 
+
+
+### Install Sequalize
+     npm install sequelize
+
+# Zustand Install
+
+- 'npm install zustand'
