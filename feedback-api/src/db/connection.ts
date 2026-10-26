@@ -24,3 +24,7 @@ export const sequelize = DATABASE_URL
       logging: false, // poné `console.log` si querés ver el SQL que genera Sequelize
       dialectOptions,
     });
+
+
+
+    

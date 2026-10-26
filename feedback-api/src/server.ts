@@ -4,6 +4,8 @@ import express, { Request, Response } from "express";
 import { sequelize } from "./db/connection.ts";
 import userRoutes from "./routes/user.routes.ts";
 import icRoutes from "./routes/ic.routes.ts"
+import feedbackRoutes from "./routes/feedback.routes.ts"
+import usersRoutes from "./routes/users.routes.ts"
 
 import cors from "cors";
 
@@ -25,6 +27,8 @@ app.get("/", (req: Request, res: Response) => {
 
 app.use('/auth', userRoutes);
 app.use('/ics', icRoutes);
+app.use('/feedback', feedbackRoutes);
+app.use('/users', usersRoutes);
 
 
 

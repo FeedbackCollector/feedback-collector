@@ -12,3 +12,4 @@ export interface NewIC {
     manager_id: number;
     entries: number;
 }
+
