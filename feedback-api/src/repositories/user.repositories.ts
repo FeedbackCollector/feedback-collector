@@ -10,3 +10,8 @@ export async function insertUser(email: string, passwordHash: string, role: stri
     return row.toJSON();
 }
 
+
+export async function patchUserPassword(id: number, passwordHash: string) {
+    const [affected] = await UserModel.update({ passwordHash }, { where: { id } });
+    return affected > 0;
+}
