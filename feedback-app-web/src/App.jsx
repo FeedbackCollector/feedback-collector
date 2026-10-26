@@ -7,6 +7,7 @@ import MyICs from './pages/MyICs'
 import Dashboard from './pages/Dashboard'
 import Management from './pages/Management'
 import MyManagement from './pages/MyManagement'
+import Login from './pages/login'
 
 const IS_ADMIN = true
 
@@ -38,6 +39,10 @@ function AppLayout() {
 }
 
 const router = createBrowserRouter([
+  {
+    path: '/',
+    element: <Login />,
+  },
   {
     element: <AppLayout />,
     children: [
