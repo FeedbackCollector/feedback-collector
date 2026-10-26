@@ -2,17 +2,17 @@ import { createBrowserRouter, Outlet, RouterProvider } from 'react-router-dom'
 import { Header } from './Components/Header'
 import { NavBar } from './Components/Manager-Nav'
 import './App.css'
-import FeedbackLogSearchComp from './Components/Feedback-log-comp'
 import MyICs from './pages/MyICs'
 import Dashboard from './pages/Dashboard'
 import Management from './pages/Management'
 import MyManagement from './pages/MyManagement'
+import FeedbackLogComp from './Components/Feedback-log-comp'
 
 const IS_ADMIN = true
 
 const managerRoutes = [
   { path: '/MyICs', title: 'My ICs', element: <MyICs /> },
-  { path: '/feedback-log', title: 'FeedBack Log', element: <FeedbackLogSearchComp /> },
+  { path: '/feedback-log', title: 'FeedBack Log', element: <FeedbackLogComp /> },
 ]
 
 const adminRoutes = [
