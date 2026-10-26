@@ -8,6 +8,7 @@ import MyICs from './pages/MyICs'
 import Dashboard from './pages/Dashboard'
 import Management from './pages/Management'
 import MyManagement from './pages/MyManagement'
+import Login from './pages/login'
 
 const TOKEN_STORAGE_KEY = 'token'
 const VALID_ROLES = ['manager', 'director']
@@ -71,56 +72,23 @@ function AppLayout({ user, links }) {
   )
 }
 
-function SessionNotice({ message, title = 'Acceso' }) {
-  return (
-    <main className="app-content">
-      <Header title={title} />
-      <p role="status">{message}</p>
-    </main>
-  )
-}
-
-function AuthenticatedApp() {
-  const [session, setSession] = useState(readCurrentUser)
-
-  useEffect(() => {
-    function syncSession(event) {
-      if (event.key === TOKEN_STORAGE_KEY || event.key === null) {
-        setSession(readCurrentUser())
-      }
-    }
-
-    window.addEventListener('storage', syncSession)
-    return () => window.removeEventListener('storage', syncSession)
-  }, [])
-
-  const user = session.user
-  const visibleRoutes = user?.role === 'director'
-    ? [...managerRoutes, ...directorRoutes]
-    : user?.role === 'manager'
-      ? managerRoutes
-      : []
-  const links = visibleRoutes.map(({ path, title }) => ({ to: path, label: title }))
-  const routeElements = visibleRoutes.map(({ path, title, element }) => ({
-    path,
-    element,
-    handle: { title },
-  }))
-  const routes = user
-    ? [
-        {
-          element: <AppLayout user={user} links={links} />,
-          children: [...routeElements, {
-            path: '*',
-            element: <p role="status">No tenés acceso a esta página.</p>,
-          }],
-        },
-      ]
-    : [{ path: '*', element: <SessionNotice message={session.error} /> }]
-  const element = useRoutes(routes)
-
-  return element
-}
+const router = createBrowserRouter([
+  {
+    path: '/',
+    element: <Login />,
+  },
+  {
+    element: <AppLayout />,
+    children: [
+      ...visibleRoutes.map(({ path, title, element }) => ({
+        path,
+        element,
+        handle: { title },
+      })),
+      { path: '*', element: null },
+    ],
+  },
+])
 
 function App() {
   return (
