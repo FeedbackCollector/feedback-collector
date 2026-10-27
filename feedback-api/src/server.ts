@@ -30,7 +30,7 @@ const openApiSpec = YAML.parse(
 app.use("/docs", swaggerUi.serve, swaggerUi.setup(openApiSpec));
 
 app.get("/", (req: Request, res: Response) => {
-  res.json({ message: "FeedBack Controller API running", docs: `http://localhost:${PORT}/api-docs` });
+  res.json({ message: "FeedBack Controller API running", docs: `http://localhost:${PORT}/docs` });
 });
 
 app.use('/auth', userRoutes);

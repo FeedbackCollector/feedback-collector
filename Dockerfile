@@ -15,6 +15,8 @@ RUN npm ci --omit=dev
 COPY --from=build /app/feedback-api/dist ./feedback-api/dist
 # indica a Node que el JS compilado es ESM ("type": "module" de feedback-api)
 COPY --from=build /app/feedback-api/package.json ./feedback-api/package.json
+# el server lee docs/openapi.yaml en runtime (Swagger UI)
+COPY --from=build /app/feedback-api/docs ./feedback-api/docs
 EXPOSE 3000
 USER node
 CMD ["node", "feedback-api/dist/server.js"]
