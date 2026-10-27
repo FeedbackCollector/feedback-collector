@@ -47,8 +47,9 @@ function AppRoutes() {
 
   const routes = hasValidSession
     ? (() => {
+        const homePath = user.role === 'director' ? '/dashboard' : '/MyICs'
         const visibleRoutes = user.role === 'director'
-          ? [...managerRoutes, ...directorRoutes]
+          ? [...directorRoutes, ...managerRoutes]
           : managerRoutes
         const links = visibleRoutes.map(({ path, title }) => ({ to: path, label: title }))
 
@@ -56,13 +57,13 @@ function AppRoutes() {
           {
             element: <AppLayout links={links} />,
             children: [
-              { index: true, element: <Navigate to="/MyICs" replace /> },
+              { index: true, element: <Navigate to={homePath} replace /> },
               ...visibleRoutes.map(({ path, title, element }) => ({
                 path,
                 element,
                 handle: { title },
               })),
-              { path: '*', element: <Navigate to="/MyICs" replace /> },
+              { path: '*', element: <Navigate to={homePath} replace /> },
             ],
           },
         ]
