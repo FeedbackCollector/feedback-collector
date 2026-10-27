@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useAuthStore } from '../store/authStore';
 
 type IC = {
   IC_id: number;
@@ -10,20 +11,38 @@ type IC = {
 function ObtainICs() {
   const [ics, setIcs] = useState<IC[]>([]);
   const [loading, setLoading] = useState(true);
+  const user = useAuthStore((state) => state.user);
+  const managerId = useAuthStore((state) => state.user?.id);
+  console.log("manager id:", managerId);
 
   useEffect(() => {
-    fetch('https://feedback-api-latest-moe8.onrender.com/ics')
-      .then((response) => response.json())
-      .then((res) => {
-        setIcs(Array.isArray(res?.data) ? res.data : []);
-        setLoading(false);
-        console.log("Retrieved data:", res);
-      })
-      .catch((error) => {
-        console.error("Error retrieving data:", error);
-        setLoading(false);
-      });
-  }, []);
+  if (!managerId) {
+    setIcs([]);
+    setLoading(false);
+    return;
+  }
+
+  setLoading(true);
+  setIcs([]);
+
+  fetch(`https://feedback-api-latest-moe8.onrender.com/ics?manager_id=${managerId}`)
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error('Could not load ICs');
+      }
+
+      return response.json();
+    })
+    .then((res) => {
+      setIcs(res.data);
+    })
+    .catch((error) => {
+      console.error('Error retrieving ICs:', error);
+    })
+    .finally(() => {
+      setLoading(false);
+    });
+}, [managerId]);
 
    const getBadgeColor = (entries: number) => {
     switch (entries) {
