@@ -1,8 +1,8 @@
 import { useEffect, useState, type ChangeEvent } from 'react';
 import type { Feedback, FeedbackFilters } from '../types/feedback';
-import { obtainFeedback } from '../service/ObtainFeedBack';
+import { obtainFeedback } from '../service/ObtainFeedback';
 
-const SCORES = [1, 2, 3, 4, 5];
+const SCORES = [1,2,3,4,5];
 
 function FeedbackLogComp() {
   const [feedback, setFeedback] = useState<Feedback[]>([]);
@@ -26,11 +26,14 @@ function FeedbackLogComp() {
     setFilters({ ...filters, [e.target.name]: e.target.value });
   }
 
-  const icNames = Array.from(new Set(feedback.map((item) => item.ic_name ?? '').filter((name) => name !== '')));
+  const icNames = Array.from(
+    new Set(feedback.map((item) => item.ic_name ?? '').filter((name) => name !== ''))
+  );
+
 
   const projectOptions: { id: number; name: string }[] = [];
   feedback.forEach((item) => {
-    if (item.project_id !== null && item.project_name !== null) {
+    if (item.project_id !== null && item.project_name !== null && item.project_name !== undefined) {
       const exists = projectOptions.some((p) => p.id === item.project_id);
       if (!exists) projectOptions.push({ id: item.project_id, name: item.project_name });
     }
@@ -39,18 +42,27 @@ function FeedbackLogComp() {
   const filteredFeedback = feedback
     .filter((item) => {
       if (filters.icName === '') return true;
-      return (item.ic_name ?? '').toLowerCase().includes(filters.icName.toLowerCase());
+      const name = item.ic_name ?? '';
+      return name.toLowerCase().includes(filters.icName.toLowerCase());
     })
-    .filter((item) => filters.projectId === '' || String(item.project_id) === filters.projectId)
-    .filter((item) => filters.score === '' || item.score === Number(filters.score))
+    .filter((item) => {
+      if (filters.projectId === '') return true;
+      return String(item.project_id) === filters.projectId;
+    })
+    .filter((item) => {
+      if (filters.score === '') return true;
+      return item.score === Number(filters.score);
+    })
     .filter((item) => {
       if (filters.text === '') return true;
-      const search = filters.text.toLowerCase();
-      return item.text.toLowerCase().includes(search) || item.comment.toLowerCase().includes(search);
+      const commentText = item.comment ?? ''; 
+      return commentText.toLowerCase().includes(filters.text.toLowerCase());
     })
     .sort((a, b) => {
-      if (filters.sortBy === 'oldest') return a.date.localeCompare(b.date);
-      return b.date.localeCompare(a.date);
+      const dateA = a.date ?? '';
+      const dateB = b.date ?? '';
+      if (filters.sortBy === 'oldest') return dateA.localeCompare(dateB);
+      return dateB.localeCompare(dateA);
     });
 
   return (
@@ -82,7 +94,7 @@ function FeedbackLogComp() {
             <select name="projectId" className="input-control" value={filters.projectId} onChange={handleChange}>
               <option value="">All</option>
               {projectOptions.map((project) => (
-                <option key={project.id} value={project.id}>
+                <option key={project.id} value={String(project.id)}>
                   {project.name}
                 </option>
               ))}
@@ -94,7 +106,7 @@ function FeedbackLogComp() {
             <select name="score" className="input-control" value={filters.score} onChange={handleChange}>
               <option value="">All</option>
               {SCORES.map((score) => (
-                <option key={score} value={score}>
+                <option key={score} value={String(score)}>
                   {score}
                 </option>
               ))}
@@ -145,10 +157,10 @@ function FeedbackLogComp() {
               {filteredFeedback.map((item) => (
                 <tr key={item.id}>
                   <td>{item.date}</td>
-                  <td>{item.ic_name}</td>
-                  <td>{item.project_name}</td>
+                  <td>{item.ic_name ?? '—'}</td>
+                  <td>{item.project_name ?? '—'}</td>
                   <td>{item.source_name}</td>
-                  <td>{item.text}</td>
+                  <td>{item.comment ?? '—'}</td>
                   <td>{item.score}</td>
                   <td>
                     {item.screenshot_url ? (
