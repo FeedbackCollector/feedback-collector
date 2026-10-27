@@ -22,6 +22,6 @@ export async function loginService(email: string, password: string): Promise<str
     const passwordOk = await bcrypt.compare(password, user.passwordHash);
     if (!passwordOk) return "INVALID_CREDENTIALS";
 
-    return jwt.sign({ email: user.email, role: user.role }, process.env.JWT_SECRET as string, {expiresIn: '1h',
+    return jwt.sign({ id: user.id, email: user.email, role: user.role }, process.env.JWT_SECRET as string, {expiresIn: '1h',
     });
 }
