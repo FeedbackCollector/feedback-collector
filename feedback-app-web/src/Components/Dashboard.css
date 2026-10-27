@@ -1,0 +1,117 @@
+.dashboard-page {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 24px;
+  padding: 24px 32px;
+}
+
+.dashboard-area-filter {
+  padding: 12px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgb(23 24 26 / 4%);
+}
+
+.dashboard-area-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.dashboard-area-button {
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease;
+}
+
+.dashboard-area-button:hover {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+.dashboard-area-button.is-selected {
+  background: var(--primary);
+  color: #fff;
+}
+
+.dashboard-area-button.is-selected:hover {
+  background: var(--primary-dk);
+}
+
+.dashboard-area-button:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.dashboard-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
+  gap: 16px;
+}
+
+.dashboard-metric-card {
+  min-height: 160px;
+  padding: 20px;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 2px 8px rgb(23 24 26 / 4%);
+}
+
+.dashboard-metric-card h2 {
+  min-height: 40px;
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.dashboard-metric-value {
+  margin-top: 8px;
+  color: var(--text);
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.dashboard-metric-detail {
+  margin-top: 8px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+@media (max-width: 1000px) {
+  .dashboard-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .dashboard-page {
+    gap: 16px;
+    padding: 16px;
+  }
+
+  .dashboard-area-filter {
+    padding: 8px;
+  }
+
+  .dashboard-area-button {
+    padding: 0 12px;
+  }
+
+  .dashboard-metrics {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}
