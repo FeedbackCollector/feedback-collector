@@ -7,7 +7,7 @@
     "joi": "^18.3.0",
     "jsonwebtoken": "^9.0.3",
     "pg": "^8.23.1",
-    "sequelize": "^6.37.8"
+    "sequelize": "^3.30.0"
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
@@ -22,5 +22,10 @@
     "seed": "tsx feedback-api/src/db/seed.ts",
     "start": "node dist/server.js",
     "dev": "tsx  feedback-api/src/server.ts"
+  },
+  "allowScripts": {
+    "bcrypt@6.0.0": true,
+    "esbuild@0.28.2": true,
+    "fsevents@2.3.3": true
   }
 }

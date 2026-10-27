@@ -2,8 +2,11 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 export interface User {
+    id?: number;
+    name?: string;
     email: string;
     role: string;
+    area_id?: number;
 }
 
 export type FormType = 'login' | 'register';
@@ -101,12 +104,38 @@ export const useAuthStore = create<AuthState>()(
                             atob(payload.padEnd(Math.ceil(payload.length / 4) * 4, '='))
                         ) as User;
                         // esto es para decodificar el token
-                        set({
-                            token,
-                            user: { email: decodedUser.email, role: decodedUser.role },
-                            isAuthenticated: true,
-                            error: null
-                        });
+                        const usersResponse = await fetch(`https://feedback-api-latest-moe8.onrender.com/users`, {
+                        headers: {
+                            Authorization: `Bearer ${token}`
+                        }
+                    });
+
+                    if (!usersResponse.ok) {
+                        throw new Error('Could not load users');
+                    }
+
+                    const usersData = await usersResponse.json();
+
+                    const currentUser = usersData.data.find(
+                        (item: User) => item.email === decodedUser.email
+                    );
+
+                    if (!currentUser) {
+                        throw new Error('User not found');
+                    }
+
+                    set({
+                        token,
+                        user: {
+                            id: currentUser.id,
+                            name: currentUser.name,
+                            email: currentUser.email,
+                            role: currentUser.role,
+                            area_id: currentUser.area_id
+                        },
+                        isAuthenticated: true,
+                        error: null
+                    });
                         return true;
                     } else {
                         set({ 
