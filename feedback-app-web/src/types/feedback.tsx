@@ -1,14 +1,14 @@
 export type Feedback = {
   id: number;
+  author_id: number;
   ic_id: number | null;
   ic_name: string | null;
   project_id: number | null;
   project_name: string | null;
   date: string;
   source_name: string;
-  text: string;
   score: number;
-  comment: string;
+  comment: string | null;
   screenshot_url: string | null;
   created_at: string;
 };
