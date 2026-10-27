@@ -1,11 +1,11 @@
 import { Router } from 'express';
 import { getAll, getById, create, replace, update, remove } from '../controllers/feedback.controller.ts';
+import { authenticateToken } from '../middleware/auth.ts';
 import { validate } from '../middleware/validate.ts';
 import { createFeedbackScheme, updateFeedbackScheme } from '../schemes/feedback.schema.ts';
 
 const router = Router();
 
-// Rechaza ids que no sean enteros positivos antes de llegar a Postgres
 router.param('id', (req, res, next, value) => {
     const id = Number(value);
     if (!Number.isInteger(id) || id < 1) {
@@ -17,9 +17,9 @@ router.param('id', (req, res, next, value) => {
 
 
 
-router.get('/', getAll);
+router.get('/', authenticateToken, getAll);
 
-router.get('/:id', getById);
+router.get('/:id', authenticateToken, getById);
 
 router.post('/', validate(createFeedbackScheme), create);
 
