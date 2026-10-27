@@ -8,6 +8,7 @@ import Dashboard from './pages/Dashboard'
 import Management from './pages/Management'
 import MyManagement from './pages/MyManagement'
 import FeedbackLogComp from './Components/Feedback-log-comp'
+import Login from './pages/login'
 
 const VALID_ROLES = ['manager', 'director']
 
