@@ -1,11 +1,15 @@
 import { useEffect, useState, type ChangeEvent } from 'react';
-import type { Feedback, FeedbackFilters } from '../types/feedback';
+import type { Feedback, FeedbackFilters, IC, Project } from '../types/feedback';
 import { obtainFeedback } from '../service/ObtainFeedback';
+import { obtainICs } from '../service/ObtainICs';
+import { obtainProjects } from '../service/ObtainProjects';
 
 const SCORES = [1,2,3,4,5];
 
 function FeedbackLogComp() {
   const [feedback, setFeedback] = useState<Feedback[]>([]);
+  const [ics, setIcs] = useState<IC[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<FeedbackFilters>({
     icName: '',
@@ -16,30 +20,53 @@ function FeedbackLogComp() {
   });
 
   useEffect(() => {
-    obtainFeedback().then((data) => {
-      setFeedback(data);
-      setLoading(false);
-    });
+    async function loadData() {
+      try {
+        const [feedbackData, icsData, projectsData] = await Promise.all([
+          obtainFeedback(),
+          obtainICs(),
+          obtainProjects(),
+        ]);
+        setFeedback(feedbackData);
+        setIcs(icsData);
+        setProjects(projectsData);
+      } catch (error) {
+        console.error('Error loading data:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadData();
   }, []);
 
   function handleChange(e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
     setFilters({ ...filters, [e.target.name]: e.target.value });
   }
 
+  const enrichedFeedback = feedback.map((item) => {
+    const matchedIC = ics.find((ic) => ic.IC_id === item.author_id);
+    const matchedProject = projects.find((p) => p.id === item.project_id);
+
+    return {
+      ...item,
+      ic_name: item.ic_name || (matchedIC ? matchedIC.name : '—'),
+      project_name: item.project_name || (matchedProject ? matchedProject.name : '—'),
+    };
+  });
+
   const icNames = Array.from(
-    new Set(feedback.map((item) => item.ic_name ?? '').filter((name) => name !== ''))
+    new Set(enrichedFeedback.map((item) => item.ic_name ?? '').filter((name) => name !== ''))
   );
 
-
   const projectOptions: { id: number; name: string }[] = [];
-  feedback.forEach((item) => {
+  enrichedFeedback.forEach((item) => {
     if (item.project_id !== null && item.project_name !== null && item.project_name !== undefined) {
       const exists = projectOptions.some((p) => p.id === item.project_id);
       if (!exists) projectOptions.push({ id: item.project_id, name: item.project_name });
     }
   });
 
-  const filteredFeedback = feedback
+  const filteredFeedback = enrichedFeedback
     .filter((item) => {
       if (filters.icName === '') return true;
       const name = item.ic_name ?? '';
