@@ -6,6 +6,9 @@ import userRoutes from "./routes/user.routes.ts";
 import icRoutes from "./routes/ic.routes.ts"
 import feedbackRoutes from "./routes/feedback.routes.ts"
 import usersRoutes from "./routes/users.routes.ts"
+import swaggerUi from "swagger-ui-express";
+import YAML from "yaml";
+import { readFileSync } from "node:fs";
 
 import cors from "cors";
 
@@ -21,8 +24,13 @@ app.use((req, res, next) => {
     next();
 });
 
+const openApiSpec = YAML.parse(
+  readFileSync(new URL("../docs/openapi.yaml", import.meta.url), "utf8")
+);
+app.use("/docs", swaggerUi.serve, swaggerUi.setup(openApiSpec));
+
 app.get("/", (req: Request, res: Response) => {
-  res.json({ message: "Library API running", docs: `http://localhost:${PORT}/docs` });
+  res.json({ message: "FeedBack Controller API running", docs: `http://localhost:${PORT}/docs` });
 });
 
 app.use('/auth', userRoutes);

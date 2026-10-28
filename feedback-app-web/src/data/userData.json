@@ -1,0 +1,14 @@
+{
+  "credentials": [
+    {
+      "id": 1,
+      "email": "admin.test@correo.com",
+      "password": "PasswordSegura123!"
+    },
+    {
+      "id": 2,
+      "email": "usuario.test@correo.com",
+      "password": "ClaveUsuario2026*"
+    }
+  ]
+}
