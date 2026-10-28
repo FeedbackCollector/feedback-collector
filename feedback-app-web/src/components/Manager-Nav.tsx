@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import './Manager-Nav.css';
+import '../styles/Manager-Nav.css';
 import { User } from './User';
 import chatIcon from '../images/chat.png';
 

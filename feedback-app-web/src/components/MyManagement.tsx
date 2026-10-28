@@ -1,4 +1,4 @@
-import './MyManagement.css';
+import '../styles/MyManagement.css';
 
 const METRICS = [
   { label: 'Managers', value: '8', detail: 'Managers in your organization' },

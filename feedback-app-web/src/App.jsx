@@ -1,13 +1,13 @@
 import { BrowserRouter, Navigate, Outlet, useLocation, useRoutes } from 'react-router-dom'
-import { Header } from './Components/Header'
-import { NavBar } from './Components/Manager-Nav'
+import { Header } from './components/Header'
+import { NavBar } from './components/Manager-Nav'
 import { useAuthStore } from './store/authStore'
-import './App.css'
+import './styles/App.css'
 import MyICs from './pages/MyICs'
 import Dashboard from './pages/Dashboard'
 import Management from './pages/Management'
 import MyManagement from './pages/MyManagement'
-import FeedbackLogComp from './Components/Feedback-log-comp'
+import FeedbackLogComp from './components/Feedback-log-comp'
 import Login from './pages/login'
 
 const VALID_ROLES = ['manager', 'director']

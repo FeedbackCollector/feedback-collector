@@ -1,4 +1,4 @@
-import ManagementComp from '../Components/Management';
+import ManagementComp from '../components/Management';
 
 export default function Management() {
   return (
