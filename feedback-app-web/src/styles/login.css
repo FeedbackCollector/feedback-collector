@@ -10,13 +10,13 @@
     --danger: #E12339;
 }
 
-body {
+.login-page {
     background: linear-gradient(160deg, #F1EAF7 8.49%, #F4F4F7 58.3%);
     min-height: 100vh;
-    margin: 0;
     display: flex;
     justify-content: center;
     align-items: center;
+    width: 100%;
 }
 
 .feedback-container {
