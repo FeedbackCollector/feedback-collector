@@ -15,6 +15,6 @@ export async function register(req: Request, res: Response) {
 export async function login(req: Request, res: Response) {
     const result = await loginService(req.body.email, req.body.password);
     if (result === "INVALID_CREDENTIALS") return res.status(400).json({ message: "Credenciales inválidas" });
-    res.json({ token: result });
+    res.json(result);
 }
 
