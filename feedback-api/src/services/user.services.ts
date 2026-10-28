@@ -25,3 +25,15 @@ export async function loginService(email: string, password: string): Promise<str
     return jwt.sign({ email: user.email, role: user.role }, process.env.JWT_SECRET as string, {expiresIn: '1h',
     });
 }
+
+export async function changePasswordService(email: string, currentPassword: string, newPassword: string): Promise<"INVALID_CREDENTIALS" | "UPDATED"> {
+    const user = await UsersRepository.getUserByEmail(email);
+    if (!user) return "INVALID_CREDENTIALS";
+
+    const passwordOk = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!passwordOk) return "INVALID_CREDENTIALS";
+
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    const updated = await UsersRepository.patchUserPassword(user.id, passwordHash);
+    return updated ? "UPDATED" : "INVALID_CREDENTIALS";
+}
