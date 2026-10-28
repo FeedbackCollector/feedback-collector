@@ -1,7 +1,7 @@
 import {Op, QueryTypes} from "sequelize"
-import {sequelize} from "../db/connection.js"
-import {ICs} from "../models/ic.js"
-import type {IC, NewIC} from "../types/ic.js"
+import {sequelize} from "../db/connection.ts"
+import {ICs} from "../models/ic.ts"
+import type {IC, NewIC} from "../types/ic.ts"
 
 interface ICsFilters{
     name?: string

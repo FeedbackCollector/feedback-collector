@@ -5,7 +5,7 @@ import {
   icFindByID,
   icUpdate,
   managerExists,
-} from "../repositories/ic.repository.js";
+} from "../repositories/ic.repository.ts";
 
 export class ManagerNotFoundError extends Error {
   constructor() {

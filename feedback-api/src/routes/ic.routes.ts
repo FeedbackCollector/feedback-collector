@@ -5,7 +5,7 @@ import {
   getICsByID,
   patchIC,
   postIC,
-} from "../controllers/ic.controller.js";
+} from "../controllers/ic.controller.ts";
 
 const router = Router();
 
