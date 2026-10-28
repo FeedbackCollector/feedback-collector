@@ -6,7 +6,7 @@ import {
   listICs,
   removeIC,
   updateIC,
-} from "../services/ic.service.js";
+} from "../services/ic.service.ts";
 
 const isPositiveInt = (v: unknown) => Number.isInteger(v) && Number(v) >= 1;
 const isNonNegativeInt = (v: unknown) => Number.isInteger(v) && Number(v) >= 0;

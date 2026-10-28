@@ -7,6 +7,7 @@ export interface NewUser {
 
 export interface User {
     id: number;
+    name: string;
     email: string;
     role: string;
     area_id: number | null

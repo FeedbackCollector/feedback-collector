@@ -5,7 +5,7 @@ import {
   InferCreationAttributes,
   CreationOptional,
 } from "sequelize";
-import { sequelize } from "../db/connection.js";
+import { sequelize } from "../db/connection.ts";
 
 export class ICs extends Model<InferAttributes<ICs>, InferCreationAttributes<ICs>> {
   declare IC_id: CreationOptional<number>;

@@ -1,0 +1,32 @@
+# Para probar la imagen en local junto con Postgres.
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: FeedBack-Collector
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      retries: 10
+
+  api:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_DATABASE: FeedBack-Collector
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      JWT_SECRET: solo-para-local-cambiar-en-produccion
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:

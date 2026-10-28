@@ -6,7 +6,9 @@
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "noEmit": true,
+    "outDir": "dist",
+    "rootDir": "src",
+    "rewriteRelativeImportExtensions": true,
     "allowImportingTsExtensions": true,
     "forceConsistentCasingInFileNames": true,
     "types": ["node"]

@@ -312,6 +312,7 @@ body {
 /*=============*/
 
 .box {
+  max-width: calc(100% - 40px);
   margin: 20px;
   padding: 20px;
   background-color: var(--surface);

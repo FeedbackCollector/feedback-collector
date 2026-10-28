@@ -1,6 +1,10 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import * as UsersRepository from '../repositories/user.repositories.js';
+import * as UsersRepository from '../repositories/user.repositories.ts';
+
+export async function getAllUsersService() {
+    return UsersRepository.getAllUsers();
+}
 
 export async function registerService(email: string, password: string , name: string , area_id: number): Promise<"EMAIL_TAKEN" | "REGISTERED"> {
     const existing = await UsersRepository.getUserByEmail(email);
