@@ -111,6 +111,43 @@ paths:
                   value:
                     message: Credenciales inválidas
 
+  /auth/password:
+    patch:
+      tags: [Auth]
+      summary: Change password
+      description: |
+        Changes the password of the authenticated user. The current password must be provided.
+        The user is identified by the email in the JWT (authentication is handled separately).
+      operationId: changePassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordRequest"
+      responses:
+        "200":
+          description: Password updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+              example:
+                message: Contraseña actualizada
+        "400":
+          description: Validation error, or current password is incorrect
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/ValidationError"
+                  - $ref: "#/components/schemas/Message"
+              examples:
+                invalidCredentials:
+                  summary: Wrong current password
+                  value:
+                    message: Credenciales inválidas
+
   /ics:
     get:
       tags: [ICs]
@@ -397,6 +434,19 @@ components:
         password:
           type: string
           format: password
+    ChangePasswordRequest:
+      type: object
+      required: [currentPassword, newPassword]
+      properties:
+        currentPassword:
+          type: string
+          format: password
+        newPassword:
+          type: string
+          minLength: 8
+          maxLength: 72
+          format: password
+          description: Must be different from `currentPassword`
     IC:
       type: object
       properties:

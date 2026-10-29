@@ -1,6 +1,14 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+export interface User {
+    id?: number;
+    name?: string;
+    email: string;
+    role: string;
+    area_id?: number;
+}
+
 export type FormType = 'login' | 'register';
 
 export interface TypeError {
@@ -11,6 +19,8 @@ export interface TypeError {
 interface AuthState {
     activeForm: FormType;
     isAuthenticated: boolean;
+    token: string | null;
+    user: User | null;
     error: TypeError | null; 
     switchForm: (form: FormType) => void;
     clearError: () => void;
@@ -40,6 +50,8 @@ export const useAuthStore = create<AuthState>()(
         (set, get) => ({
             activeForm: 'login',
             isAuthenticated: false,
+            token: null,
+            user: null,
             error: null, 
 
             loginEmail: '',
@@ -86,7 +98,44 @@ export const useAuthStore = create<AuthState>()(
                     const datos = await respuesta.json();
 
                     if (respuesta.ok) {
-                        set({ isAuthenticated: true, error: null });
+                        const token: string = datos.token;
+                        const payload = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+                        const decodedUser = JSON.parse(
+                            atob(payload.padEnd(Math.ceil(payload.length / 4) * 4, '='))
+                        ) as User;
+                        // esto es para decodificar el token
+                        const usersResponse = await fetch(`https://feedback-api-latest-moe8.onrender.com/users`, {
+                        headers: {
+                            Authorization: `Bearer ${token}`
+                        }
+                    });
+
+                    if (!usersResponse.ok) {
+                        throw new Error('Could not load users');
+                    }
+
+                    const usersData = await usersResponse.json();
+
+                    const currentUser = usersData.data.find(
+                        (item: User) => item.email === decodedUser.email
+                    );
+
+                    if (!currentUser) {
+                        throw new Error('User not found');
+                    }
+
+                    set({
+                        token,
+                        user: {
+                            id: currentUser.id,
+                            name: currentUser.name,
+                            email: currentUser.email,
+                            role: currentUser.role,
+                            area_id: currentUser.area_id
+                        },
+                        isAuthenticated: true,
+                        error: null
+                    });
                         return true;
                     } else {
                         set({ 
@@ -154,6 +203,8 @@ export const useAuthStore = create<AuthState>()(
             logout: () => set({
                 activeForm: 'login',
                 isAuthenticated: false,
+                token: null,
+                user: null,
                 error: null,
                 loginEmail: '',
                 loginPassword: '',
