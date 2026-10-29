@@ -41,4 +41,148 @@
   line-height: 1.6;
 }
 
-/*  */
+/* FEEDBACK LOG AND FILTERS FLOATING LAYOUT */
+.filters-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.filter-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.filter-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+}
+
+/* SEARCH FIELD WITH ICON GAP */
+.search-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.search-wrapper svg {
+  position: absolute;
+  left: 12px;
+  color: var(--text-muted);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.search-wrapper .input-control {
+  padding-left: 38px !important;
+  width: 100%;
+}
+
+/* VIEW TOGGLE BUTTONS ACTIVE STATE FROM FIGMA */
+.view-toggle-container {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0px;
+  margin: 0 0 16px 0;
+}
+
+.btn-toggle-view {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 8px 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  color: var(--text-muted);
+  transition: all 0.2s ease;
+}
+
+.btn-toggle-view:first-of-type {
+  border-radius: 6px 0 0 6px;
+}
+
+.btn-toggle-view:last-of-type {
+  border-radius: 0 6px 6px 0;
+  border-left: none;
+}
+
+.btn-toggle-view.active {
+  background: var(--primary);
+  color: var(--surface);
+  border-color: var(--primary);
+}
+
+/* LIST CARDS - FIGMA SPECIFIC STYLE */
+.feedback-card {
+  background: var(--surface);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+}
+
+.feedback-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.feedback-card-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.feedback-card-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.feedback-card-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+}
+
+.feedback-card-subtext {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.feedback-card-body {
+  font-size: 14px;
+  color: var(--text);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.feedback-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+  margin-top: 4px;
+}
+
+/* SHARED BADGE */
+.badge-shared {
+  background-color: var(--primary-light);
+  color: var(--primary);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  text-transform: capitalize;
+}

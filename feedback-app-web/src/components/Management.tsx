@@ -206,7 +206,15 @@ export default function ManagementComp() {
               aria-pressed={viewMode === 'cards'}
               onClick={() => setViewMode('cards')}
             >
-              <i className="fa-solid fa-table-cells-large" aria-hidden="true" />
+              <svg
+                aria-hidden="true"
+                height="20"
+                viewBox="0 -960 960 960"
+                width="20"
+                fill="currentColor"
+              >
+                <path d="M760-120H200q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120ZM200-640h560v-120H200v120Zm100 80H200v360h100v-360Zm360 0v360h100v-360H660Zm-80 0H380v360h200v-360Z" />
+              </svg>
             </button>
             <button
               type="button"
@@ -215,7 +223,15 @@ export default function ManagementComp() {
               aria-pressed={viewMode === 'table'}
               onClick={() => setViewMode('table')}
             >
-              <i className="fa-solid fa-table-list" aria-hidden="true" />
+              <svg
+                aria-hidden="true"
+                height="20"
+                viewBox="0 -960 960 960"
+                width="20"
+                fill="currentColor"
+              >
+                <path d="M360-240h440v-107H360v107ZM160-613h120v-107H160v107Zm0 187h120v-107H160v107Zm0 186h120v-107H160v107Zm200-186h440v-107H360v107Zm0-187h440v-107H360v107ZM160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h640q33 0 56.5 23.5T880-720v480q0 33-23.5 56.5T800-160H160Z" />
+              </svg>
             </button>
           </div>
         </div>

@@ -20,3 +20,15 @@ export type FeedbackFilters = {
   sortBy: string;
   text: string;
 };
+
+export type IC = {
+  IC_id: number;
+  name: string;
+  title: string;
+  entries: number;
+};
+
+export type Project = {
+  id: number;
+  name: string;
+};

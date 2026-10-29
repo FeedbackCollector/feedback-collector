@@ -11,3 +11,8 @@ export const loginScheme = Joi.object({
     email: Joi.string().required(),
     password: Joi.string().required(),
 });
+
+export const changePasswordScheme = Joi.object({
+    currentPassword: Joi.string().required(),
+    newPassword: Joi.string().min(8).max(72).invalid(Joi.ref("currentPassword")).required(),
+});
