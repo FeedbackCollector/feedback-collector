@@ -43,7 +43,7 @@ interface AuthState {
 }
 
 
-const API_URL = 'https://feedback-api-latest-moe8.onrender.com/auth';
+const API_URL = 'https://feedback-collector-fycv.onrender.com/auth';
 
 export const useAuthStore = create<AuthState>()(
     persist(
@@ -104,7 +104,7 @@ export const useAuthStore = create<AuthState>()(
                             atob(payload.padEnd(Math.ceil(payload.length / 4) * 4, '='))
                         ) as User;
                         // esto es para decodificar el token
-                        const usersResponse = await fetch(`https://feedback-api-latest-moe8.onrender.com/users`, {
+                        const usersResponse = await fetch(`https://feedback-collector-fycv.onrender.com/users`, {
                         headers: {
                             Authorization: `Bearer ${token}`
                         }
