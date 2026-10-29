@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import './Dashboard.css';
+import '../styles/Dashboard.css';
 
 const AREAS = ['Design', 'Delivery', 'Engineering', 'Product'];
 

@@ -1,0 +1,359 @@
+.management-page {
+  min-height: calc(100vh - 76px);
+  padding: 24px 32px;
+  background: #f4f4f8;
+}
+
+.management-tabs {
+  display: flex;
+  gap: 8px;
+  min-height: 48px;
+  border-bottom: 1px solid var(--border);
+}
+
+.management-tab {
+  position: relative;
+  min-width: 88px;
+  padding: 0 16px 12px;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.management-tab:hover {
+  color: var(--primary);
+}
+
+.management-tab.is-active {
+  color: var(--primary);
+}
+
+.management-tab.is-active::after {
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 2px;
+  background: var(--primary);
+  content: '';
+}
+
+.management-tab:focus-visible,
+.management-add-button:focus-visible,
+.management-view-button:focus-visible,
+.management-row-action:focus-visible,
+.management-cancel-button:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.management-panel {
+  padding-top: 20px;
+}
+
+.management-toolbar {
+  display: flex;
+  min-height: 88px;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: flex-start;
+  gap: 12px;
+}
+
+.management-add-button {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 0 22px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--primary);
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+  transition: background-color 150ms ease;
+}
+
+.management-add-button:hover {
+  background: var(--primary-dk);
+}
+
+.management-view-toggle {
+  display: flex;
+  gap: 6px;
+}
+
+.management-view-button {
+  display: grid;
+  width: 38px;
+  height: 36px;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 17px;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.management-view-button:hover {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+.management-view-button.is-active {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #fff;
+}
+
+.management-table-wrap {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 2px 3px rgb(23 24 26 / 10%);
+}
+
+.management-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.management-table th {
+  height: 44px;
+  padding: 0 14px;
+  background: #f4f4f8;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.management-table td {
+  height: 61px;
+  padding: 8px 14px;
+  border-top: 1px solid var(--border);
+  color: var(--text);
+  font-size: 14px;
+}
+
+.management-table th:first-child,
+.management-table td:first-child {
+  padding-left: 14px;
+}
+
+.management-table th:last-child,
+.management-table td:last-child {
+  width: 104px;
+  padding-right: 14px;
+  text-align: right;
+}
+
+.management-actions-cell {
+  white-space: nowrap;
+}
+
+.management-row-action {
+  display: inline-grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  margin-left: 4px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: #fff;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 16px;
+  transition:
+    border-color 150ms ease,
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.management-row-action:hover {
+  border-color: var(--primary);
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+.management-score {
+  display: inline-grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.management-score-high {
+  background: #62a900;
+}
+
+.management-score-low {
+  background: #e77a00;
+}
+
+.management-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.management-card {
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 2px 3px rgb(23 24 26 / 8%);
+}
+
+.management-card-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.management-card-heading h2 {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.management-card-actions {
+  display: flex;
+}
+
+.management-card-detail {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 0;
+  border-top: 1px solid var(--border);
+}
+
+.management-card-detail dt {
+  color: var(--text-muted);
+}
+
+.management-card-detail dd {
+  font-weight: 600;
+}
+
+.management-empty-state {
+  padding: 32px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.management-dialog-backdrop {
+  position: fixed;
+  z-index: 10;
+  display: grid;
+  padding: 20px;
+  background: rgb(23 24 26 / 42%);
+  inset: 0;
+  place-items: center;
+}
+
+.management-dialog {
+  display: flex;
+  width: min(100%, 420px);
+  flex-direction: column;
+  gap: 12px;
+  padding: 24px;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 16px 48px rgb(23 24 26 / 20%);
+}
+
+.management-dialog h2 {
+  margin-bottom: 4px;
+  font-size: 20px;
+}
+
+.management-dialog label {
+  font-weight: 600;
+}
+
+.management-dialog input {
+  min-height: 42px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font: inherit;
+}
+
+.management-dialog input:focus {
+  border-color: var(--primary);
+  outline: 2px solid var(--primary-light);
+}
+
+.management-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.management-cancel-button {
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--text-muted);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+}
+
+.management-cancel-button:hover {
+  background: #f4f4f8;
+}
+
+.management-visually-hidden {
+  position: absolute;
+  overflow: hidden;
+  width: 1px;
+  height: 1px;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
+
+@media (max-width: 680px) {
+  .management-page {
+    padding: 16px;
+  }
+
+  .management-tab {
+    min-width: auto;
+    padding-right: 12px;
+    padding-left: 12px;
+  }
+
+  .management-table-wrap {
+    overflow-x: auto;
+  }
+
+  .management-table {
+    min-width: 600px;
+  }
+}
