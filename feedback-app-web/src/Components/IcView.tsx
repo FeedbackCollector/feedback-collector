@@ -1,5 +1,5 @@
 
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent, type ChangeEvent } from 'react';
 import type { Feedback } from '../types/feedback';
 import { obtainFeedback } from '../service/ObtainFeedback';
 
@@ -27,10 +27,12 @@ type FeedbackForm = {
 
 const API_URL = 'https://feedback-api-latest-moe8.onrender.com/feedback';
 
+const today = () => new Date().toISOString().slice(0, 10);
+
 const emptyForm: FeedbackForm = {
   author_id: '',
   project_id: '',
-  date: new Date().toISOString().slice(0, 10),
+  date: today(),
   source_name: '',
   score: '3',
   comment: '',
@@ -44,6 +46,7 @@ const inputStyle = {
   border: '1px solid #ccc',
   borderRadius: '6px',
   fontSize: '14px',
+  marginTop: '6px',
 };
 
 const buttonStyle = {
@@ -51,7 +54,28 @@ const buttonStyle = {
   border: 'none',
   borderRadius: '6px',
   cursor: 'pointer',
-  fontWeight: 600,
+  fontWeight: 600 as const,
+};
+
+const statCardStyle = {
+  background: '#f7f8fa',
+  border: '1px solid #e5e7eb',
+  borderRadius: '10px',
+  padding: '18px',
+  flex: '1',
+  minWidth: '140px',
+};
+
+const statLabelStyle = {
+  margin: 0,
+  fontSize: '13px',
+  color: '#666',
+};
+
+const statValueStyle = {
+  margin: '8px 0 0',
+  fontSize: '26px',
+  fontWeight: 700,
 };
 
 function ICView({ ic, onBack }: ICViewProps) {
@@ -104,7 +128,9 @@ function ICView({ ic, onBack }: ICViewProps) {
     () =>
       [1, 2, 3, 4, 5].map((score) => ({
         score,
-        count: feedbacks.filter((item) => Number(item.score) === score).length,
+        count: feedbacks.filter(
+          (item) => Number(item.score) === score
+        ).length,
       })),
     [feedbacks]
   );
@@ -112,12 +138,16 @@ function ICView({ ic, onBack }: ICViewProps) {
   const maxCount = Math.max(1, ...scoreCounts.map((item) => item.count));
 
   function handleFormChange(
-    event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+    event: ChangeEvent<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >
   ) {
-    setForm({
-      ...form,
-      [event.target.name]: event.target.value,
-    });
+    const { name, value } = event.target;
+
+    setForm((current) => ({
+      ...current,
+      [name]: value,
+    }));
   }
 
   function startCreate() {
@@ -132,13 +162,15 @@ function ICView({ ic, onBack }: ICViewProps) {
     setEditingId(item.id);
     setForm({
       author_id: String(item.author_id),
-      project_id: item.project_id === null ? '' : String(item.project_id),
-      date: item.date?.slice(0, 10) || new Date().toISOString().slice(0, 10),
+      project_id:
+        item.project_id === null ? '' : String(item.project_id),
+      date: item.date?.slice(0, 10) || today(),
       source_name: item.source_name ?? '',
       score: String(item.score),
       comment: item.comment ?? '',
       screenshot_url: item.screenshot_url ?? '',
     });
+
     setShowForm(true);
     setError('');
     setSuccess('');
@@ -156,7 +188,7 @@ function ICView({ ic, onBack }: ICViewProps) {
     setSuccess('');
 
     const authorId = Number(form.author_id);
-    const projectId = form.project_id === '' ? null : Number(form.project_id);
+    const projectId = Number(form.project_id);
     const score = Number(form.score);
 
     if (!Number.isInteger(authorId) || authorId <= 0) {
@@ -164,11 +196,19 @@ function ICView({ ic, onBack }: ICViewProps) {
       return;
     }
 
-    if (
-      projectId !== null &&
-      (!Number.isInteger(projectId) || projectId <= 0)
-    ) {
+    // project_id is required by the API.
+    if (form.project_id.trim() === '') {
+      setError('You must enter a project ID.');
+      return;
+    }
+
+    if (!Number.isInteger(projectId) || projectId <= 0) {
       setError('Project ID must be a positive integer.');
+      return;
+    }
+
+    if (!form.date) {
+      setError('Date is required.');
       return;
     }
 
@@ -197,31 +237,41 @@ function ICView({ ic, onBack }: ICViewProps) {
 
     try {
       const response = await fetch(
-        editingId === null ? API_URL : `${API_URL}/${editingId}`,
+        editingId === null
+          ? API_URL
+          : `${API_URL}/${editingId}`,
         {
           method: editingId === null ? 'POST' : 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+          },
           body: JSON.stringify(payload),
         }
       );
 
       if (!response.ok) {
         const responseText = await response.text();
+
         throw new Error(
-          responseText || `Request failed with status ${response.status}`
+          responseText ||
+            `Request failed with status ${response.status}`
         );
       }
 
+      const wasEditing = editingId !== null;
+
       cancelForm();
+
       setSuccess(
-        editingId === null
-          ? 'Feedback created successfully.'
-          : 'Feedback updated successfully.'
+        wasEditing
+          ? 'Feedback updated successfully.'
+          : 'Feedback created successfully.'
       );
 
       await loadFeedbacks();
     } catch (err) {
       console.error('Error saving feedback:', err);
+
       setError(
         err instanceof Error
           ? `Could not save feedback: ${err.message}`
@@ -249,17 +299,25 @@ function ICView({ ic, onBack }: ICViewProps) {
 
       if (!response.ok) {
         const responseText = await response.text();
+
         throw new Error(
-          responseText || `Request failed with status ${response.status}`
+          responseText ||
+            `Request failed with status ${response.status}`
         );
       }
 
-      setFeedbacks((current) => current.filter((item) => item.id !== id));
+      setFeedbacks((current) =>
+        current.filter((item) => item.id !== id)
+      );
+
       setSuccess('Feedback deleted successfully.');
 
-      if (editingId === id) cancelForm();
+      if (editingId === id) {
+        cancelForm();
+      }
     } catch (err) {
       console.error('Error deleting feedback:', err);
+
       setError(
         err instanceof Error
           ? `Could not delete feedback: ${err.message}`
@@ -269,7 +327,13 @@ function ICView({ ic, onBack }: ICViewProps) {
   }
 
   return (
-    <div style={{ padding: '20px', fontFamily: 'sans-serif', color: '#222' }}>
+    <div
+      style={{
+        padding: '20px',
+        fontFamily: 'sans-serif',
+        color: '#222',
+      }}
+    >
       <button
         type="button"
         onClick={onBack}
@@ -283,20 +347,22 @@ function ICView({ ic, onBack }: ICViewProps) {
         ← Back to Feedback Log
       </button>
 
-      <div
+      <header
         style={{
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
           flexWrap: 'wrap',
-          gap: '12px',
-          marginBottom: '20px',
+          gap: '16px',
+          marginBottom: '24px',
         }}
       >
         <div>
-          <h2 style={{ margin: '0 0 6px' }}>{ic.name}</h2>
+          <h1 style={{ margin: '0 0 8px' }}>{ic.name}</h1>
           <p style={{ margin: 0, color: '#666' }}>{ic.title}</p>
-          <small>IC ID: {ic.IC_id}</small>
+          <p style={{ margin: '6px 0 0', color: '#666' }}>
+            IC ID: {ic.IC_id}
+          </p>
         </div>
 
         <button
@@ -304,168 +370,151 @@ function ICView({ ic, onBack }: ICViewProps) {
           onClick={startCreate}
           style={{
             ...buttonStyle,
-            background: '#243b80',
-            color: 'white',
+            background: '#2563eb',
+            color: '#fff',
           }}
         >
           + Add feedback
         </button>
-      </div>
+      </header>
 
       {error && (
-        <p role="alert" style={{ color: '#b42318', marginBottom: '12px' }}>
+        <div
+          role="alert"
+          style={{
+            background: '#fee2e2',
+            color: '#991b1b',
+            padding: '12px',
+            borderRadius: '6px',
+            marginBottom: '16px',
+            overflowWrap: 'anywhere',
+          }}
+        >
           {error}
-        </p>
+        </div>
       )}
 
       {success && (
-        <p role="status" style={{ color: '#18733b', marginBottom: '12px' }}>
+        <div
+          role="status"
+          style={{
+            background: '#dcfce7',
+            color: '#166534',
+            padding: '12px',
+            borderRadius: '6px',
+            marginBottom: '16px',
+          }}
+        >
           {success}
-        </p>
+        </div>
       )}
 
-      <div
+      <section
         style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+          display: 'flex',
           gap: '16px',
+          flexWrap: 'wrap',
           marginBottom: '24px',
         }}
       >
         <div style={statCardStyle}>
-          <p style={statLabelStyle}>Average score</p>
-          <strong style={statValueStyle}>
-            {feedbacks.length ? averageScore.toFixed(2) : '—'} / 5
-          </strong>
+          <p style={statLabelStyle}>Total feedbacks</p>
+          <p style={statValueStyle}>{feedbacks.length}</p>
         </div>
 
         <div style={statCardStyle}>
-          <p style={statLabelStyle}>Total feedbacks</p>
-          <strong style={statValueStyle}>{feedbacks.length}</strong>
+          <p style={statLabelStyle}>Average score</p>
+          <p style={statValueStyle}>
+            {feedbacks.length > 0 ? averageScore.toFixed(1) : '—'}
+            <span style={{ fontSize: '15px', color: '#777' }}>
+              {' '}
+              / 5
+            </span>
+          </p>
         </div>
 
         <div style={statCardStyle}>
           <p style={statLabelStyle}>Latest feedback</p>
-          <strong style={{ fontSize: '17px' }}>
-            {sortedFeedbacks[0]?.date?.slice(0, 10) ?? '—'}
-          </strong>
+          <p style={{ ...statValueStyle, fontSize: '18px' }}>
+            {sortedFeedbacks[0]?.date
+              ? sortedFeedbacks[0].date.slice(0, 10)
+              : '—'}
+          </p>
         </div>
-      </div>
+      </section>
 
       <section
         style={{
-          border: '1px solid #e1e1e1',
+          border: '1px solid #e5e7eb',
           borderRadius: '10px',
           padding: '20px',
           marginBottom: '24px',
         }}
       >
-        <h3 style={{ marginTop: 0 }}>Feedback score distribution</h3>
-        <p style={{ color: '#666', fontSize: '14px' }}>
-          Number of feedbacks for each score, from 1 to 5.
-        </p>
+        <h2 style={{ marginTop: 0, fontSize: '18px' }}>
+          Score distribution
+        </h2>
 
-        {feedbacks.length === 0 ? (
-          <p>No scores available to display yet.</p>
-        ) : (
-          <svg
-            viewBox="0 0 360 190"
-            role="img"
-            aria-label="Bar chart showing the number of feedbacks for scores one through five"
-            style={{ width: '100%', maxWidth: '500px', display: 'block' }}
+        {scoreCounts.map(({ score, count }) => (
+          <div
+            key={score}
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '48px 1fr 32px',
+              alignItems: 'center',
+              gap: '12px',
+              marginBottom: '12px',
+            }}
           >
-            {[0, 1, 2, 3].map((step) => {
-              const y = 145 - step * 40;
+            <span>{score} ★</span>
 
-              return (
-                <g key={step}>
-                  <line
-                    x1="35"
-                    y1={y}
-                    x2="345"
-                    y2={y}
-                    stroke="#e5e7eb"
-                    strokeWidth="1"
-                  />
-                  <text
-                    x="25"
-                    y={y + 4}
-                    fontSize="10"
-                    textAnchor="end"
-                    fill="#666"
-                  >
-                    {Math.round((maxCount * step) / 3)}
-                  </text>
-                </g>
-              );
-            })}
-
-            {scoreCounts.map(({ score, count }, index) => {
-              const barHeight = (count / maxCount) * 120;
-              const x = 48 + index * 60;
-              const y = 145 - barHeight;
-
-              return (
-                <g key={score}>
-                  <rect
-                    x={x}
-                    y={y}
-                    width="34"
-                    height={barHeight}
-                    rx="4"
-                    fill="#4059a8"
-                  />
-                  <text
-                    x={x + 17}
-                    y={Math.max(12, y - 6)}
-                    fontSize="11"
-                    textAnchor="middle"
-                    fill="#222"
-                  >
-                    {count}
-                  </text>
-                  <text
-                    x={x + 17}
-                    y="165"
-                    fontSize="12"
-                    textAnchor="middle"
-                    fill="#444"
-                  >
-                    {score}
-                  </text>
-                </g>
-              );
-            })}
-
-            <text
-              x="190"
-              y="185"
-              fontSize="11"
-              textAnchor="middle"
-              fill="#666"
+            <div
+              style={{
+                background: '#eee',
+                height: '12px',
+                borderRadius: '10px',
+                overflow: 'hidden',
+              }}
             >
-              Score
-            </text>
-          </svg>
-        )}
+              <div
+                style={{
+                  width: `${(count / maxCount) * 100}%`,
+                  height: '100%',
+                  background: '#f59e0b',
+                  borderRadius: '10px',
+                  transition: 'width 0.2s',
+                }}
+              />
+            </div>
+
+            <span style={{ textAlign: 'right' }}>{count}</span>
+          </div>
+        ))}
       </section>
 
       {showForm && (
         <form
           onSubmit={handleSubmit}
           style={{
-            border: '1px solid #ddd',
+            border: '1px solid #d1d5db',
             borderRadius: '10px',
             padding: '20px',
             marginBottom: '24px',
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-            gap: '14px',
+            gap: '16px',
+            background: '#fafafa',
           }}
         >
-          <h3 style={{ gridColumn: '1 / -1', margin: 0 }}>
+          <h2
+            style={{
+              gridColumn: '1 / -1',
+              margin: 0,
+              fontSize: '20px',
+            }}
+          >
             {editingId === null ? 'Create feedback' : 'Edit feedback'}
-          </h3>
+          </h2>
 
           <label>
             Author ID *
@@ -473,22 +522,24 @@ function ICView({ ic, onBack }: ICViewProps) {
               name="author_id"
               type="number"
               min="1"
-              required
+              step="1"
               value={form.author_id}
               onChange={handleFormChange}
+              required
               style={inputStyle}
             />
           </label>
 
           <label>
-            Project ID
+            Project ID *
             <input
               name="project_id"
               type="number"
               min="1"
+              step="1"
               value={form.project_id}
               onChange={handleFormChange}
-              placeholder="Optional"
+              required
               style={inputStyle}
             />
           </label>
@@ -498,9 +549,9 @@ function ICView({ ic, onBack }: ICViewProps) {
             <input
               name="date"
               type="date"
-              required
               value={form.date}
               onChange={handleFormChange}
+              required
               style={inputStyle}
             />
           </label>
@@ -510,10 +561,10 @@ function ICView({ ic, onBack }: ICViewProps) {
             <input
               name="source_name"
               type="text"
-              required
               value={form.source_name}
               onChange={handleFormChange}
-              placeholder="e.g. Code review"
+              required
+              placeholder="e.g. Interview, survey"
               style={inputStyle}
             />
           </label>
@@ -527,11 +578,11 @@ function ICView({ ic, onBack }: ICViewProps) {
               required
               style={inputStyle}
             >
-              {[1, 2, 3, 4, 5].map((score) => (
-                <option key={score} value={score}>
-                  {score}
-                </option>
-              ))}
+              <option value="1">1 - Very poor</option>
+              <option value="2">2 - Poor</option>
+              <option value="3">3 - Average</option>
+              <option value="4">4 - Good</option>
+              <option value="5">5 - Excellent</option>
             </select>
           </label>
 
@@ -553,9 +604,12 @@ function ICView({ ic, onBack }: ICViewProps) {
               name="comment"
               value={form.comment}
               onChange={handleFormChange}
-              rows={3}
-              placeholder="Write feedback..."
-              style={{ ...inputStyle, resize: 'vertical' }}
+              rows={4}
+              placeholder="Write a comment..."
+              style={{
+                ...inputStyle,
+                resize: 'vertical',
+              }}
             />
           </label>
 
@@ -572,9 +626,9 @@ function ICView({ ic, onBack }: ICViewProps) {
               disabled={saving}
               style={{
                 ...buttonStyle,
-                background: '#243b80',
-                color: 'white',
-                opacity: saving ? 0.6 : 1,
+                background: saving ? '#9ca3af' : '#2563eb',
+                color: '#fff',
+                cursor: saving ? 'wait' : 'pointer',
               }}
             >
               {saving
@@ -590,7 +644,7 @@ function ICView({ ic, onBack }: ICViewProps) {
               disabled={saving}
               style={{
                 ...buttonStyle,
-                background: '#eee',
+                background: '#e5e7eb',
                 color: '#222',
               }}
             >
@@ -600,112 +654,147 @@ function ICView({ ic, onBack }: ICViewProps) {
         </form>
       )}
 
-      <h3>Feedback history</h3>
+      <section>
+        <h2 style={{ fontSize: '20px' }}>Feedback history</h2>
 
-      {loading && <p>Loading feedback...</p>}
-
-      {!loading && sortedFeedbacks.length === 0 && (
-        <p>No feedback entries found for this IC.</p>
-      )}
-
-      <div style={{ display: 'grid', gap: '14px' }}>
-        {!loading &&
-          sortedFeedbacks.map((item) => (
-            <article
-              key={item.id}
-              style={{
-                border: '1px solid #e1e1e1',
-                borderRadius: '10px',
-                padding: '16px',
-              }}
-            >
-              <div
+        {loading ? (
+          <p>Loading feedback...</p>
+        ) : sortedFeedbacks.length === 0 ? (
+          <p style={{ color: '#666' }}>
+            No feedback has been registered for this IC yet.
+          </p>
+        ) : (
+          <div
+            style={{
+              display: 'grid',
+              gap: '16px',
+            }}
+          >
+            {sortedFeedbacks.map((item) => (
+              <article
+                key={item.id}
                 style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'flex-start',
-                  gap: '12px',
-                  flexWrap: 'wrap',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '10px',
+                  padding: '18px',
+                  background: '#fff',
                 }}
               >
-                <div>
-                  <strong>{item.source_name}</strong>
-                  <p style={{ color: '#666', margin: '5px 0' }}>
-                    {item.date?.slice(0, 10) ?? 'No date'}
-                    {' · '}
-                    {item.project_name ?? (
-                      item.project_id ? `Project #${item.project_id}` : 'No project'
-                    )}
-                  </p>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-start',
+                    flexWrap: 'wrap',
+                    gap: '12px',
+                  }}
+                >
+                  <div>
+                    <p
+                      style={{
+                        margin: '0 0 8px',
+                        fontSize: '18px',
+                        fontWeight: 700,
+                      }}
+                    >
+                      {'★'.repeat(
+                        Math.max(
+                          0,
+                          Math.min(5, Number(item.score))
+                        )
+                      )}
+                      <span style={{ color: '#d1d5db' }}>
+                        {'★'.repeat(
+                          5 -
+                            Math.max(
+                              0,
+                              Math.min(5, Number(item.score))
+                            )
+                        )}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: '14px',
+                          marginLeft: '8px',
+                        }}
+                      >
+                        {item.score}/5
+                      </span>
+                    </p>
+
+                    <p style={{ margin: '0 0 6px', color: '#666' }}>
+                      {item.date?.slice(0, 10) || 'No date'} ·{' '}
+                      {item.source_name}
+                    </p>
+
+                    <p style={{ margin: '0 0 6px', color: '#666' }}>
+                      Author ID: {item.author_id} · Project ID:{' '}
+                      {item.project_id ?? '—'}
+                    </p>
+                  </div>
+
+                  <div
+                    style={{
+                      display: 'flex',
+                      gap: '8px',
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => startEdit(item)}
+                      style={{
+                        ...buttonStyle,
+                        background: '#e5e7eb',
+                        color: '#222',
+                      }}
+                    >
+                      Edit
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => void handleDelete(item.id)}
+                      style={{
+                        ...buttonStyle,
+                        background: '#fee2e2',
+                        color: '#991b1b',
+                      }}
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
 
-                <strong style={{ fontSize: '18px' }}>
-                  {item.score} / 5
-                </strong>
-              </div>
-
-              <p style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
-                {item.comment || 'No comment provided.'}
-              </p>
-
-              {item.screenshot_url && (
-                <p>
-                  <a
-                    href={item.screenshot_url}
-                    target="_blank"
-                    rel="noreferrer"
+                {item.comment && (
+                  <p
+                    style={{
+                      whiteSpace: 'pre-wrap',
+                      overflowWrap: 'anywhere',
+                      margin: '14px 0 0',
+                    }}
                   >
-                    View screenshot
-                  </a>
-                </p>
-              )}
+                    {item.comment}
+                  </p>
+                )}
 
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                <button
-                  type="button"
-                  onClick={() => startEdit(item)}
-                  style={{
-                    ...buttonStyle,
-                    background: '#e8edff',
-                    color: '#243b80',
-                  }}
-                >
-                  Edit
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => void handleDelete(item.id)}
-                  style={{
-                    ...buttonStyle,
-                    background: '#fde8e7',
-                    color: '#a3211b',
-                  }}
-                >
-                  Delete
-                </button>
-              </div>
-            </article>
-          ))}
-      </div>
+                {item.screenshot_url && (
+                  <p style={{ marginBottom: 0 }}>
+                    <a
+                      href={item.screenshot_url}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      View screenshot
+                    </a>
+                  </p>
+                )}
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   );
 }
-
-const statCardStyle = {
-  border: '1px solid #e1e1e1',
-  borderRadius: '10px',
-  padding: '18px',
-};
-
-const statLabelStyle = {
-  color: '#666',
-  margin: '0 0 8px',
-  fontSize: '14px',
-};
-
-const statValueStyle = {
-  fontSize: '26px',
-};
 
 export default ICView;
