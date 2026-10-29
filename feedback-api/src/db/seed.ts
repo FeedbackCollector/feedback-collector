@@ -21,18 +21,21 @@ async function seed() {
     const userPasswordHash = await bcrypt.hash("manager", 10);
     const [apollo, atlas] = await Project.bulkCreate([{ name: "Apollo" }, { name: "Atlas" }]);
 
-    const [, manager] = await User.bulkCreate([
+    const [, manager, manager2] = await User.bulkCreate([
     { name :"director" ,email: "director@example.com", passwordHash: adminPasswordHash, role: "director" },
     { name : "manager"  ,email: "manager@example.com", passwordHash: userPasswordHash, area_id: 2 },
+    { name : "manager2" ,email: "manager2@example.com", passwordHash: userPasswordHash, area_id: 2 },
 
 ]);
-const [ana, luis, carla, diego, sofia, mateo] = await ICs.bulkCreate([
+const [ana, luis, carla, diego, sofia, mateo, , valeria] = await ICs.bulkCreate([
   { name: "Ana Torres",    title: "Software Engineer",        manager_id: manager.id, entries: 0 },
   { name: "Luis Gomez",    title: "QA Engineer",              manager_id: manager.id, entries: 0 },
   { name: "Carla Mendez",  title: "AI Engineer",              manager_id: manager.id, entries: 0 },
   { name: "Diego Ruiz",    title: "DevOps Engineer",          manager_id: manager.id, entries: 0 },
   { name: "Sofia Castro",  title: "Frontend Developer",       manager_id: manager.id, entries: 0 },
   { name: "Mateo Herrera", title: "Data Analyst",             manager_id: manager.id, entries: 0 },
+  { name: "Julia Ortiz",   title: "Backend Engineer",         manager_id: manager2.id, entries: 0 },
+  { name: "Valeria Rios",  title: "Product Designer",         manager_id: manager2.id, entries: 0 },
 ]);
 
     await Feedback.bulkCreate([
@@ -42,6 +45,8 @@ const [ana, luis, carla, diego, sofia, mateo] = await ICs.bulkCreate([
     source_name: "Code review", score: 4, comment: "Buen código", screenshot_url: null },
   { author_id: manager.id, ic_id: luis.IC_id, project_id: apollo.id, date: "2026-10-05",
     source_name: "Standup", score: 3, comment: null, screenshot_url: null },
+  { author_id: manager2.id, ic_id: valeria.IC_id, project_id: atlas.id, date: "2026-10-12",
+    source_name: "Retro", score: 4, comment: "Gran trabajo de diseño", screenshot_url: null },
 ]);
 
 

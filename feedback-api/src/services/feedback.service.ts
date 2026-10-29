@@ -17,14 +17,21 @@ async function checkReferences(data: UpdateFeedback): Promise<ReferenceError | n
         return null;
 }
 
-export async function getAllFeedbacksService(): Promise<Feedback[]> {
-    return FeedbackRepository.getAllFeedbacks();
+type Caller = { id: number; role: string };
+
+export async function getAllFeedbacksService(user: Caller): Promise<Feedback[]> {
+    if (user.role === "director") return FeedbackRepository.getAllFeedbacks();
+    return FeedbackRepository.getAllFeedbacks({ managerId: user.id });
 }
 
-export async function getFeedbackByIdService(id: number): Promise<Feedback | "FEEDBACK_NOT_FOUND"> {
+export async function getFeedbackByIdService(id: number, user: Caller): Promise<Feedback | "FEEDBACK_NOT_FOUND"> {
     const feedback = await FeedbackRepository.getFeedbackByID(id);
-    
     if (!feedback) return "FEEDBACK_NOT_FOUND";
+
+    if (user.role !== "director") {
+        const ic = await icFindByID(feedback.ic_id);
+        if (!ic || ic.manager_id !== user.id) return "FEEDBACK_NOT_FOUND";
+    }
     return feedback;
 }
 

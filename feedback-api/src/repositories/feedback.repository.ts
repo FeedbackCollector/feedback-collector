@@ -1,4 +1,4 @@
-import { Feedback as FeedbackModel } from "../models/Index.ts";
+import { Feedback as FeedbackModel, ICs } from "../models/Index.ts";
 import { Feedback,NewFeedback, UpdateFeedback } from "../types/feedback.ts";
 
 export async function getFeedbackByID(id: number): Promise<Feedback | null> {
@@ -7,8 +7,13 @@ export async function getFeedbackByID(id: number): Promise<Feedback | null> {
 }
 
 
-export async function getAllFeedbacks(): Promise<Feedback[]> {
-    const rows = await FeedbackModel.findAll();
+export async function getAllFeedbacks(filter?: { managerId: number }): Promise<Feedback[]> {
+    let where = {};
+    if (filter) {
+        const ics = await ICs.findAll({ where: { manager_id: filter.managerId }, attributes: ["IC_id"] });
+        where = { ic_id: ics.map(ic => ic.IC_id) }; 
+    }
+    const rows = await FeedbackModel.findAll({ where });
     return rows.map(row => row.toJSON());
 }
 
