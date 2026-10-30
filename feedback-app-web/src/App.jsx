@@ -19,7 +19,7 @@ const managerRoutes = [
 
 const directorRoutes = [
   { path: '/dashboard', title: 'Dashboard', element: <Dashboard /> },
-  { path: '/my-management', title: 'My Management', element: <MyManagement /> },
+  { path: '/my-management', title: 'My Managers', element: <MyManagement /> },
 ]
 
 function AppLayout({ links }) {
