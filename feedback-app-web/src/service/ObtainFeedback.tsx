@@ -1,6 +1,6 @@
 import type { Feedback } from '../types/feedback';
 
-const URLEndpoint = 'https://feedback-collector-fycv.onrender.com/feedback';
+const URLEndpoint = 'http://localhost:3000/feedback';
 
 export async function obtainFeedback(): Promise<Feedback[]> {
   try {
