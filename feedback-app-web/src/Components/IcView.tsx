@@ -1,7 +1,11 @@
-
-import { useEffect, useMemo, useState, type FormEvent, type ChangeEvent } from 'react';
-import type { Feedback } from '../types/feedback';
+import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react';
+import type { Feedback, Project } from '../types/feedback';
 import { obtainFeedback } from '../service/ObtainFeedback';
+
+import { useAuthStore } from '../store/authStore';
+import { formatDate, getInitials } from '../utils/feedbackFormat';
+import { getProjects } from '../service/ObtainProjects';
+import '../styles/IcView.css';
 
 type ICInfo = {
   IC_id: number;
@@ -15,78 +19,81 @@ type ICViewProps = {
   onBack: () => void;
 };
 
-type FeedbackForm = {
-  author_id: string;
+type EntryForm = {
   project_id: string;
   date: string;
   source_name: string;
-  score: string;
+  source_title: string;
   comment: string;
+  score: string;
   screenshot_url: string;
 };
 
-const API_URL = 'https://feedback-api-latest-moe8.onrender.com/feedback';
+const API_URL = 'https://localhost:3000/feedback';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
-const emptyForm: FeedbackForm = {
-  author_id: '',
+const emptyForm = (): EntryForm => ({
   project_id: '',
   date: today(),
   source_name: '',
-  score: '3',
+  source_title: '',
   comment: '',
+  score: '3',
   screenshot_url: '',
-};
+});
 
-const inputStyle = {
-  width: '100%',
-  boxSizing: 'border-box' as const,
-  padding: '10px',
-  border: '1px solid #ccc',
-  borderRadius: '6px',
-  fontSize: '14px',
-  marginTop: '6px',
-};
+function Sparkline({ scores }: { scores: number[] }) {
+  if (scores.length < 2) {
+    return <svg className="icv-sparkline" aria-hidden="true" />;
+  }
 
-const buttonStyle = {
-  padding: '9px 14px',
-  border: 'none',
-  borderRadius: '6px',
-  cursor: 'pointer',
-  fontWeight: 600 as const,
-};
+  const width = 120;
+  const height = 40;
+  const pad = 4;
+  const step = width / (scores.length - 1);
 
-const statCardStyle = {
-  background: '#f7f8fa',
-  border: '1px solid #e5e7eb',
-  borderRadius: '10px',
-  padding: '18px',
-  flex: '1',
-  minWidth: '140px',
-};
+  const points = scores.map((score, index) => {
+    const x = index * step;
+    const y = height - pad - ((score - 1) / 4) * (height - pad * 2);
+    return { x, y };
+  });
 
-const statLabelStyle = {
-  margin: 0,
-  fontSize: '13px',
-  color: '#666',
-};
+  const line = points.map((p) => `${p.x},${p.y}`).join(' ');
+  const area = `0,${height} ${line} ${width},${height}`;
 
-const statValueStyle = {
-  margin: '8px 0 0',
-  fontSize: '26px',
-  fontWeight: 700,
-};
+  return (
+    <svg
+      className="icv-sparkline"
+      viewBox={`0 0 ${width} ${height}`}
+      aria-label="Score trend"
+    >
+      <polygon points={area} fill="var(--primary-light)" />
+      <polyline
+        points={line}
+        fill="none"
+        stroke="var(--primary)"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
 
 function ICView({ ic, onBack }: ICViewProps) {
+  const currentUserId = useAuthStore((state) => state.user?.id);
+
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [form, setForm] = useState<FeedbackForm>({ ...emptyForm });
-  const [showForm, setShowForm] = useState(false);
+
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<Feedback | null>(null);
+  const [form, setForm] = useState<EntryForm>(emptyForm);
+  const [formError, setFormError] = useState('');
 
   async function loadFeedbacks() {
     setLoading(true);
@@ -107,118 +114,99 @@ function ICView({ ic, onBack }: ICViewProps) {
     void loadFeedbacks();
   }, [ic.IC_id]);
 
-  const sortedFeedbacks = useMemo(
+  useEffect(() => {
+    getProjects().then(setProjects);
+  }, []);
+
+  const newestFirst = useMemo(
+    () => [...feedbacks].sort((a, b) => (b.date ?? '').localeCompare(a.date ?? '')),
+    [feedbacks]
+  );
+
+  const oldestFirstScores = useMemo(
     () =>
-      [...feedbacks].sort((a, b) =>
-        (b.date ?? '').localeCompare(a.date ?? '')
-      ),
+      [...feedbacks]
+        .sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''))
+        .map((item) => Number(item.score)),
     [feedbacks]
   );
 
   const averageScore = useMemo(() => {
-    if (feedbacks.length === 0) return 0;
-
-    return (
-      feedbacks.reduce((total, item) => total + Number(item.score), 0) /
-      feedbacks.length
-    );
+    if (feedbacks.length === 0) return null;
+    const total = feedbacks.reduce((sum, item) => sum + Number(item.score), 0);
+    return Math.round(total / feedbacks.length);
   }, [feedbacks]);
 
-  const scoreCounts = useMemo(
-    () =>
-      [1, 2, 3, 4, 5].map((score) => ({
-        score,
-        count: feedbacks.filter(
-          (item) => Number(item.score) === score
-        ).length,
-      })),
-    [feedbacks]
-  );
+  function projectNameOf(item: Feedback): string {
+    const match = projects.find((project) => project.id === item.project_id);
+    return match?.name ?? item.project_name ?? '—';
+  }
 
-  const maxCount = Math.max(1, ...scoreCounts.map((item) => item.count));
-
-  function handleFormChange(
-    event: ChangeEvent<
-      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
-    >
+  function handleFieldChange(
+    event: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) {
     const { name, value } = event.target;
-
-    setForm((current) => ({
-      ...current,
-      [name]: value,
-    }));
+    setForm((current) => ({ ...current, [name]: value }));
   }
 
-  function startCreate() {
-    setEditingId(null);
-    setForm({ ...emptyForm });
-    setShowForm(true);
+  function openCreate() {
+    setEditingItem(null);
+    setForm(emptyForm());
+    setFormError('');
     setError('');
     setSuccess('');
+    setModalOpen(true);
   }
 
-  function startEdit(item: Feedback) {
-    setEditingId(item.id);
+  function openEdit(item: Feedback) {
+    setEditingItem(item);
     setForm({
-      author_id: String(item.author_id),
-      project_id:
-        item.project_id === null ? '' : String(item.project_id),
+      project_id: item.project_id === null ? '' : String(item.project_id),
       date: item.date?.slice(0, 10) || today(),
       source_name: item.source_name ?? '',
-      score: String(item.score),
+      source_title: '',
       comment: item.comment ?? '',
+      score: String(item.score),
       screenshot_url: item.screenshot_url ?? '',
     });
-
-    setShowForm(true);
+    setFormError('');
     setError('');
     setSuccess('');
+    setModalOpen(true);
   }
 
-  function cancelForm() {
-    setShowForm(false);
-    setEditingId(null);
-    setForm({ ...emptyForm });
+  function closeModal() {
+    setModalOpen(false);
+    setEditingItem(null);
+    setFormError('');
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError('');
-    setSuccess('');
+    setFormError('');
 
-    const authorId = Number(form.author_id);
+    const authorId = editingItem ? editingItem.author_id : currentUserId;
     const projectId = Number(form.project_id);
     const score = Number(form.score);
 
-    if (!Number.isInteger(authorId) || authorId <= 0) {
-      setError('Enter a valid positive author ID.');
+    if (!authorId) {
+      setFormError('Could not identify the logged-in user. Please log in again.');
       return;
     }
-
-    // project_id is required by the API.
-    if (form.project_id.trim() === '') {
-      setError('You must enter a project ID.');
+    if (form.project_id === '' || !Number.isInteger(projectId) || projectId <= 0) {
+      setFormError('Select a project.');
       return;
     }
-
-    if (!Number.isInteger(projectId) || projectId <= 0) {
-      setError('Project ID must be a positive integer.');
-      return;
-    }
-
     if (!form.date) {
-      setError('Date is required.');
+      setFormError('Date is required.');
       return;
     }
-
     if (!form.source_name.trim()) {
-      setError('Source is required.');
+      setFormError('Source is required.');
       return;
     }
-
     if (!Number.isInteger(score) || score < 1 || score > 5) {
-      setError('Score must be between 1 and 5.');
+      setFormError('Score must be between 1 and 5.');
       return;
     }
 
@@ -236,46 +224,30 @@ function ICView({ ic, onBack }: ICViewProps) {
     setSaving(true);
 
     try {
+      const isEditing = editingItem !== null;
       const response = await fetch(
-        editingId === null
-          ? API_URL
-          : `${API_URL}/${editingId}`,
+        isEditing ? `${API_URL}/${editingItem.id}` : API_URL,
         {
-          method: editingId === null ? 'POST' : 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          method: isEditing ? 'PATCH' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         }
       );
 
       if (!response.ok) {
         const responseText = await response.text();
-
-        throw new Error(
-          responseText ||
-            `Request failed with status ${response.status}`
-        );
+        throw new Error(responseText || `Request failed with status ${response.status}`);
       }
 
-      const wasEditing = editingId !== null;
-
-      cancelForm();
-
-      setSuccess(
-        wasEditing
-          ? 'Feedback updated successfully.'
-          : 'Feedback created successfully.'
-      );
-
+      closeModal();
+      setSuccess(isEditing ? 'Entry updated successfully.' : 'Entry created successfully.');
       await loadFeedbacks();
     } catch (err) {
       console.error('Error saving feedback:', err);
-
-      setError(
+      setFormError(
         err instanceof Error
-          ? `Could not save feedback: ${err.message}`
-          : 'Could not save feedback.'
+          ? `Could not save entry: ${err.message}`
+          : 'Could not save entry.'
       );
     } finally {
       setSaving(false);
@@ -284,515 +256,289 @@ function ICView({ ic, onBack }: ICViewProps) {
 
   async function handleDelete(id: number) {
     const confirmed = window.confirm(
-      'Are you sure you want to delete this feedback? This action cannot be undone.'
+      'Are you sure you want to delete this entry? This action cannot be undone.'
     );
-
     if (!confirmed) return;
 
     setError('');
     setSuccess('');
 
     try {
-      const response = await fetch(`${API_URL}/${id}`, {
-        method: 'DELETE',
-      });
+      const response = await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
 
       if (!response.ok) {
         const responseText = await response.text();
-
-        throw new Error(
-          responseText ||
-            `Request failed with status ${response.status}`
-        );
+        throw new Error(responseText || `Request failed with status ${response.status}`);
       }
 
-      setFeedbacks((current) =>
-        current.filter((item) => item.id !== id)
-      );
+      setFeedbacks((current) => current.filter((item) => item.id !== id));
+      setSuccess('Entry deleted successfully.');
 
-      setSuccess('Feedback deleted successfully.');
-
-      if (editingId === id) {
-        cancelForm();
+      if (editingItem?.id === id) {
+        closeModal();
       }
     } catch (err) {
       console.error('Error deleting feedback:', err);
-
       setError(
         err instanceof Error
-          ? `Could not delete feedback: ${err.message}`
-          : 'Could not delete feedback.'
+          ? `Could not delete entry: ${err.message}`
+          : 'Could not delete entry.'
       );
     }
   }
 
   return (
-    <div
-      style={{
-        padding: '20px',
-        fontFamily: 'sans-serif',
-        color: '#222',
-      }}
-    >
-      <button
-        type="button"
-        onClick={onBack}
-        style={{
-          ...buttonStyle,
-          background: '#eee',
-          color: '#222',
-          marginBottom: '20px',
-        }}
-      >
-        ← Back to Feedback Log
-      </button>
-
-      <header
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '16px',
-          marginBottom: '24px',
-        }}
-      >
-        <div>
-          <h1 style={{ margin: '0 0 8px' }}>{ic.name}</h1>
-          <p style={{ margin: 0, color: '#666' }}>{ic.title}</p>
-          <p style={{ margin: '6px 0 0', color: '#666' }}>
-            IC ID: {ic.IC_id}
-          </p>
+    <div className="icv-page">
+      <header className="icv-topbar">
+        <div className="icv-title-group">
+          <button
+            type="button"
+            className="icv-back-btn"
+            onClick={onBack}
+            aria-label="Back to Feedback Log"
+          >
+            <i className="fa-solid fa-arrow-left" />
+          </button>
+          <h1 className="icv-title">{ic.name}</h1>
         </div>
 
-        <button
-          type="button"
-          onClick={startCreate}
-          style={{
-            ...buttonStyle,
-            background: '#2563eb',
-            color: '#fff',
-          }}
-        >
-          + Add feedback
+        <button type="button" className="icv-primary-btn" onClick={openCreate}>
+          <i className="fa-solid fa-plus" />
+          New Entry
         </button>
       </header>
 
-      {error && (
-        <div
-          role="alert"
-          style={{
-            background: '#fee2e2',
-            color: '#991b1b',
-            padding: '12px',
-            borderRadius: '6px',
-            marginBottom: '16px',
-            overflowWrap: 'anywhere',
-          }}
-        >
-          {error}
-        </div>
-      )}
+      {error && <div role="alert" className="icv-alert is-error">{error}</div>}
+      {success && <div role="status" className="icv-alert is-success">{success}</div>}
 
-      {success && (
-        <div
-          role="status"
-          style={{
-            background: '#dcfce7',
-            color: '#166534',
-            padding: '12px',
-            borderRadius: '6px',
-            marginBottom: '16px',
-          }}
-        >
-          {success}
-        </div>
-      )}
-
-      <section
-        style={{
-          display: 'flex',
-          gap: '16px',
-          flexWrap: 'wrap',
-          marginBottom: '24px',
-        }}
-      >
-        <div style={statCardStyle}>
-          <p style={statLabelStyle}>Total feedbacks</p>
-          <p style={statValueStyle}>{feedbacks.length}</p>
-        </div>
-
-        <div style={statCardStyle}>
-          <p style={statLabelStyle}>Average score</p>
-          <p style={statValueStyle}>
-            {feedbacks.length > 0 ? averageScore.toFixed(1) : '—'}
-            <span style={{ fontSize: '15px', color: '#777' }}>
-              {' '}
-              / 5
-            </span>
-          </p>
-        </div>
-
-        <div style={statCardStyle}>
-          <p style={statLabelStyle}>Latest feedback</p>
-          <p style={{ ...statValueStyle, fontSize: '18px' }}>
-            {sortedFeedbacks[0]?.date
-              ? sortedFeedbacks[0].date.slice(0, 10)
-              : '—'}
-          </p>
-        </div>
-      </section>
-
-      <section
-        style={{
-          border: '1px solid #e5e7eb',
-          borderRadius: '10px',
-          padding: '20px',
-          marginBottom: '24px',
-        }}
-      >
-        <h2 style={{ marginTop: 0, fontSize: '18px' }}>
-          Score distribution
-        </h2>
-
-        {scoreCounts.map(({ score, count }) => (
-          <div
-            key={score}
-            style={{
-              display: 'grid',
-              gridTemplateColumns: '48px 1fr 32px',
-              alignItems: 'center',
-              gap: '12px',
-              marginBottom: '12px',
-            }}
-          >
-            <span>{score} ★</span>
-
-            <div
-              style={{
-                background: '#eee',
-                height: '12px',
-                borderRadius: '10px',
-                overflow: 'hidden',
-              }}
-            >
-              <div
-                style={{
-                  width: `${(count / maxCount) * 100}%`,
-                  height: '100%',
-                  background: '#f59e0b',
-                  borderRadius: '10px',
-                  transition: 'width 0.2s',
-                }}
-              />
-            </div>
-
-            <span style={{ textAlign: 'right' }}>{count}</span>
+      <section className="icv-summary">
+        <div className="icv-person">
+          <div className="icv-avatar">{getInitials(ic.name)}</div>
+          <div>
+            <div className="icv-person-name">{ic.name}</div>
+            <div className="icv-person-role">{ic.title}</div>
           </div>
-        ))}
-      </section>
+        </div>
 
-      {showForm && (
-        <form
-          onSubmit={handleSubmit}
-          style={{
-            border: '1px solid #d1d5db',
-            borderRadius: '10px',
-            padding: '20px',
-            marginBottom: '24px',
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-            gap: '16px',
-            background: '#fafafa',
-          }}
-        >
-          <h2
-            style={{
-              gridColumn: '1 / -1',
-              margin: 0,
-              fontSize: '20px',
-            }}
-          >
-            {editingId === null ? 'Create feedback' : 'Edit feedback'}
-          </h2>
-
-          <label>
-            Author ID *
-            <input
-              name="author_id"
-              type="number"
-              min="1"
-              step="1"
-              value={form.author_id}
-              onChange={handleFormChange}
-              required
-              style={inputStyle}
-            />
-          </label>
-
-          <label>
-            Project ID *
-            <input
-              name="project_id"
-              type="number"
-              min="1"
-              step="1"
-              value={form.project_id}
-              onChange={handleFormChange}
-              required
-              style={inputStyle}
-            />
-          </label>
-
-          <label>
-            Date *
-            <input
-              name="date"
-              type="date"
-              value={form.date}
-              onChange={handleFormChange}
-              required
-              style={inputStyle}
-            />
-          </label>
-
-          <label>
-            Source *
-            <input
-              name="source_name"
-              type="text"
-              value={form.source_name}
-              onChange={handleFormChange}
-              required
-              placeholder="e.g. Interview, survey"
-              style={inputStyle}
-            />
-          </label>
-
-          <label>
-            Score *
-            <select
-              name="score"
-              value={form.score}
-              onChange={handleFormChange}
-              required
-              style={inputStyle}
-            >
-              <option value="1">1 - Very poor</option>
-              <option value="2">2 - Poor</option>
-              <option value="3">3 - Average</option>
-              <option value="4">4 - Good</option>
-              <option value="5">5 - Excellent</option>
-            </select>
-          </label>
-
-          <label>
-            Screenshot URL
-            <input
-              name="screenshot_url"
-              type="url"
-              value={form.screenshot_url}
-              onChange={handleFormChange}
-              placeholder="https://..."
-              style={inputStyle}
-            />
-          </label>
-
-          <label style={{ gridColumn: '1 / -1' }}>
-            Comment
-            <textarea
-              name="comment"
-              value={form.comment}
-              onChange={handleFormChange}
-              rows={4}
-              placeholder="Write a comment..."
-              style={{
-                ...inputStyle,
-                resize: 'vertical',
-              }}
-            />
-          </label>
-
-          <div
-            style={{
-              gridColumn: '1 / -1',
-              display: 'flex',
-              gap: '10px',
-              flexWrap: 'wrap',
-            }}
-          >
-            <button
-              type="submit"
-              disabled={saving}
-              style={{
-                ...buttonStyle,
-                background: saving ? '#9ca3af' : '#2563eb',
-                color: '#fff',
-                cursor: saving ? 'wait' : 'pointer',
-              }}
-            >
-              {saving
-                ? 'Saving...'
-                : editingId === null
-                  ? 'Create feedback'
-                  : 'Save changes'}
-            </button>
-
-            <button
-              type="button"
-              onClick={cancelForm}
-              disabled={saving}
-              style={{
-                ...buttonStyle,
-                background: '#e5e7eb',
-                color: '#222',
-              }}
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
-      )}
-
-      <section>
-        <h2 style={{ fontSize: '20px' }}>Feedback history</h2>
-
-        {loading ? (
-          <p>Loading feedback...</p>
-        ) : sortedFeedbacks.length === 0 ? (
-          <p style={{ color: '#666' }}>
-            No feedback has been registered for this IC yet.
-          </p>
-        ) : (
-          <div
-            style={{
-              display: 'grid',
-              gap: '16px',
-            }}
-          >
-            {sortedFeedbacks.map((item) => (
-              <article
-                key={item.id}
-                style={{
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '10px',
-                  padding: '18px',
-                  background: '#fff',
-                }}
+        <div className="icv-stats">
+          <div className="icv-stat">
+            <span className="icv-stat-label">Average</span>
+            {averageScore === null ? (
+              <span className="icv-stat-value">—</span>
+            ) : (
+              <span
+                className="score-badge icv-avg-badge"
+                data-score={averageScore}
+                title="Rounded average score"
               >
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'flex-start',
-                    flexWrap: 'wrap',
-                    gap: '12px',
-                  }}
-                >
-                  <div>
-                    <p
-                      style={{
-                        margin: '0 0 8px',
-                        fontSize: '18px',
-                        fontWeight: 700,
-                      }}
-                    >
-                      {'★'.repeat(
-                        Math.max(
-                          0,
-                          Math.min(5, Number(item.score))
-                        )
-                      )}
-                      <span style={{ color: '#d1d5db' }}>
-                        {'★'.repeat(
-                          5 -
-                            Math.max(
-                              0,
-                              Math.min(5, Number(item.score))
-                            )
-                        )}
-                      </span>
-                      <span
-                        style={{
-                          fontSize: '14px',
-                          marginLeft: '8px',
-                        }}
-                      >
-                        {item.score}/5
-                      </span>
-                    </p>
+                {averageScore}
+              </span>
+            )}
+          </div>
 
-                    <p style={{ margin: '0 0 6px', color: '#666' }}>
-                      {item.date?.slice(0, 10) || 'No date'} ·{' '}
-                      {item.source_name}
-                    </p>
+          <div className="icv-stat">
+            <span className="icv-stat-label">Entries</span>
+            <span className="icv-stat-value">{feedbacks.length}</span>
+          </div>
 
-                    <p style={{ margin: '0 0 6px', color: '#666' }}>
-                      Author ID: {item.author_id} · Project ID:{' '}
-                      {item.project_id ?? '—'}
-                    </p>
-                  </div>
+          <Sparkline scores={oldestFirstScores} />
+        </div>
+      </section>
 
-                  <div
-                    style={{
-                      display: 'flex',
-                      gap: '8px',
-                    }}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => startEdit(item)}
-                      style={{
-                        ...buttonStyle,
-                        background: '#e5e7eb',
-                        color: '#222',
-                      }}
-                    >
-                      Edit
-                    </button>
+      <section className="icv-entries">
+        {loading && <p className="icv-muted">Loading feedback...</p>}
 
-                    <button
-                      type="button"
-                      onClick={() => void handleDelete(item.id)}
-                      style={{
-                        ...buttonStyle,
-                        background: '#fee2e2',
-                        color: '#991b1b',
-                      }}
-                    >
-                      Delete
-                    </button>
-                  </div>
+        {!loading && newestFirst.length === 0 && (
+          <p className="icv-muted">No entries have been registered for this IC yet.</p>
+        )}
+
+        {!loading &&
+          newestFirst.map((item) => (
+            <article key={item.id} className="icv-entry animate-slide-up">
+              <div className="icv-entry-head animate-slide-up">
+                <div className="icv-entry-meta">
+                  <span className="score-badge" data-score={item.score}>
+                    {item.score}
+                  </span>
+                  <span>
+                    {formatDate(item.date)} · {projectNameOf(item)} · {item.source_name}
+                  </span>
                 </div>
 
-                {item.comment && (
-                  <p
-                    style={{
-                      whiteSpace: 'pre-wrap',
-                      overflowWrap: 'anywhere',
-                      margin: '14px 0 0',
-                    }}
+                <div className="icv-entry-actions">
+                  <button
+                    type="button"
+                    className="icv-icon-btn"
+                    onClick={() => openEdit(item)}
+                    aria-label="Edit entry"
                   >
-                    {item.comment}
-                  </p>
-                )}
+                    <i className="fa-solid fa-pen" />
+                  </button>
+                  <button
+                    type="button"
+                    className="icv-icon-btn is-danger"
+                    onClick={() => void handleDelete(item.id)}
+                    aria-label="Delete entry"
+                  >
+                    <i className="fa-solid fa-trash-can" />
+                  </button>
+                </div>
+              </div>
 
-                {item.screenshot_url && (
-                  <p style={{ marginBottom: 0 }}>
-                    <a
-                      href={item.screenshot_url}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      View screenshot
-                    </a>
-                  </p>
-                )}
-              </article>
-            ))}
-          </div>
-        )}
+              {item.comment && <p className="icv-entry-body">{item.comment}</p>}
+
+              {item.screenshot_url && (
+                <a href={item.screenshot_url} target="_blank" rel="noreferrer">
+                  <img
+                    className="icv-thumb"
+                    src={item.screenshot_url}
+                    alt="Screenshot attached to this entry"
+                  />
+                </a>
+              )}
+            </article>
+          ))}
       </section>
+
+      {modalOpen && (
+        <div className="icv-overlay" onClick={closeModal}>
+          <div
+            className="icv-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="icv-modal-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <form className="icv-form" onSubmit={handleSubmit}>
+              <h2 id="icv-modal-title">
+                {editingItem ? 'Edit Entry' : 'New Entry'}
+              </h2>
+
+              <label className="icv-field">
+                <span className="icv-label">Date</span>
+                <input
+                  className="input-control"
+                  name="date"
+                  type="date"
+                  value={form.date}
+                  onChange={handleFieldChange}
+                  required
+                />
+              </label>
+
+              <label className="icv-field">
+                <span className="icv-label">Project</span>
+                <select
+                  className="input-control"
+                  name="project_id"
+                  value={form.project_id}
+                  onChange={handleFieldChange}
+                  required
+                >
+                  <option value="">Select a project</option>
+                  {projects.map((project) => (
+                    
+                    <option key={project.id} value={String(project.id)}>
+                      {project.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="icv-field">
+                <span className="icv-label">Source (who this feedback is from)</span>
+                <input
+                  className="input-control"
+                  name="source_name"
+                  type="text"
+                  value={form.source_name}
+                  onChange={handleFieldChange}
+                  placeholder="e.g. Stakeholder Review, Peer Feedback"
+                  required
+                />
+              </label>
+
+              <label className="icv-field">
+                <span className="icv-label">Source title</span>
+                <input
+                  className="input-control"
+                  name="source_title"
+                  type="text"
+                  value={form.source_title}
+                  onChange={handleFieldChange}
+                  placeholder="e.g. Product Manager, Client, Peer"
+                />
+                <span className="icv-hint">
+                  Not saved yet: the API has no field for it.
+                </span>
+              </label>
+
+              <label className="icv-field">
+                <span className="icv-label">Comment</span>
+                <textarea
+                  name="comment"
+                  value={form.comment}
+                  onChange={handleFieldChange}
+                  rows={4}
+                />
+              </label>
+
+              <label className="icv-field">
+                <span className="icv-label">Score</span>
+                <select
+                  className="input-control"
+                  name="score"
+                  value={form.score}
+                  onChange={handleFieldChange}
+                  required
+                >
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                  <option value="3">3</option>
+                  <option value="4">4</option>
+                  <option value="5">5</option>
+                </select>
+              </label>
+
+              <label className="icv-field">
+                <span className="icv-label">Screenshot (optional)</span>
+                <input
+                  className="input-control"
+                  name="screenshot_url"
+                  type="url"
+                  value={form.screenshot_url}
+                  onChange={handleFieldChange}
+                  placeholder="https://..."
+                />
+              </label>
+
+              {formError && (
+                <div role="alert" className="icv-alert is-error">
+                  {formError}
+                </div>
+              )}
+
+              <div className="icv-modal-actions">
+                <button
+                  type="button"
+                  className="icv-ghost-btn"
+                  onClick={closeModal}
+                  disabled={saving}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="icv-primary-btn"
+                  disabled={saving}
+                >
+                  {saving ? 'Saving...' : 'Save'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

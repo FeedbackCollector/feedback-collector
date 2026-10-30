@@ -25,7 +25,7 @@ function ObtainICs() {
     setLoading(true);
     setIcs([]);
 
-    fetch(`https://feedback-api-latest-moe8.onrender.com/ics?manager_id=${managerId}`)
+    fetch(`https://localhost:3000/ics?manager_id=${managerId}`)
       .then((response) => {
         if (!response.ok) {
           throw new Error('Could not load ICs');

@@ -1,6 +1,6 @@
 import type { IC } from '../types/feedback';
 
-const URLEndpoint = 'https://feedback-api-latest-moe8.onrender.com/ics';
+const URLEndpoint = 'https://localhost:3000/ics';
 
 export async function obtainICs(): Promise<IC[]> {
   try {
