@@ -1,6 +1,6 @@
 import type { Feedback } from '../types/feedback';
 
-const URLEndpoint = 'https://feedback-api-latest-moe8.onrender.com/feedback';
+const URLEndpoint = 'https://localhost:3000/feedback';
 
 export async function obtainFeedback(): Promise<Feedback[]> {
   try {
