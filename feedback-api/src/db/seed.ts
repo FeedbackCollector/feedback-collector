@@ -27,7 +27,7 @@ async function seed() {
 ]);
 
     const [, manager] = await User.bulkCreate([
-    { name :"Martin Gonzalez" ,email: "director@example.com", passwordHash: adminPasswordHash, role: "Director" },
+    { name :"Martin Gonzalez" ,email: "director@example.com", passwordHash: adminPasswordHash, role: "director" },
     { name : "Carolina Méndez"  ,email: "manager@example.com", passwordHash: userPasswordHash, area_id: 2 },
 
 ]);
