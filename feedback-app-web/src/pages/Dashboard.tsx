@@ -1,4 +1,4 @@
-import DashboardComp from '../Components/Dashboard';
+import DashboardComp from '../components/Dashboard';
 
 export default function Dashboard() {
   return (

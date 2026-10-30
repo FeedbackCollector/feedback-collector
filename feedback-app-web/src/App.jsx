@@ -1,13 +1,13 @@
 import { BrowserRouter, Navigate, Outlet, useLocation, useRoutes } from 'react-router-dom'
-import { Header } from './Components/Header'
-import { NavBar } from './Components/Manager-Nav'
+import { Header } from './components/Header'
+import { NavBar } from './components/Manager-Nav'
 import { useAuthStore } from './store/authStore'
-import './App.css'
+import './styles/App.css'
 import MyICs from './pages/MyICs'
 import Dashboard from './pages/Dashboard'
 import Management from './pages/Management'
 import MyManagement from './pages/MyManagement'
-import FeedbackLogComp from './Components/Feedback-log-comp'
+import FeedbackLogComp from './components/Feedback-log-comp'
 import Login from './pages/login'
 
 const VALID_ROLES = ['manager', 'director']
@@ -19,7 +19,6 @@ const managerRoutes = [
 
 const directorRoutes = [
   { path: '/dashboard', title: 'Dashboard', element: <Dashboard /> },
-  { path: '/management', title: 'Management', element: <Management /> },
   { path: '/my-management', title: 'My Management', element: <MyManagement /> },
 ]
 
@@ -49,7 +48,7 @@ function AppRoutes() {
     ? (() => {
         const homePath = user.role === 'director' ? '/dashboard' : '/MyICs'
         const visibleRoutes = user.role === 'director'
-          ? [...directorRoutes, ...managerRoutes]
+          ? [...directorRoutes, ...managerRoutes, { path: '/management', title: 'Management', element: <Management /> }]
           : managerRoutes
         const links = visibleRoutes.map(({ path, title }) => ({ to: path, label: title }))
 

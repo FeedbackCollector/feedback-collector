@@ -1,4 +1,4 @@
-import './Header.css';
+import '../styles/Header.css';
 
 export function Header({ title }: { title: string }) {
   return (

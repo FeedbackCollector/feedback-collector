@@ -15,7 +15,6 @@ function ObtainICs() {
   const managerId = useAuthStore((state) => state.user?.id);
 
   useEffect(() => {
-    console.log("manager_id:", managerId);
     if (!managerId) {
       setIcs([]);
       setLoading(false);

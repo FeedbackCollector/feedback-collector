@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import './User.css';
+import '../styles/User.css';
 import { useAuthStore } from '../store/authStore';
 import { useNavigate } from "react-router-dom";
 
