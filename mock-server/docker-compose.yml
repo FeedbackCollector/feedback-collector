@@ -1,0 +1,11 @@
+# Mock de la API para el frontend (sin Postgres ni backend).
+# Editable con la app de escritorio de Mockoon (abrir mockoon-env.json).
+services:
+  mock:
+    image: docker.io/mockoon/cli:latest
+    container_name: feedback-mock
+    command: ["--data", "/home/mockoon/data/mockoon-env.json", "--port", "4010"]
+    ports:
+      - "4010:4010"
+    volumes:
+      - ./mockoon-env.json:/home/mockoon/data/mockoon-env.json:ro
