@@ -8,7 +8,12 @@ const LINKS = [
   { label: 'FeedBack Log', to: '/feedback-log' }
 ];
 
-export function NavBar({ links = LINKS, user }) {
+interface NavLinkItem {
+  label: string;
+  to: string;
+}
+
+export function NavBar({ links = LINKS }: { links?: NavLinkItem[] }) {
   return (
   <>
     <aside className="manager-sidebar">
@@ -16,7 +21,7 @@ export function NavBar({ links = LINKS, user }) {
         <img src={chatIcon} alt="chaticon" width="32" height="32"/>
         <h1>Feedback Collector</h1>
       </div>
-      <User user={user} />
+      <User />
       <nav className="manager-nav" aria-label="Navegación principal">
         {links.map((link) => (
           <NavLink

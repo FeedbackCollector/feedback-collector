@@ -41,7 +41,6 @@ app.use('/users', usersRoutes);
 
 
 
-
 async function start() {
   await sequelize.authenticate(); // falla si Postgres no está prendido, si la base `library` no existe o si la contraseña de src/db/connection.ts está mal
   await sequelize.sync(); // crea las tablas que falten, sin borrar datos

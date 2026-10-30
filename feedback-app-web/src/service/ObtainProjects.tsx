@@ -1,7 +1,7 @@
 import type { Project } from '../types/feedback';
 import { useAuthStore } from '../store/authStore';
 
-const URL_ENDPOINT = 'https://localhost:3000/projects';
+const URLEndpoint = 'http://localhost:3000/projects';
 
 export type ProjectInput = {
   name: string;
