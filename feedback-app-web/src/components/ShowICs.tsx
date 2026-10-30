@@ -15,7 +15,6 @@ function ObtainICs() {
   const managerId = useAuthStore((state) => state.user?.id);
 
   useEffect(() => {
-    console.log("manager_id:", managerId);
     if (!managerId) {
       setIcs([]);
       setLoading(false);
@@ -25,7 +24,7 @@ function ObtainICs() {
     setLoading(true);
     setIcs([]);
 
-    fetch(`https://feedback-api-latest-moe8.onrender.com/ics?manager_id=${managerId}`)
+    fetch(`https://feedback-collector-fycv.onrender.com/ics?manager_id=${managerId}`)
       .then((response) => {
         if (!response.ok) {
           throw new Error('Could not load ICs');

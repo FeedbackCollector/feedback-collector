@@ -1,4 +1,4 @@
-import MyManagementComp from '../Components/MyManagement';
+import MyManagementComp from '../components/MyManagement';
 
 export default function MyManagement() {
   return (
