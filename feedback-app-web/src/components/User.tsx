@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import '../styles/User.css';
 import { useAuthStore } from '../store/authStore';
 import { useNavigate } from "react-router-dom";
@@ -18,6 +18,16 @@ export function User() {
     dialogRef.current?.close();
   };
 
+
+  const token = useAuthStore((state) => state.token);
+
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(false);
+
+
   const logout = useAuthStore((state) => state.logout);
   const navigate = useNavigate();
 
@@ -25,6 +35,66 @@ export function User() {
     logout();
     navigate("/", { replace: true });
   };
+
+  async function handleChangePassword() {
+  setMessage('');
+
+  if (!currentPassword || !newPassword || !confirmPassword) {
+    setMessage('Complete all password fields.');
+    return;
+  }
+
+  if (newPassword !== confirmPassword) {
+    setMessage('Passwords do not match.');
+    return;
+  }
+
+  if (!token) {
+    setMessage('Please log in again.');
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    const response = await fetch('http://localhost:3000/auth/password', {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        currentPassword,
+        newPassword
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      setMessage(data.message || 'Could not update password.');
+      return;
+    }
+
+    setMessage('Password updated successfully.');
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
+  } catch {
+    setMessage('Could not complete the request.');
+  } finally {
+    setLoading(false);
+  }
+}
+
+function clearPasswordFields() {
+
+  setCurrentPassword('');
+  setNewPassword('');
+  setConfirmPassword('');
+  setMessage('');
+
+}
 
   return (
     <>
@@ -43,6 +113,8 @@ export function User() {
       <dialog 
         ref={dialogRef} 
         onClick={(e) => e.stopPropagation()}
+        onClose={clearPasswordFields}
+        autoFocus
         style={{
           width: '100%',
           maxWidth: '440px',
@@ -91,23 +163,36 @@ export function User() {
             
             <div>
               <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', color: '#9ca3af', marginBottom: '4px' }}>Current Password</label>
-              <input type="password" disabled style={{ width: '100%', padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '8px', backgroundColor: '#f9fafb',  boxSizing: 'border-box' }} />
+              <input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} autoComplete='current-password' style={{ width: '100%', padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '8px', backgroundColor: '#f9fafb',  boxSizing: 'border-box' }} />
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', color: '#9ca3af', marginBottom: '4px' }}>New Password</label>
-                <input type="password" disabled style={{ width: '100%', padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '8px', backgroundColor: '#f9fafb',  boxSizing: 'border-box' }} />
+                <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} autoComplete='new-password' style={{ width: '100%', padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '8px', backgroundColor: '#f9fafb',  boxSizing: 'border-box' }} />
               </div>
               <div>
                 <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', color: '#9ca3af', marginBottom: '4px' }}>Confirm Password</label>
-                <input type="password" disabled style={{ width: '100%', padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '8px', backgroundColor: '#f9fafb',  boxSizing: 'border-box' }} />
+                <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} autoComplete='new-password' style={{ width: '100%', padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '8px', backgroundColor: '#f9fafb',  boxSizing: 'border-box' }} />
               </div>
             </div>
 
-            <button type="button" style={{ width: 'fit-content', padding: '8px 16px', border: '1px solid #e5e7eb', borderRadius: '8px', color: '#9ca3af', backgroundColor: '#f9fafb', fontWeight: 500,  fontSize: '14px' }}>
-              Change Password
+            <button
+              type="button"
+              onClick={handleChangePassword}
+              disabled={loading}
+              style={{
+                padding: '8px 16px',
+                border: '1px solid #e5e7eb',
+                borderRadius: '8px',
+                color: '#374151',
+                backgroundColor: '#f9fafb',
+                cursor: 'pointer'
+              }}
+              >
+              {loading ? 'Saving...' : 'Change Password'}
             </button>
+            <p role="status">{message}</p>
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '16px', marginTop: '8px', borderTop: '1px solid #f3f4f6' }}>
