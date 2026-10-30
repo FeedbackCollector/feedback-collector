@@ -1,0 +1,185 @@
+.fl-page {
+  padding: 24px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.fl-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.fl-filters-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.fl-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.fl-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.fl-search-full {
+  margin-top: 16px;
+}
+
+.fl-search-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.fl-search-wrap > i {
+  position: absolute;
+  left: 12px;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.fl-search-wrap .input-control {
+  padding-left: 36px;
+}
+
+.fl-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+.fl-toggle {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.fl-toggle button {
+  background: var(--surface);
+  border: none;
+  padding: 8px 12px;
+  cursor: pointer;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+}
+
+.fl-toggle button + button {
+  border-left: 1px solid var(--border);
+}
+
+.fl-toggle button.is-active {
+  background: var(--primary);
+  color: var(--surface);
+}
+
+.fl-table-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow-x: auto;
+}
+
+.fl-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 960px;
+}
+
+.fl-table th {
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.fl-table td {
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+  color: var(--text);
+  vertical-align: top;
+}
+
+.fl-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.fl-muted {
+  color: var(--text-muted);
+}
+
+.fl-subject {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.fl-excerpt {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  max-width: 240px;
+  line-height: 1.45;
+}
+
+.fl-action-btn {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font: inherit;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.fl-action-btn:hover:not(:disabled) {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.fl-action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.fl-empty {
+  padding: 24px;
+  color: var(--text-muted);
+}
+
+@media (max-width: 1000px) {
+  .fl-filters-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .fl-page {
+    padding: 16px;
+  }
+  .fl-filters-grid {
+    grid-template-columns: 1fr;
+  }
+}
