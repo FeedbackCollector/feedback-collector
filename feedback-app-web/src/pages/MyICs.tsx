@@ -1,5 +1,5 @@
-import FeedbackDashboard from "../Components/FeedbackDashboard";
-import ObtainICs from "../Components/ShowICs";
+import FeedbackDashboard from "../components/FeedbackDashboard";
+import ObtainICs from "../components/ShowICs";
 
 
 export default function MyICs() {
