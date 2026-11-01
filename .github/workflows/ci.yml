@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [developmentv2, mainv2]
+  push:
+    branches: [developmentv2, mainv2]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: feedback-app-web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: feedback-app-web/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+
+  api:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: feedback-api
+    steps:
+      - uses: actions/checkout@v4
+      # mainv2 puede no tener todavía el package.json de la API: en ese caso el job se salta.
+      - id: has_api
+        working-directory: .
+        run: echo "found=${{ hashFiles('feedback-api/package.json') != '' }}" >> "$GITHUB_OUTPUT"
+      - if: steps.has_api.outputs.found == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: feedback-api/package-lock.json
+      - if: steps.has_api.outputs.found == 'true'
+        run: npm ci
+      # `tsc` emite a dist/; también hace de type-check.
+      - if: steps.has_api.outputs.found == 'true'
+        run: npm run build
