@@ -1,0 +1,72 @@
+name: Conventions
+
+on:
+  pull_request:
+    branches: [developmentv2, mainv2]
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  conventions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Branch name
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          types='feat|fix|docs|chore|refactor|test'
+          branch_re="^($types)/[a-z0-9]+(-[a-z0-9]+)*\$"
+          # El release (developmentv2 -> mainv2) es el único PR que sale de una rama permanente.
+          if [[ "$HEAD_REF" == "developmentv2" && "$BASE_REF" == "mainv2" ]]; then
+            exit 0
+          fi
+          if [[ ! $HEAD_REF =~ $branch_re ]]; then
+            echo "::error::Rama '$HEAD_REF' inválida. Formato: <tipo>/<nombre-en-kebab-case>, con tipo en: ${types//|/, }"
+            exit 1
+          fi
+
+      - name: PR title
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          types='feat|fix|docs|chore|refactor|test'
+          msg_re="^($types)(\([a-z0-9-]+\))?: [^ ].{0,71}\$"
+          if [[ ! $PR_TITLE =~ $msg_re ]]; then
+            echo "::error::Título '$PR_TITLE' inválido. Formato: <tipo>: <descripción> o <tipo>(<scope>): <descripción>"
+            exit 1
+          fi
+
+      - name: Commit messages
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+          BASE_REF: ${{ github.base_ref }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          STRICT: "true"   # "false" = solo avisa, no bloquea
+        run: |
+          types='feat|fix|docs|chore|refactor|test'
+          msg_re="^($types)(\([a-z0-9-]+\))?: [^ ].{0,71}\$"
+          # En el release los commits ya fueron validados al entrar a developmentv2.
+          if [[ "$HEAD_REF" == "developmentv2" && "$BASE_REF" == "mainv2" ]]; then
+            exit 0
+          fi
+          fail=0
+          while IFS= read -r subject; do
+            [[ $subject == Revert\ \"* ]] && continue
+            if [[ ! $subject =~ $msg_re ]]; then
+              echo "::error::Commit inválido: $subject"
+              fail=1
+            fi
+          done < <(git log --no-merges --format=%s "$BASE_SHA..$HEAD_SHA")
+          if [[ $fail -eq 1 && "$STRICT" != "true" ]]; then
+            echo "::warning::Hay commits que no cumplen el formato (STRICT=false, no bloquea)."
+            exit 0
+          fi
+          exit $fail
