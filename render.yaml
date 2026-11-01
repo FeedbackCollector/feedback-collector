@@ -1,0 +1,72 @@
+# Render Blueprint (ensayo en ramas v2): APIs y frontends para los ambientes development y production.
+# La base de datos es Neon (una rama de base por ambiente); DATABASE_URL se carga a mano en el panel.
+# API provisoria: arranca con tsx (sin type-check) y despliega por commit hasta que `api` pase en CI.
+
+services:
+  - type: web
+    name: feedback-api-development
+    runtime: node
+    plan: free
+    region: ohio
+    branch: developmentv2
+    rootDir: feedback-api
+    buildCommand: npm ci --include=dev
+    startCommand: npx tsx src/server.ts
+    healthCheckPath: /
+    autoDeployTrigger: commit
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DB_SSL
+        value: "true"
+      - key: DATABASE_URL
+        sync: false
+
+  - type: web
+    name: feedback-api-production
+    runtime: node
+    plan: free
+    region: ohio
+    branch: mainv2
+    rootDir: feedback-api
+    buildCommand: npm ci --include=dev
+    startCommand: npx tsx src/server.ts
+    healthCheckPath: /
+    autoDeployTrigger: commit
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DB_SSL
+        value: "true"
+      - key: DATABASE_URL
+        sync: false
+
+  - type: web
+    name: feedback-web-development
+    runtime: static
+    branch: developmentv2
+    rootDir: feedback-app-web
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    autoDeployTrigger: checksPass
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
+  - type: web
+    name: feedback-web-production
+    runtime: static
+    branch: mainv2
+    rootDir: feedback-app-web
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    autoDeployTrigger: checksPass
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
