@@ -1,6 +1,7 @@
 # Render Blueprint (ensayo en ramas v2): APIs y frontends para los ambientes development y production.
 # La base de datos es Neon (una rama de base por ambiente); DATABASE_URL se carga a mano en el panel.
 # API provisoria: arranca con tsx (sin type-check) y despliega por commit hasta que `api` pase en CI.
+# Front: despliega por commit mientras `api` falle en CI; VITE_API_URL se carga a mano en el panel.
 
 services:
   - type: web
@@ -52,7 +53,10 @@ services:
     rootDir: feedback-app-web
     buildCommand: npm ci && npm run build
     staticPublishPath: dist
-    autoDeployTrigger: checksPass
+    autoDeployTrigger: commit
+    envVars:
+      - key: VITE_API_URL
+        sync: false
     routes:
       - type: rewrite
         source: /*
@@ -65,7 +69,10 @@ services:
     rootDir: feedback-app-web
     buildCommand: npm ci && npm run build
     staticPublishPath: dist
-    autoDeployTrigger: checksPass
+    autoDeployTrigger: commit
+    envVars:
+      - key: VITE_API_URL
+        sync: false
     routes:
       - type: rewrite
         source: /*
