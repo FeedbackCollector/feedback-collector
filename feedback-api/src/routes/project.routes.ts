@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { getAll, getById, create, update, remove } from "../controllers/project.controller.ts";
-import { authenticateToken, authorizeRole } from "../middleware/auth.ts";
+import { authenticate, authorizeRole } from "../middleware/auth.ts";
 
 const router = Router();
 
@@ -12,10 +12,10 @@ router.param("id", (req, res, next, value) => {
     next();
 });
 
-router.get("/", authenticateToken, getAll);
-router.get("/:id", authenticateToken, getById);
-router.post("/", authenticateToken, authorizeRole("director"), create);
-router.put("/:id", authenticateToken, authorizeRole("director"), update);
-router.delete("/:id", authenticateToken, authorizeRole("director"), remove);
+router.get("/", authenticate, getAll);
+router.get("/:id", authenticate, getById);
+router.post("/", authenticate, authorizeRole("director"), create);
+router.put("/:id", authenticate, authorizeRole("director"), update);
+router.delete("/:id", authenticate, authorizeRole("director"), remove);
 
 export default router;

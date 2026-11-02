@@ -1,6 +1,7 @@
 import type { IC } from '../types/feedback';
+import { API_URL } from './api';
 
-const URLEndpoint = 'https://feedback-collector-fycv.onrender.com/ics';
+const URLEndpoint = `${API_URL}/ics`;
 
 export async function obtainICs(): Promise<IC[]> {
   try {

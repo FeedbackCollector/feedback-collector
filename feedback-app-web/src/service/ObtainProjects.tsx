@@ -1,6 +1,7 @@
 import type { Project } from '../types/feedback';
+import { API_URL } from './api';
 
-const URLEndpoint = 'https://feedback-collector-fycv.onrender.com/projects';
+const URLEndpoint = `${API_URL}/projects`;
 
 export async function obtainProjects(): Promise<Project[]> {
   try {

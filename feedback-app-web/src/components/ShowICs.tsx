@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '../store/authStore';
+import { API_URL } from '../service/api';
 import './ShowICs.css';
 
 type IC = {
@@ -24,7 +25,7 @@ function ObtainICs() {
     setLoading(true);
     setIcs([]);
 
-    fetch(`https://feedback-collector-fycv.onrender.com/ics?manager_id=${managerId}`)
+    fetch(`${API_URL}/ics?manager_id=${managerId}`)
       .then((response) => {
         if (!response.ok) {
           throw new Error('Could not load ICs');

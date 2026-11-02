@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from "express";
+import { Request, Response, NextFunction, RequestHandler } from "express";
 import jwt from "jsonwebtoken";
 
 export function authenticate(req: Request, res: Response, next: NextFunction): void {
@@ -16,4 +16,14 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
     } catch {
         res.status(401).json({ message: "Invalid token" });
     }
+}
+
+export function authorizeRole(role: string): RequestHandler {
+    return (_req, res, next) => {
+        if (res.locals.user?.role !== role) {
+            res.status(403).json({ message: "Insufficient permissions" });
+            return;
+        }
+        next();
+    };
 }
