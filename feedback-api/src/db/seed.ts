@@ -7,6 +7,7 @@ import { ICs } from "../models/ic.ts";
 import { Feedback } from "../models/feedback.ts";
 
 import { Project } from "../models/project.ts";
+import { Area } from "../models/Index.ts";
 
 
 
@@ -26,6 +27,7 @@ async function seed() {
   { name: "Orion" },
 ]);
 
+
     const [, manager] = await User.bulkCreate([
     { name :"Martin Gonzalez" ,email: "director@example.com", passwordHash: adminPasswordHash, role: "director" },
     { name : "Carolina Méndez"  ,email: "manager@example.com", passwordHash: userPasswordHash, area_id: 2 },
@@ -35,6 +37,11 @@ const [lucia, nicolas, camila] = await ICs.bulkCreate([
   { name: "Lucía Fernández", title: "UX Designer",     manager_id: manager.id, entries: 6 },
   { name: "Nicolás Herrera", title: "UX Designer Jr.", manager_id: manager.id, entries: 5 },
   { name: "Camila Rojas",    title: "UX Researcher",   manager_id: manager.id, entries: 4 },
+]);
+  Area.bulkCreate([
+  { name: "UX" },
+  { name: "UI" },
+  { name: "Research" },
 ]);
 
     const fb = (ic: { IC_id: number }, project: { id: number }, date: string, source_name: string, score: number, comment: string | null) =>
