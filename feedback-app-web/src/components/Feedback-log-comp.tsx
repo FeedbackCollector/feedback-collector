@@ -1,4 +1,4 @@
-import { useEffect, useState, type ChangeEvent } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import type { Feedback, FeedbackFilters, IC, Project } from '../types/feedback';
 import { obtainICs } from '../service/ObtainICs';
 import { obtainProjects } from '../service/ObtainProjects';
@@ -40,6 +40,7 @@ function FeedbackLogComp() {
     sortBy: 'newest',
     text: '',
   });
+  const feedbackContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     async function loadReferences() {
@@ -58,7 +59,6 @@ function FeedbackLogComp() {
     let cancelled = false;
 
     async function loadFeedback() {
-      setLoading(true);
       try {
         const result = await fetchFeedbackPage(page);
         if (cancelled) return;
@@ -82,6 +82,18 @@ function FeedbackLogComp() {
     };
   }, [page]);
 
+  useEffect(() => {
+    const el = feedbackContainerRef.current;
+    if (!el) return;
+    el.animate(
+      [
+        { opacity: 0, transform: 'translateY(16px)' },
+        { opacity: 1, transform: 'translateY(0)' },
+      ],
+      { duration: 600, easing: 'ease-out' }
+    );
+  }, [feedback, viewMode]);
+
   function handleChange(e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
     setFilters({ ...filters, [e.target.name]: e.target.value });
   }
@@ -92,7 +104,7 @@ function FeedbackLogComp() {
   }
 
   const enrichedFeedback = feedback.map((item) => {
-    const matchedIC = ics.find((ic) => ic.IC_id === item.author_id);
+    const matchedIC = ics.find((ic) => ic.IC_id === item.ic_id);
     const matchedProject = projects.find((p) => p.id === item.project_id);
 
     return {
@@ -259,90 +271,94 @@ function FeedbackLogComp() {
         {loading && <p>Loading data...</p>}
         {!loading && filteredFeedback.length === 0 && <p>No feedback entries match the applied filters.</p>}
 
-        {!loading && filteredFeedback.length > 0 && viewMode === 'table' && (
-          <div className="box" style={{ margin: '0 0 20px 0', padding: '0', maxWidth: '100%', overflowX: 'auto' }}>
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Subject</th>
-                  <th>Project</th>
-                  <th>Source</th>
-                  <th>Score</th>
-                  <th>Excerpt</th>
-                  <th>Attachment</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredFeedback.map((item) => (
-                  <tr key={item.id}>
-                    <td className="text-caption-default" style={{ color: 'var(--text-muted)' }}>{item.date}</td>
-                    <td>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                        <span style={{ fontWeight: 600 }}>{item.ic_name ?? '—'}</span>
-                        {item.source_name.toLowerCase().includes('peer') && <span className="badge-shared" style={{ width: 'fit-content' }}>Shared</span>}
-                      </div>
-                    </td>
-                    <td>{item.project_name ?? '—'}</td>
-                    <td style={{ color: 'var(--text-muted)' }}>{item.source_name}</td>
-                    <td>
-                      <span className="score-badge" data-score={item.score}>{item.score}</span>
-                    </td>
-                    <td style={{ maxWidth: '280px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {item.comment ?? '—'}
-                    </td>
-                    <td>
-                      {item.screenshot_url ? (
-                        <a href={item.screenshot_url} target="_blank" rel="noreferrer" style={{ color: 'var(--primary)', fontWeight: 600 }}>View</a>
-                      ) : '—'}
-                    </td>
-                    <td>
-                      <button className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '13px', borderRadius: '6px' }}>View in Timeline</button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {!loading && filteredFeedback.length > 0 && viewMode === 'list' && (
-          <div className="box-columns" style={{ gap: '16px', marginBottom: '20px' }}>
-            {filteredFeedback.map((item) => (
-              <div key={item.id} className="feedback-card animate-slide-up">
-                <div className="feedback-card-header">
-                  <span className="score-badge" data-score={item.score} style={{ width: '32px', height: '32px', fontSize: '14px'}}>
-                    {item.score}
-                  </span>
-
-                  <div className="feedback-card-meta">
-                    <div className="feedback-card-name-row">
-                      <h4 className="feedback-card-name">{item.ic_name ?? '—'}</h4>
-                      {(item.source_name.toLowerCase().includes('peer') || item.id === 3) && (
-                        <span className="badge-shared">Shared</span>
-                      )}
-                    </div>
-                    <span className="feedback-card-subtext">
-                      {item.date} • {item.project_name ?? '—'}
-                    </span>
-                  </div>
-                </div>
-
-                <p className="feedback-card-body">
-                  {item.comment ?? '—'}
-                </p>
-
-                <div className="feedback-card-footer">
-                  <span className="text-label-meta" style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
-                    {item.source_name}
-                  </span>
-                  <button className="btn btn-secondary" style={{ padding: '6px 14px', borderRadius: '6px', fontSize: '13px' }}>
-                    View in Timeline
-                  </button>
-                </div>
+        {!loading && filteredFeedback.length > 0 && (
+          <div ref={feedbackContainerRef}>
+            {viewMode === 'table' && (
+              <div className="box" style={{ margin: '0 0 20px 0', padding: '0', maxWidth: '100%', overflowX: 'auto' }}>
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Subject</th>
+                      <th>Project</th>
+                      <th>Source</th>
+                      <th>Score</th>
+                      <th>Excerpt</th>
+                      <th>Attachment</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredFeedback.map((item) => (
+                      <tr key={item.id}>
+                        <td className="text-caption-default" style={{ color: 'var(--text-muted)' }}>{item.date}</td>
+                        <td>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            <span style={{ fontWeight: 600 }}>{item.ic_name ?? '—'}</span>
+                            {item.source_name.toLowerCase().includes('peer') && <span className="badge-shared" style={{ width: 'fit-content' }}>Shared</span>}
+                          </div>
+                        </td>
+                        <td>{item.project_name ?? '—'}</td>
+                        <td style={{ color: 'var(--text-muted)' }}>{item.source_name}</td>
+                        <td>
+                          <span className="score-badge" data-score={item.score}>{item.score}</span>
+                        </td>
+                        <td style={{ maxWidth: '280px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {item.comment ?? '—'}
+                        </td>
+                        <td>
+                          {item.screenshot_url ? (
+                            <a href={item.screenshot_url} target="_blank" rel="noreferrer" style={{ color: 'var(--primary)', fontWeight: 600 }}>View</a>
+                          ) : '—'}
+                        </td>
+                        <td>
+                          <button className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '13px', borderRadius: '6px' }}>View in Timeline</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-            ))}
+            )}
+
+            {viewMode === 'list' && (
+              <div className="box-columns" style={{ gap: '16px', marginBottom: '20px' }}>
+                {filteredFeedback.map((item) => (
+                  <div key={item.id} className="feedback-card">
+                    <div className="feedback-card-header">
+                      <span className="score-badge" data-score={item.score} style={{ width: '32px', height: '32px', fontSize: '14px'}}>
+                        {item.score}
+                      </span>
+
+                      <div className="feedback-card-meta">
+                        <div className="feedback-card-name-row">
+                          <h4 className="feedback-card-name">{item.ic_name ?? '—'}</h4>
+                          {(item.source_name.toLowerCase().includes('peer') || item.id === 3) && (
+                            <span className="badge-shared">Shared</span>
+                          )}
+                        </div>
+                        <span className="feedback-card-subtext">
+                          {item.date} • {item.project_name ?? '—'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <p className="feedback-card-body">
+                      {item.comment ?? '—'}
+                    </p>
+
+                    <div className="feedback-card-footer">
+                      <span className="text-label-meta" style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
+                        {item.source_name}
+                      </span>
+                      <button className="btn btn-secondary" style={{ padding: '6px 14px', borderRadius: '6px', fontSize: '13px' }}>
+                        View in Timeline
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
