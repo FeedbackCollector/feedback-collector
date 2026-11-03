@@ -1,12 +1,22 @@
+.app-page.my-management-app-page {
+  padding: 0;
+}
+
+.my-management-page {
+  min-height: calc(100vh - 76px);
+  background: #f5f5f5;
+}
+
 .my-management-metrics {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
+  padding: 24px 32px 0;
 }
 
 .my-management-metric-card {
-  min-height: 160px;
-  padding: 20px;
+  min-height: 92px;
+  padding: 16px;
   border: 1px solid var(--border);
   border-radius: 12px;
   background: #fff;
@@ -14,28 +24,45 @@
 }
 
 .my-management-metric-card h2 {
-  min-height: 40px;
   color: var(--text-muted);
-  font-size: 14px;
+  font-size: 11px;
   font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
 }
 
-.my-management-metric-value {
+.my-management-metric-card p {
   margin-top: 8px;
   color: var(--text);
-  font-size: 32px;
+  font-size: 24px;
   font-weight: 700;
   line-height: 1.1;
 }
 
-.my-management-metric-detail {
-  margin-top: 8px;
+.my-management-team {
+  padding-top: 28px;
+}
+
+.my-management-state {
   color: var(--text-muted);
-  font-size: 13px;
+  font-size: 14px;
+}
+
+.my-management-no-data {
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #f1eafa;
+  color: #51316e;
+  font-size: 11px;
 }
 
 @media (max-width: 800px) {
   .my-management-metrics {
     grid-template-columns: 1fr;
+    padding: 20px 16px 0;
+  }
+
+  .my-management-team {
+    padding-top: 20px;
   }
 }
