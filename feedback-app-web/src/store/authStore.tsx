@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { API_URL } from '../service/api';
 
 export interface User {
     id?: number;
@@ -42,8 +43,6 @@ interface AuthState {
     logout: () => void;
 }
 
-
-const API_URL = 'http://localhost:3000/auth';
 
 export const useAuthStore = create<AuthState>()(
     persist(
@@ -89,7 +88,7 @@ export const useAuthStore = create<AuthState>()(
                 }
 
                 try {
-                    const respuesta = await fetch(`${API_URL}/login`, {
+                    const respuesta = await fetch(`${API_URL}/auth/login`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ email: loginEmail, password: loginPassword })
@@ -104,7 +103,7 @@ export const useAuthStore = create<AuthState>()(
                             atob(payload.padEnd(Math.ceil(payload.length / 4) * 4, '='))
                         ) as User;
                         // esto es para decodificar el token
-                        const usersResponse = await fetch(`http://localhost:3000/users`, {
+                        const usersResponse = await fetch(`${API_URL}/users`, {
                         headers: {
                             Authorization: `Bearer ${token}`
                         }
@@ -171,7 +170,7 @@ export const useAuthStore = create<AuthState>()(
                 }
 
                 try {
-                    const respuesta = await fetch(`${API_URL}/register`, {
+                    const respuesta = await fetch(`${API_URL}/auth/register`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ name: regName, email: regEmail, password: regPassword, area_id: 1 }) 

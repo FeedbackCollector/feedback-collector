@@ -1,3 +1,5 @@
+import { API_URL } from './api';
+
 export interface Manager {
   id: number;
   name: string;
@@ -32,8 +34,6 @@ interface ICsResponse {
 interface FeedbackResponse {
   data?: Feedback[];
 }
-
-const API_URL = 'http://localhost:3000';
 
 async function fetchJSON<T>(url: string): Promise<T> {
   const response = await fetch(url);
