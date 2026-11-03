@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 
-export function authenticate(req: Request, res: Response, next: NextFunction): void {
+export function authenticateToken(req: Request, res: Response, next: NextFunction): void {
     const header = req.headers.authorization;
     const token = header?.startsWith("Bearer ") ? header.slice(7) : null;
     if (!token) {
@@ -16,4 +16,16 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
     } catch {
         res.status(401).json({ message: "Invalid token" });
     }
+}
+
+export const authenticate = authenticateToken;
+
+export function authorizeRole(...roles: string[]) {
+    return (req: Request, res: Response, next: NextFunction): void => {
+        if (!res.locals.user || !roles.includes(res.locals.user.role)) {
+            res.status(403).json({ message: "Forbidden" });
+            return;
+        }
+        next();
+    };
 }

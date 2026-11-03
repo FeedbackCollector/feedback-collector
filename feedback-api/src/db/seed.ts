@@ -27,7 +27,7 @@ async function seed() {
   { name: "Orion" },
 ]);
 
-    const [ux] = await Area.bulkCreate([
+    const [ux,ui,research] = await Area.bulkCreate([
   { name: "UX" },
   { name: "UI" },
   { name: "Research" },
@@ -36,6 +36,11 @@ async function seed() {
     const [, manager] = await User.bulkCreate([
     { name :"Martin Gonzalez" ,email: "director@example.com", passwordHash: adminPasswordHash, role: "director" },
     { name : "Carolina Méndez"  ,email: "manager@example.com", passwordHash: userPasswordHash, area_id: ux.id },
+    { name : "Lautaro Martinez"  ,email: "Lautaro@example.com", passwordHash: userPasswordHash, area_id: ui.id },
+    { name : "Milito Méndez"  ,email: "Milito@example.com", passwordHash: userPasswordHash, area_id: research.id },
+    { name : "Méndez"  ,email: "Mendez@example.com", passwordHash: userPasswordHash, area_id: research.id },
+
+
 
 ]);
 const [lucia, nicolas, camila] = await ICs.bulkCreate([
