@@ -7,9 +7,22 @@ export async function getFeedbackByID(id: number): Promise<Feedback | null> {
 }
 
 
-export async function getAllFeedbacks(): Promise<Feedback[]> {
-    const rows = await FeedbackModel.findAll();
-    return rows.map(row => row.toJSON());
+export async function getAllFeedbacks(page: number, limit: number) {
+    const result = await FeedbackModel.findAndCountAll({
+        limit,
+        offset: (page - 1) * limit,
+        order: [["id", "ASC"]],
+    });
+
+    return {
+        data: result.rows.map(row => row.toJSON()),
+        pagination: {
+            page,
+            limit,
+            total: result.count,
+            totalPages: Math.ceil(result.count / limit),
+        },
+    };
 }
 
 export async function insertFeedback(feedbackData: NewFeedback): Promise<Feedback[]> {
