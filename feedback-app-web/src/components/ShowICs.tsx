@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '../store/authStore';
+import { API_URL } from '../service/api';
 import FeedbackDashboard from './FeedbackDashboard';
 import './ShowICs.css';
 
@@ -25,7 +26,7 @@ function ObtainICs() {
     setLoading(true);
     setIcs([]);
 
-    fetch(`http://localhost:3000/ics?manager_id=${managerId}`)
+    fetch(`${API_URL}/ics?manager_id=${managerId}`)
       .then((response) => {
         if (!response.ok) {
           throw new Error('Could not load ICs');

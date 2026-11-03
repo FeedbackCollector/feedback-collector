@@ -1,6 +1,7 @@
 import type { IC } from '../types/feedback';
+import { API_URL } from './api';
 
-const URLEndpoint = 'http://localhost:3000/ics';
+const URLEndpoint = `${API_URL}/ics`;
 
 export async function obtainICs(): Promise<IC[]> {
   try {
