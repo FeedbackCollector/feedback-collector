@@ -1,14 +1,28 @@
 import { useEffect, useState, type ChangeEvent } from 'react';
 import type { Feedback, FeedbackFilters, IC, Project } from '../types/feedback';
-import { obtainFeedback } from '../service/ObtainFeedback';
 import { obtainICs } from '../service/ObtainICs';
 import { obtainProjects } from '../service/ObtainProjects';
 
+const FEEDBACK_URL = 'http://localhost:3000/feedback';
+const PAGE_SIZE = 10;
 const SCORES = [1,2,3,4,5];
+
+type FeedbackPageResponse = {
+  data: Feedback[];
+  pagination: { page: number; limit: number; total: number; totalPages: number };
+};
+
+async function fetchFeedbackPage(page: number): Promise<FeedbackPageResponse> {
+  const response = await fetch(`${FEEDBACK_URL}?page=${page}&limit=${PAGE_SIZE}`);
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  return response.json();
+}
 
 const searchIcon = <svg xmlns="http://w3.org" height="20px" viewBox="0 -960 960 960" width="20px" fill="currentColor"><path d="M784-120 532-372q-30 24-69 38t-83 14q-109 0-184.5-75.5T120-580q0-109 75.5-184.5T380-840q109 0 184.5 75.5T640-580q0 44-14 83t-38 69l252 252-56 56ZM380-400q75 0 127.5-52.5T560-580q0-75-52.5-127.5T380-760q-75 0-127.5 52.5T200-580q0 75 52.5 127.5T380-400Z"/></svg>
 const tableChartIcon = <svg xmlns="http://w3.org" height="20px" viewBox="0 -960 960 960" width="20px" fill="currentColor"><path d="M760-120H200q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120ZM200-640h560v-120H200v120Zm100 80H200v360h100v-360Zm360 0v360h100v-360H660Zm-80 0H380v360h200v-360Z"/></svg>
 const viewListIcon = <svg xmlns="http://w3.org" height="20px" viewBox="0 -960 960 960" width="20px" fill="currentColor"><path d="M360-240h440v-107H360v107ZM160-613h120v-107H160v107Zm0 187h120v-107H160v107Zm0 186h120v-107H160v107Zm200-186h440v-107H360v107Zm0-187h440v-107H360v107ZM160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h640q33 0 56.5 23.5T880-720v480q0 33-23.5 56.5T800-160H160Z"/></svg>
+const arrowForward = <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" height="10px" width="10px" fill="#1f1f1f"><path d="M8.03,22L6.25,20.23L14.48,12L6.25,3.77L8.03,2l10,10l-10,10Z"/></svg>
+const arrowBack = <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" height="10px" width="10px" fill="#1f1f1f"><path d="M10,22L0,12L10,2l1.78,1.77L3.55,12l8.23,8.23L10,22Z"/></svg>
 
 function FeedbackLogComp() {
   const [feedback, setFeedback] = useState<Feedback[]>([]);
@@ -16,6 +30,9 @@ function FeedbackLogComp() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'table' | 'list'>('table');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
   const [filters, setFilters] = useState<FeedbackFilters>({
     icName: '',
     projectId: '',
@@ -25,27 +42,53 @@ function FeedbackLogComp() {
   });
 
   useEffect(() => {
-    async function loadData() {
+    async function loadReferences() {
       try {
-        const [feedbackData, icsData, projectsData] = await Promise.all([
-          obtainFeedback(),
-          obtainICs(),
-          obtainProjects(),
-        ]);
-        setFeedback(feedbackData);
+        const [icsData, projectsData] = await Promise.all([obtainICs(), obtainProjects()]);
         setIcs(icsData);
         setProjects(projectsData);
       } catch (error) {
         console.error('Error loading data:', error);
-      } finally {
-        setLoading(false);
       }
     }
-    loadData();
+    loadReferences();
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadFeedback() {
+      setLoading(true);
+      try {
+        const result = await fetchFeedbackPage(page);
+        if (cancelled) return;
+        setFeedback(result.data ?? []);
+        setTotalPages(Math.max(result.pagination.totalPages, 1));
+        setTotalItems(result.pagination.total);
+      } catch (error) {
+        if (cancelled) return;
+        console.error('Error retrieving feedback:', error);
+        setFeedback([]);
+        setTotalPages(1);
+        setTotalItems(0);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    loadFeedback();
+    return () => {
+      cancelled = true;
+    };
+  }, [page]);
 
   function handleChange(e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
     setFilters({ ...filters, [e.target.name]: e.target.value });
+  }
+
+  function goToPage(next: number) {
+    if (next < 1 || next > totalPages || next === page) return;
+    setPage(next);
   }
 
   const enrichedFeedback = feedback.map((item) => {
@@ -81,7 +124,7 @@ function FeedbackLogComp() {
     .filter((item) => filters.score === '' || item.score === Number(filters.score))
     .filter((item) => {
       if (filters.text === '') return true;
-      const commentText = item.comment ?? ''; 
+      const commentText = item.comment ?? '';
       return commentText.toLowerCase().includes(filters.text.toLowerCase());
     })
     .sort((a, b) => {
@@ -90,6 +133,34 @@ function FeedbackLogComp() {
       if (filters.sortBy === 'oldest') return dateA.localeCompare(dateB);
       return dateB.localeCompare(dateA);
     });
+
+  const pagination = (
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '16px', margin: '0 0 20px 0' }}>
+      <button
+        type="button"
+        className="btn btn-icon btn-secondary"
+        onClick={() => goToPage(page - 1)}
+        disabled={page <= 1}
+        aria-label="Previous page"
+        style={{ width: '32px', height: '32px', padding: 0, borderRadius: '6px', color: 'var(--text)', background: 'var(--surface)', right:'4px' }}
+      >
+        {arrowBack}
+      </button>
+      <span style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
+        Page {page} of {totalPages}
+      </span>
+      <button
+        type="button"
+        className="btn btn-icon btn-secondary"
+        onClick={() => goToPage(page + 1)}
+        disabled={page >= totalPages}
+        aria-label="Next page"
+        style={{ width: '32px', height: '32px', padding: 0, borderRadius: '6px', color: 'var(--text)', background: 'var(--surface)', left:'4px' }}
+      >
+        {arrowForward}
+      </button>
+    </div>
+  );
 
   return (
     <>
@@ -165,9 +236,9 @@ function FeedbackLogComp() {
             </div>
           </div>
         </div>
-        
+
         <div className="view-toggle-container">
-          <button 
+          <button
             type="button"
             onClick={() => setViewMode('table')}
             className={`btn-toggle-view ${viewMode === 'table' ? 'active' : ''}`}
@@ -175,7 +246,7 @@ function FeedbackLogComp() {
           >
             {tableChartIcon}
           </button>
-          <button 
+          <button
             type="button"
             onClick={() => setViewMode('list')}
             className={`btn-toggle-view ${viewMode === 'list' ? 'active' : ''}`}
@@ -244,7 +315,7 @@ function FeedbackLogComp() {
                   <span className="score-badge" data-score={item.score} style={{ width: '32px', height: '32px', fontSize: '14px'}}>
                     {item.score}
                   </span>
-                  
+
                   <div className="feedback-card-meta">
                     <div className="feedback-card-name-row">
                       <h4 className="feedback-card-name">{item.ic_name ?? '—'}</h4>
@@ -274,6 +345,8 @@ function FeedbackLogComp() {
             ))}
           </div>
         )}
+
+        {!loading && totalItems > 0 && pagination}
       </div>
     </>
   );
