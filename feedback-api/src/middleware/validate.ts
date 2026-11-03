@@ -26,7 +26,6 @@ export function validate(schema: ObjectSchema): RequestHandler {
     };
 }
 
-// Express 5 makes req.query read-only, so the validated query goes to res.locals.query
 export function validateQuery(schema: ObjectSchema): RequestHandler {
     return (req: Request, res: Response, next: NextFunction): void => {
         const { error, value } = schema.validate(req.query, {
