@@ -7,6 +7,7 @@ import { ICs } from "../models/ic.ts";
 import { Feedback } from "../models/feedback.ts";
 
 import { Project } from "../models/project.ts";
+import { Area } from "../models/Index.ts";
 
 
 
@@ -26,9 +27,20 @@ async function seed() {
   { name: "Orion" },
 ]);
 
+    const [ux,ui,research] = await Area.bulkCreate([
+  { name: "UX" },
+  { name: "UI" },
+  { name: "Research" },
+]);
+
     const [, manager] = await User.bulkCreate([
     { name :"Martin Gonzalez" ,email: "director@example.com", passwordHash: adminPasswordHash, role: "director" },
-    { name : "Carolina Méndez"  ,email: "manager@example.com", passwordHash: userPasswordHash, area_id: 2 },
+    { name : "Carolina Méndez"  ,email: "manager@example.com", passwordHash: userPasswordHash, area_id: ux.id },
+    { name : "Lautaro Martinez"  ,email: "Lautaro@example.com", passwordHash: userPasswordHash, area_id: ui.id },
+    { name : "Milito Méndez"  ,email: "Milito@example.com", passwordHash: userPasswordHash, area_id: research.id },
+    { name : "Méndez"  ,email: "Mendez@example.com", passwordHash: userPasswordHash, area_id: research.id },
+
+
 
 ]);
 const [lucia, nicolas, camila] = await ICs.bulkCreate([
@@ -36,7 +48,6 @@ const [lucia, nicolas, camila] = await ICs.bulkCreate([
   { name: "Nicolás Herrera", title: "UX Designer Jr.", manager_id: manager.id, entries: 5 },
   { name: "Camila Rojas",    title: "UX Researcher",   manager_id: manager.id, entries: 4 },
 ]);
-
     const fb = (ic: { IC_id: number }, project: { id: number }, date: string, source_name: string, score: number, comment: string | null) =>
       ({ author_id: manager.id, ic_id: ic.IC_id, project_id: project.id, date, source_name, score, comment, screenshot_url: null });
 
