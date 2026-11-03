@@ -1,25 +1,31 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
-export interface AuthRequest extends Request {
-    user?: { email: string; role: string };
-}
+export function authenticateToken(req: Request, res: Response, next: NextFunction): void {
+    const header = req.headers.authorization;
+    const token = header?.startsWith("Bearer ") ? header.slice(7) : null;
+    if (!token) {
+        res.status(401).json({ message: "Token required" });
+        return;
+    }
 
-export function authenticateToken(req: AuthRequest, res: Response, next: NextFunction) {
-    const authHeader = req.headers.authorization;
-    const token = authHeader?.split(' ')[1];
-    if (!token) return res.sendStatus(401);
-
-    jwt.verify(token, process.env.JWT_SECRET as string, (err, payload) => {
-        if (err) return res.sendStatus(403);
-        req.user = payload as { email: string; role: string };
+    try {
+        const payload = jwt.verify(token, process.env.JWT_SECRET as string) as { email: string; role: string };
+        res.locals.user = { email: payload.email, role: payload.role };
         next();
-    });
+    } catch {
+        res.status(401).json({ message: "Invalid token" });
+    }
 }
 
-export function authorizeRole(role: string) {
-    return (req: AuthRequest, res: Response, next: NextFunction) => {
-        if (req.user?.role !== role) return res.sendStatus(403);
+export const authenticate = authenticateToken;
+
+export function authorizeRole(...roles: string[]) {
+    return (req: Request, res: Response, next: NextFunction): void => {
+        if (!res.locals.user || !roles.includes(res.locals.user.role)) {
+            res.status(403).json({ message: "Forbidden" });
+            return;
+        }
         next();
     };
 }

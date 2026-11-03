@@ -2,6 +2,7 @@ import { User } from "./User.ts";
 import { ICs } from "./ic.ts";
 import { Project } from "./project.ts";
 import { Feedback } from "./feedback.ts";
+import { Area } from "./area.ts";
 
 User.hasMany(ICs, { foreignKey: "manager_id", onDelete: "RESTRICT" });
 ICs.belongsTo(User, { foreignKey: "manager_id" });
@@ -12,4 +13,7 @@ Feedback.belongsTo(ICs, { foreignKey: "ic_id", targetKey: "IC_id" });
 Project.hasMany(Feedback, { foreignKey: "project_id" });
 Feedback.belongsTo(Project, { foreignKey: "project_id" });
 
-export { User, ICs, Project, Feedback };
+Area.hasMany(User, { foreignKey: "area_id" });
+User.belongsTo(Area, { foreignKey: "area_id" });
+
+export { User, ICs, Project, Feedback, Area };
