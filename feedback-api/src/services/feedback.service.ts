@@ -17,8 +17,8 @@ async function checkReferences(data: UpdateFeedback): Promise<ReferenceError | n
         return null;
 }
 
-export async function getAllFeedbacksService(): Promise<Feedback[]> {
-    return FeedbackRepository.getAllFeedbacks();
+export async function getAllFeedbacksService(page: number, limit: number) {
+    return FeedbackRepository.getAllFeedbacks(page, limit);
 }
 
 export async function getFeedbackByIdService(id: number): Promise<Feedback | "FEEDBACK_NOT_FOUND"> {

@@ -1,9 +1,23 @@
 import { Request, Response } from 'express';
 import { getAllFeedbacksService, createFeedbackService, deleteFeedbackService, getFeedbackByIdService, replaceFeedbackService, updateFeedbackService } from '../services/feedback.service.ts';
 
+const isPositiveInt = (v: unknown) => Number.isInteger(v) && Number(v) >= 1;
+
 export async function getAll(req: Request, res: Response) {
-    const result = await getAllFeedbacksService();
-    return res.json({ data: result });
+    try {
+        const page = Number(req.query.page ?? 1);
+        const limit = Number(req.query.limit ?? 10);
+
+        if (!isPositiveInt(page) || !isPositiveInt(limit) || limit > 100) {
+            res.status(400).json({ message: "Invalid search parameters" });
+            return;
+        }
+
+        const result = await getAllFeedbacksService(page, limit);
+        res.status(200).json(result);
+    } catch {
+        res.status(500).json({ message: "Error retrieving feedback" });
+    }
 }
 
 export async function getById(req: Request, res: Response) {
