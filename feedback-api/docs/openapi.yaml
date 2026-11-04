@@ -6,7 +6,7 @@ info:
     REST API for managing users (managers) and ICs (individual contributors).
     Note: the IC endpoints currently do not require authentication.
 servers:
-  - url: http://localhost:3000
+  - url: http://localhost:4010
     description: Local development
 tags:
   - name: Health
@@ -32,7 +32,7 @@ paths:
                     example: Library API running
                   docs:
                     type: string
-                    example: http://localhost:3000/docs
+                    example: http://localhost:4010/docs
 
   /auth/register:
     post:
