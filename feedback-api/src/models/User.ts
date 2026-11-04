@@ -14,7 +14,7 @@ import { sequelize } from "../db/connection.ts";
 // email         VARCHAR(255) NOT NULL UNIQUE
 // passwordHash  VARCHAR(255) NOT NULL
 // role          VARCHAR(50)  NOT NULL DEFAULT 'MANAGER'
-// area_id       INTEGER FK   NOT NULL 
+// area_id       INTEGER FK → area.id, NULL for users without an area (e.g. the director)
 
 export class User extends Model<InferAttributes<User>, InferCreationAttributes<User>> {
     declare id: CreationOptional<number>;
