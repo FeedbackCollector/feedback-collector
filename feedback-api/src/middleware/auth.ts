@@ -10,13 +10,8 @@ export function authenticateToken(req: Request, res: Response, next: NextFunctio
     }
 
     try {
-        const payload = jwt.verify(token, process.env.JWT_SECRET as string) as { id?: number; email: string; role: string };
-        // Tokens issued before the id was added cannot be tied to a user: ask for a new login.
-        if (!Number.isInteger(payload.id)) {
-            res.status(401).json({ message: "Invalid token" });
-            return;
-        }
-        res.locals.user = { id: payload.id, email: payload.email, role: payload.role };
+        const payload = jwt.verify(token, process.env.JWT_SECRET as string) as { email: string; role: string; id: number };
+        res.locals.user = { email: payload.email, role: payload.role, id: payload.id };
         next();
     } catch {
         res.status(401).json({ message: "Invalid token" });
