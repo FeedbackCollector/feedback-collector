@@ -69,9 +69,11 @@ async function fetchAllICs(token: string, managerId?: number): Promise<Omit<IC, 
   return [...firstPage.data, ...remainingPages.flatMap((page) => page.data ?? [])];
 }
 
-async function fetchFeedbackPage(page: number): Promise<FeedbackResponse> {
+async function fetchFeedbackPage(token: string, page: number): Promise<FeedbackResponse> {
   const params = new URLSearchParams({ page: String(page), limit: '100' });
-  const response = await fetch(`${API_URL}/feedback?${params}`);
+  const response = await fetch(`${API_URL}/feedback?${params}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
   if (!response.ok) {
     throw new Error(`Could not load feedback (${response.status}).`);
   }
@@ -79,15 +81,15 @@ async function fetchFeedbackPage(page: number): Promise<FeedbackResponse> {
   return response.json() as Promise<FeedbackResponse>;
 }
 
-async function fetchAllFeedback(): Promise<Feedback[]> {
-  const firstPage = await fetchFeedbackPage(1);
+async function fetchAllFeedback(token: string): Promise<Feedback[]> {
+  const firstPage = await fetchFeedbackPage(token, 1);
   if (!Array.isArray(firstPage.data) || !Number.isInteger(firstPage.pagination?.totalPages)) {
     throw new Error('The feedback response has an invalid format.');
   }
 
   const remainingPages = await Promise.all(
     Array.from({ length: Math.max(0, firstPage.pagination.totalPages - 1) }, (_, index) =>
-      fetchFeedbackPage(index + 2)
+      fetchFeedbackPage(token, index + 2)
     )
   );
   if (remainingPages.some((page) => !Array.isArray(page.data))) {
@@ -120,7 +122,7 @@ function ObtainICs() {
     setLoading(true);
     setIcs([]);
 
-    Promise.all([fetchAllICs(token, managerId), fetchAllFeedback()])
+    Promise.all([fetchAllICs(token, managerId), fetchAllFeedback(token)])
       .then(([data, feedback]) => {
         if (!isCurrent) return;
 
