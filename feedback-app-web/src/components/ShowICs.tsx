@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '../store/authStore';
+import { API_URL } from '../service/api';
+import FeedbackDashboard from './FeedbackDashboard';
 import './ShowICs.css';
 
 type IC = {
@@ -24,7 +26,7 @@ function ObtainICs() {
     setLoading(true);
     setIcs([]);
 
-    fetch(`http://localhost:3000/ics?manager_id=${managerId}`)
+    fetch(`${API_URL}/ics?manager_id=${managerId}`)
       .then((response) => {
         if (!response.ok) {
           throw new Error('Could not load ICs');
@@ -59,39 +61,46 @@ function ObtainICs() {
 
   if (ics.length === 0) {
     return (
-      <div className="show-ics-empty">
-        <i className="fa-solid fa-user-group"></i>
-        <p>You don't have any Individual Contributors assigned yet. The Director assigns ICs to each manager.</p>
+      <div className="MyICs-containers">
+        <div className="show-ics-empty">
+          <i className="fa-solid fa-user-group"></i>
+          <p>You don't have any Individual Contributors assigned yet. The Director assigns ICs to each manager.</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <section className="team-page">
-      <h2>Your Team</h2>
-      <div className="team-metrics">
-        {ics.map((item) => (
-          <article className="team-metric-card" key={item.IC_id}>
-            <div className="team-metric-avatar" />
+    <>
+      <FeedbackDashboard />
+      <div className="MyICs-containers">
+        <section className="team-page">
+          <h2>Your Team</h2>
+          <div className="team-metrics">
+            {ics.map((item) => (
+              <article className="team-metric-card" key={item.IC_id}>
+                <div className="team-metric-avatar" />
 
-            <div className="team-metric-info">
-              <h3>{item.name}</h3>
-              <p className="team-metric-role">{item.title}</p>
-              
-              <div className="team-metric-badge-row">
-                <span 
-                  className="team-metric-badge" 
-                  style={{ backgroundColor: getBadgeColor(item.entries) }}
-                >
-                  {item.entries}
-                </span>
-                <span className="team-metric-detail">{item.entries} entries</span>
-              </div>
-            </div>
-          </article>
-        ))}
+                <div className="team-metric-info">
+                  <h3>{item.name}</h3>
+                  <p className="team-metric-role">{item.title}</p>
+
+                  <div className="team-metric-badge-row">
+                    <span
+                      className="team-metric-badge"
+                      style={{ backgroundColor: getBadgeColor(item.entries) }}
+                    >
+                      {item.entries}
+                    </span>
+                    <span className="team-metric-detail">{item.entries} entries</span>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
       </div>
-    </section>
+    </>
   );
 }
 

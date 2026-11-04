@@ -7,14 +7,22 @@ export async function getFeedbackByID(id: number): Promise<Feedback | null> {
 }
 
 
-export async function getAllFeedbacks(filter?: { managerId: number }): Promise<Feedback[]> {
-    let where = {};
-    if (filter) {
-        const ics = await ICs.findAll({ where: { manager_id: filter.managerId }, attributes: ["IC_id"] });
-        where = { ic_id: ics.map(ic => ic.IC_id) }; 
-    }
-    const rows = await FeedbackModel.findAll({ where });
-    return rows.map(row => row.toJSON());
+export async function getAllFeedbacks(page: number, limit: number) {
+    const result = await FeedbackModel.findAndCountAll({
+        limit,
+        offset: (page - 1) * limit,
+        order: [["id", "ASC"]],
+    });
+
+    return {
+        data: result.rows.map(row => row.toJSON()),
+        pagination: {
+            page,
+            limit,
+            total: result.count,
+            totalPages: Math.ceil(result.count / limit),
+        },
+    };
 }
 
 export async function insertFeedback(feedbackData: NewFeedback): Promise<Feedback[]> {

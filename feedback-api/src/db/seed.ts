@@ -7,6 +7,7 @@ import { ICs } from "../models/ic.ts";
 import { Feedback } from "../models/feedback.ts";
 
 import { Project } from "../models/project.ts";
+import { Area } from "../models/Index.ts";
 
 
 
@@ -26,19 +27,29 @@ async function seed() {
   { name: "Orion" },
 ]);
 
-    const [, manager] = await User.bulkCreate([
-    { name :"Martin Gonzalez" ,email: "director@example.com", passwordHash: adminPasswordHash, role: "director" },
-    { name : "Carolina Méndez"  ,email: "manager@example.com", passwordHash: userPasswordHash, area_id: 2 },
+    const [ux,ui,research] = await Area.bulkCreate([
+  { name: "UX" },
+  { name: "UI" },
+  { name: "Research" },
+]);
 
+    const [, carolina, lautaro, milito, mendez] = await User.bulkCreate([
+    { name :"Martin Gonzalez" ,email: "director@example.com", passwordHash: adminPasswordHash, role: "director" },
+    { name : "Carolina Méndez"  ,email: "manager@example.com", passwordHash: userPasswordHash, area_id: ux.id },
+    { name : "Lautaro Martinez"  ,email: "Lautaro@example.com", passwordHash: userPasswordHash, area_id: ui.id },
+    { name : "Milito Méndez"  ,email: "Milito@example.com", passwordHash: userPasswordHash, area_id: research.id },
+    { name : "Méndez"  ,email: "Mendez@example.com", passwordHash: userPasswordHash, area_id: research.id },
 ]);
 const [lucia, nicolas, camila] = await ICs.bulkCreate([
-  { name: "Lucía Fernández", title: "UX Designer",     manager_id: manager.id, entries: 6 },
-  { name: "Nicolás Herrera", title: "UX Designer Jr.", manager_id: manager.id, entries: 5 },
-  { name: "Camila Rojas",    title: "UX Researcher",   manager_id: manager.id, entries: 4 },
+  { name: "Lucía Fernández", title: "UX Designer",     manager_id: carolina.id, entries: 6 },
+  { name: "Nicolás Herrera", title: "UX Designer Jr.", manager_id: carolina.id, entries: 5 },
+  { name: "Camila Rojas",    title: "UX Researcher",   manager_id: milito.id,   entries: 4 },
+  { name: "Tomás Ibarra",    title: "UI Designer",     manager_id: lautaro.id,  entries: 0 },
+  { name: "Sofía Paz",       title: "UX Researcher",   manager_id: mendez.id,   entries: 0 },
 ]);
-
-    const fb = (ic: { IC_id: number }, project: { id: number }, date: string, source_name: string, score: number, comment: string | null) =>
-      ({ author_id: manager.id, ic_id: ic.IC_id, project_id: project.id, date, source_name, score, comment, screenshot_url: null });
+    // The feedback author is the manager of the IC it is about.
+    const fb = (ic: { IC_id: number; manager_id: number }, project: { id: number }, date: string, source_name: string, score: number, comment: string | null) =>
+      ({ author_id: ic.manager_id, ic_id: ic.IC_id, project_id: project.id, date, source_name, score, comment, screenshot_url: null });
 
     // Scores/dates reproduce the "My ICs" Figma design: averages 2.7 / 3.6 / 4.0 (team 3.3),
     // 6 / 5 / 4 entries, last entries 08/07, 08/13 and 08/13 (2026), 7 entries in the 30 days before 08/13.

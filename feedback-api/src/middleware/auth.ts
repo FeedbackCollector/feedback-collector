@@ -1,13 +1,13 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
-export interface AuthRequest extends Request {
-    user?: { id: number; email: string; role: string };
-}
-
-export function authenticateToken(req: AuthRequest, res: Response, next: NextFunction) {
-    const token = req.headers.authorization?.split(' ')[1];
-    if (!token) return res.status(401).json({ error: 'Token required' });
+export function authenticateToken(req: Request, res: Response, next: NextFunction): void {
+    const header = req.headers.authorization;
+    const token = header?.startsWith("Bearer ") ? header.slice(7) : null;
+    if (!token) {
+        res.status(401).json({ message: "Token required" });
+        return;
+    }
 
     try {
         req.user = jwt.verify(token, process.env.JWT_SECRET as string) as AuthRequest['user'];
@@ -17,10 +17,13 @@ export function authenticateToken(req: AuthRequest, res: Response, next: NextFun
     }
 }
 
+export const authenticate = authenticateToken;
+
 export function authorizeRole(...roles: string[]) {
-    return (req: AuthRequest, res: Response, next: NextFunction) => {
-        if (!req.user || !roles.includes(req.user.role)) {
-            return res.status(403).json({ error: 'Forbidden' });
+    return (req: Request, res: Response, next: NextFunction): void => {
+        if (!res.locals.user || !roles.includes(res.locals.user.role)) {
+            res.status(403).json({ message: "Forbidden" });
+            return;
         }
         next();
     };

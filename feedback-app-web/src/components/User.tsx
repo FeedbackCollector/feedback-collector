@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import '../styles/User.css';
 import { useAuthStore } from '../store/authStore';
 import { useNavigate } from "react-router-dom";
+import { API_URL } from '../service/api';
 
 
 export function User() {
@@ -57,7 +58,7 @@ export function User() {
   setLoading(true);
 
   try {
-    const response = await fetch('http://localhost:3000/auth/password', {
+    const response = await fetch(`${API_URL}/auth/password`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
@@ -104,7 +105,7 @@ function clearPasswordFields() {
           <div className="user-profile__avatar" aria-hidden="true" />
           <div className='user-profile_name'>
             <span>{user?.name}</span>
-            <p>{user?.role}</p>
+            <p style={{ color:'#5f2169', fontWeight: '600' }}>{user?.role}</p>
           </div>
         </div>
       </section>
@@ -152,7 +153,7 @@ function clearPasswordFields() {
 
             <div>
               <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', color: '#9ca3af', fontWeight: 500, marginBottom: '4px' }}>Role</label>
-              <input type="text" value={user?.role} readOnly disabled style={{ width: '100%', padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '8px', backgroundColor: '#f9fafb', color: '#4b5563', boxSizing: 'border-box' }} />
+              <input type="text" value={user?.role} readOnly disabled style={{ width: '100%', padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '8px', backgroundColor: '#f9fafb', color: '#574b63', boxSizing: 'border-box' }} />
             </div>
           </div>
 

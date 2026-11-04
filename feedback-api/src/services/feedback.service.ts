@@ -17,11 +17,8 @@ async function checkReferences(data: UpdateFeedback): Promise<ReferenceError | n
         return null;
 }
 
-type Caller = { id: number; role: string };
-
-export async function getAllFeedbacksService(user: Caller): Promise<Feedback[]> {
-    if (user.role === "director") return FeedbackRepository.getAllFeedbacks();
-    return FeedbackRepository.getAllFeedbacks({ managerId: user.id });
+export async function getAllFeedbacksService(page: number, limit: number) {
+    return FeedbackRepository.getAllFeedbacks(page, limit);
 }
 
 export async function getFeedbackByIdService(id: number, user: Caller): Promise<Feedback | "FEEDBACK_NOT_FOUND"> {

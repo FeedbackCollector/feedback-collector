@@ -8,6 +8,7 @@ export async function getAll(req: Request, res: Response) {
 
 export async function register(req: Request, res: Response) {
     const result = await registerService(req.body.email, req.body.password , req.body.name , req.body.area_id);
+    if (result === "AREA_NOT_FOUND") return res.status(400).json({ error: "Area not found" });
     if (result === "EMAIL_TAKEN") return res.status(409).json({ error: "Email already registered" });
     res.status(201).json({ message: "Usuario creado" });
 }
