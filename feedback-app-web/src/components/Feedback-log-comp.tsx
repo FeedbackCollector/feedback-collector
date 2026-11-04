@@ -3,6 +3,7 @@ import type { Feedback, FeedbackFilters, IC, Project } from '../types/feedback';
 import { obtainFeedback } from '../service/ObtainFeedback';
 import { obtainICs } from '../service/ObtainICs';
 import { obtainProjects } from '../service/ObtainProjects';
+import '../styles/index.css'
 
 const SCORES = [1,2,3,4,5];
 
@@ -23,6 +24,23 @@ function FeedbackLogComp() {
     sortBy: 'newest',
     text: '',
   });
+
+  useEffect(() => {
+  const mediaQuery = window.matchMedia('(max-width: 767px)');
+
+  if (mediaQuery.matches) {
+    setViewMode('list');
+  }
+
+  const handleMediaChange = (e: MediaQueryListEvent) => {
+    if (e.matches) {
+      setViewMode('list');
+    }
+  }; 
+  mediaQuery.addEventListener('change', handleMediaChange);
+  return () => mediaQuery.removeEventListener('change', handleMediaChange);
+  }, []);
+  
 
   useEffect(() => {
     async function loadData() {
