@@ -32,3 +32,13 @@ export type Project = {
   id: number;
   name: string;
 };
+
+export type FeedbackPageResponse = {
+  data: Feedback[];
+  pagination: { 
+    page: number; 
+    limit: number; 
+    total: number; 
+    totalPages: number 
+  };
+};

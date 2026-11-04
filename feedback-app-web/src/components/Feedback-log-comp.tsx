@@ -1,16 +1,13 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
-import type { Feedback, FeedbackFilters, IC, Project } from '../types/feedback';
+import type { Feedback, FeedbackFilters, FeedbackPageResponse, IC, Project } from '../types/feedback';
 import { obtainICs } from '../service/ObtainICs';
 import { obtainProjects } from '../service/ObtainProjects';
+import { API_URL } from '../service/api';
 
-const FEEDBACK_URL = 'http://localhost:3000/feedback';
+const FEEDBACK_URL = API_URL;
 const PAGE_SIZE = 10;
 const SCORES = [1,2,3,4,5];
 
-type FeedbackPageResponse = {
-  data: Feedback[];
-  pagination: { page: number; limit: number; total: number; totalPages: number };
-};
 
 async function fetchFeedbackPage(page: number): Promise<FeedbackPageResponse> {
   const response = await fetch(`${FEEDBACK_URL}?page=${page}&limit=${PAGE_SIZE}`);
