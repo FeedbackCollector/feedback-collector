@@ -7,6 +7,7 @@ import icRoutes from "./routes/ic.routes.ts"
 import feedbackRoutes from "./routes/feedback.routes.ts"
 import usersRoutes from "./routes/users.routes.ts"
 import areaRoutes from "./routes/area.routes.ts"
+import projectRoutes from "./routes/project.routes.ts"
 import swaggerUi from "swagger-ui-express";
 import YAML from "yaml";
 import { readFileSync } from "node:fs";
@@ -39,6 +40,7 @@ app.use('/ics', icRoutes);
 app.use('/feedback', feedbackRoutes);
 app.use('/users', usersRoutes);
 app.use('/areas', areaRoutes);
+app.use('/projects', projectRoutes);
 
 
 

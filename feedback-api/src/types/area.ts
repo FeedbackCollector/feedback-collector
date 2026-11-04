@@ -6,3 +6,5 @@ export interface Area {
 export interface NewArea {
     name: string;
 }
+
+export type UpdateArea = Partial<NewArea>;
