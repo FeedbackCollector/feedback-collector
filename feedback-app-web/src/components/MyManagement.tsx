@@ -1,15 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { obtainManagers, type Manager } from '../service/ObtainManagers';
+import { obtainAreas, type Area } from '../service/ObtainAreas';
+import { useAuthStore } from '../store/authStore';
 import '../styles/MyManagement.css';
 
 type ViewMode = 'cards' | 'list';
-
-const AREA_NAMES: Record<number, string> = {
-  1: 'Design',
-  2: 'Delivery',
-  3: 'Engineering',
-  4: 'Product',
-};
 
 function getBadgeColor(score: number) {
   if (score < 2) return '#d31c37';
@@ -19,26 +14,47 @@ function getBadgeColor(score: number) {
 }
 
 export default function MyManagementComp() {
+  const token = useAuthStore((state) => state.token);
   const [managers, setManagers] = useState<Manager[]>([]);
+  const [areas, setAreas] = useState<Area[]>([]);
   const [totalICs, setTotalICs] = useState<number | null>(null);
   const [averageScore, setAverageScore] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [areasError, setAreasError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('cards');
 
   useEffect(() => {
     let isCurrent = true;
+    setLoading(true);
+    setError(null);
+    setAreasError(null);
 
-    obtainManagers()
-      .then((result) => {
+    Promise.allSettled([obtainManagers(token), obtainAreas()])
+      .then(([managerResult, areaResult]) => {
         if (!isCurrent) return;
-        setManagers(result.managers);
-        setTotalICs(result.totalICs);
-        setAverageScore(result.averageScore);
-      })
-      .catch(() => {
-        if (isCurrent) setError(true);
+        if (managerResult.status === 'fulfilled') {
+          setManagers(managerResult.value.managers);
+          setTotalICs(managerResult.value.totalICs);
+          setAverageScore(managerResult.value.averageScore);
+        } else {
+          const message = managerResult.reason instanceof Error
+            ? managerResult.reason.message
+            : String(managerResult.reason);
+          console.error('Could not load managers:', managerResult.reason);
+          setError(message);
+        }
+
+        if (areaResult.status === 'fulfilled') {
+          setAreas(areaResult.value);
+        } else {
+          const message = areaResult.reason instanceof Error
+            ? areaResult.reason.message
+            : String(areaResult.reason);
+          console.error('Could not load areas:', areaResult.reason);
+          setAreasError(message);
+        }
       })
       .finally(() => {
         if (isCurrent) setLoading(false);
@@ -47,15 +63,24 @@ export default function MyManagementComp() {
     return () => {
       isCurrent = false;
     };
-  }, []);
+  }, [token]);
+
+  const areaNamesById = useMemo(
+    () => new Map(areas.map((area) => [area.id, area.name])),
+    [areas]
+  );
+  const getAreaName = (areaId: number | null) =>
+    areaId === null ? 'No area assigned' : areaNamesById.get(areaId) ?? `Area ${areaId}`;
 
   const visibleManagers = useMemo(() => {
     const query = search.trim().toLocaleLowerCase();
     if (!query) return managers;
     return managers.filter((manager) =>
-      `${manager.name} ${manager.email}`.toLocaleLowerCase().includes(query)
+      `${manager.name} ${manager.email} ${getAreaName(manager.area_id)}`
+        .toLocaleLowerCase()
+        .includes(query)
     );
-  }, [managers, search]);
+  }, [areaNamesById, managers, search]);
 
   const metrics = [
     { label: 'Managers', value: loading ? '…' : error ? '—' : String(managers.length) },
@@ -125,12 +150,17 @@ export default function MyManagementComp() {
           <p className="my-management-state" role="status">Loading managers...</p>
         ) : error ? (
           <p className="my-management-state" role="alert">
-            Could not load managers. Please try again later.
+            Could not load managers: {error}
           </p>
         ) : managers.length === 0 ? (
           <p className="my-management-state">There are no managers to display yet.</p>
         ) : (
           <>
+            {areasError && (
+              <p className="my-management-state" role="status">
+                Could not load area names: {areasError}
+              </p>
+            )}
             <section className="my-management-comparison" aria-label="Manager comparison">
               <h3>Manager Comparison</h3>
               {visibleManagers.map((manager) => (
@@ -172,9 +202,7 @@ export default function MyManagementComp() {
                     <div className="my-management-manager-info">
                       <h3>{manager.name}</h3>
                       <p className="my-management-area">
-                        {manager.area_id === null
-                          ? 'No area assigned'
-                          : AREA_NAMES[manager.area_id] ?? `Area ${manager.area_id}`}
+                        {getAreaName(manager.area_id)}
                       </p>
                       <div className="my-management-manager-meta">
                         {manager.averageScore === null ? (
@@ -208,11 +236,7 @@ export default function MyManagementComp() {
                     {visibleManagers.map((manager) => (
                       <tr key={manager.id}>
                         <td>{manager.name}</td>
-                        <td>
-                          {manager.area_id === null
-                            ? 'No area assigned'
-                            : AREA_NAMES[manager.area_id] ?? `Area ${manager.area_id}`}
-                        </td>
+                        <td>{getAreaName(manager.area_id)}</td>
                         <td>{manager.averageScore?.toFixed(1) ?? 'No data'}</td>
                         <td>{manager.icCount}</td>
                       </tr>

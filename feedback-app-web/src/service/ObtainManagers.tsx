@@ -35,24 +35,25 @@ interface FeedbackResponse {
   data?: Feedback[];
 }
 
-async function fetchJSON<T>(url: string): Promise<T> {
-  const response = await fetch(url);
+async function fetchJSON<T>(url: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(url, init);
   if (!response.ok) {
     throw new Error(`Request failed (${response.status}): ${url}`);
   }
   return response.json() as Promise<T>;
 }
 
-async function obtainAllICs(): Promise<IC[]> {
+async function obtainAllICs(token: string): Promise<IC[]> {
   const limit = 100;
-  const firstPage = await fetchJSON<ICsResponse>(`${API_URL}/ics?page=1&limit=${limit}`);
+  const headers = { Authorization: `Bearer ${token}` };
+  const firstPage = await fetchJSON<ICsResponse>(`${API_URL}/ics?page=1&limit=${limit}`, { headers });
   if (!Array.isArray(firstPage.data) || !Number.isInteger(firstPage.pagination?.totalPages)) {
     throw new Error('The ICs response has an invalid format.');
   }
 
   const remainingPages = await Promise.all(
     Array.from({ length: Math.max(0, firstPage.pagination.totalPages - 1) }, (_, index) =>
-      fetchJSON<ICsResponse>(`${API_URL}/ics?page=${index + 2}&limit=${limit}`)
+      fetchJSON<ICsResponse>(`${API_URL}/ics?page=${index + 2}&limit=${limit}`, { headers })
     )
   );
 
@@ -67,14 +68,18 @@ async function obtainAllICs(): Promise<IC[]> {
   ];
 }
 
-export async function obtainManagers(): Promise<{
+export async function obtainManagers(token: string | null): Promise<{
   managers: Manager[];
   totalICs: number;
   averageScore: number | null;
 }> {
+  if (!token) {
+    throw new Error('No hay una sesión activa. Iniciá sesión y volvé a abrir My Managers.');
+  }
+
   const [usersResponse, ics, feedbackResponse] = await Promise.all([
     fetchJSON<UsersResponse>(`${API_URL}/users`),
-    obtainAllICs(),
+    obtainAllICs(token),
     fetchJSON<FeedbackResponse>(`${API_URL}/feedback`),
   ]);
 
