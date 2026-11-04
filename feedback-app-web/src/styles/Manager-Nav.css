@@ -38,7 +38,7 @@ h1{
   min-height: 44px;
   padding: 0 12px;
   border-radius: 8px;
-  color: #4b5563;
+  color: #3c3d3c;
   font-size: 15px;
   font-weight: 500;
   text-decoration: none;
@@ -48,16 +48,53 @@ h1{
 }
 
 .nav-link:hover {
-  background: #eff6ff;
-  color: #1d4ed8;
+  background: rgba(241, 234, 247, 1);
+  color: rgb(18, 4, 32);
 }
 
 .nav-link.active {
-  background: #dbebff;
-  color: #1d4ed8;
+  background: rgba(241, 234, 247, 1);
+  color: rgb(18, 4, 32)
 }
 
 .nav-link:focus-visible {
-  outline: 2px solid #2563eb;
+  outline: 2px solid #25eb67;
   outline-offset: 2px;
+}
+
+.manager-overlay {
+  display: none;
+  position: fixed;
+}
+
+@media (max-width: 768px) {
+
+  .manager-sidebar {
+    display: none;
+  }
+
+  .manager-sidebar.open {
+    display: flex;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 50;
+    width: 240px;
+    height: 100vh;
+    border-right: 1px solid #e5e7eb;
+  }
+
+  .manager-sidebar.open + .manager-overlay {
+  display: block;
+  position: fixed;
+  inset: 0;
+  z-index: 49;
+  border: 0;
+  background: rgb(0 0 0 / 40%);
+}
+
+.manager-sidebar {
+  z-index: 50;
+}
+
 }
