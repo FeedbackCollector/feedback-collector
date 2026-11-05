@@ -33,7 +33,12 @@ type EntryForm = {
 
 const API_URL = `${BASE_URL}/feedback`;
 
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => {
+  const now = new Date();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${now.getFullYear()}-${month}-${day}`;
+};
 
 const emptyForm = (): EntryForm => ({
   project_id: '',
@@ -201,6 +206,10 @@ function ICView({ ic, onBack }: ICViewProps) {
     }
     if (!form.date) {
       setFormError('Date is required.');
+      return;
+    }
+    if (form.date > today()) {
+      setFormError('Date cannot be in the future.');
       return;
     }
     if (!form.source_name.trim()) {
@@ -425,6 +434,7 @@ function ICView({ ic, onBack }: ICViewProps) {
                   className="input-control"
                   name="date"
                   type="date"
+                  max={today()}
                   value={form.date}
                   onChange={handleFieldChange}
                   required
