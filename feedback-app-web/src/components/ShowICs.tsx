@@ -1,6 +1,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useAuthStore } from '../store/authStore';
-import { API_URL } from '../service/api';
+import { obtainAllICs } from '../service/ObtainICs';
+import { obtainAllFeedback } from '../service/ObtainFeedback';
 import FeedbackDashboard from './FeedbackDashboard';
 import './ShowICs.css';
 
@@ -13,89 +14,6 @@ type IC = {
 };
 
 type ViewMode = 'cards' | 'list';
-
-interface Feedback {
-  ic_id: number;
-  score: number;
-}
-
-interface ICsResponse {
-  data?: Omit<IC, 'score'>[];
-  pagination?: {
-    totalPages?: number;
-  };
-}
-
-interface FeedbackResponse {
-  data?: Feedback[];
-  pagination?: {
-    totalPages?: number;
-  };
-}
-
-async function fetchICPage(
-  token: string,
-  page: number,
-  managerId?: number
-): Promise<ICsResponse> {
-  const params = new URLSearchParams({ page: String(page), limit: '100' });
-  if (managerId !== undefined) params.set('manager_id', String(managerId));
-
-  const response = await fetch(`${API_URL}/ics?${params}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!response.ok) {
-    throw new Error(`Could not load ICs (${response.status}).`);
-  }
-
-  return response.json() as Promise<ICsResponse>;
-}
-
-async function fetchAllICs(token: string, managerId?: number): Promise<Omit<IC, 'score'>[]> {
-  const firstPage = await fetchICPage(token, 1, managerId);
-  if (!Array.isArray(firstPage.data) || !Number.isInteger(firstPage.pagination?.totalPages)) {
-    throw new Error('The ICs response has an invalid format.');
-  }
-
-  const remainingPages = await Promise.all(
-    Array.from({ length: Math.max(0, firstPage.pagination.totalPages - 1) }, (_, index) =>
-      fetchICPage(token, index + 2, managerId)
-    )
-  );
-  if (remainingPages.some((page) => !Array.isArray(page.data))) {
-    throw new Error('The ICs response has an invalid format.');
-  }
-
-  return [...firstPage.data, ...remainingPages.flatMap((page) => page.data ?? [])];
-}
-
-async function fetchFeedbackPage(page: number): Promise<FeedbackResponse> {
-  const params = new URLSearchParams({ page: String(page), limit: '100' });
-  const response = await fetch(`${API_URL}/feedback?${params}`);
-  if (!response.ok) {
-    throw new Error(`Could not load feedback (${response.status}).`);
-  }
-
-  return response.json() as Promise<FeedbackResponse>;
-}
-
-async function fetchAllFeedback(): Promise<Feedback[]> {
-  const firstPage = await fetchFeedbackPage(1);
-  if (!Array.isArray(firstPage.data) || !Number.isInteger(firstPage.pagination?.totalPages)) {
-    throw new Error('The feedback response has an invalid format.');
-  }
-
-  const remainingPages = await Promise.all(
-    Array.from({ length: Math.max(0, firstPage.pagination.totalPages - 1) }, (_, index) =>
-      fetchFeedbackPage(index + 2)
-    )
-  );
-  if (remainingPages.some((page) => !Array.isArray(page.data))) {
-    throw new Error('The feedback response has an invalid format.');
-  }
-
-  return [...firstPage.data, ...remainingPages.flatMap((page) => page.data ?? [])];
-}
 
 function ObtainICs() {
   const [ics, setIcs] = useState<IC[]>([]);
@@ -120,7 +38,7 @@ function ObtainICs() {
     setLoading(true);
     setIcs([]);
 
-    Promise.all([fetchAllICs(token, managerId), fetchAllFeedback()])
+    Promise.all([obtainAllICs(managerId), obtainAllFeedback()])
       .then(([data, feedback]) => {
         if (!isCurrent) return;
 
@@ -196,10 +114,11 @@ function ObtainICs() {
           score,
           entries,
         }))}
-        icComparisonData={visibleICs.map(({ IC_id, name, score }) => ({
+        icComparisonData={visibleICs.map(({ IC_id, name, score, entries }) => ({
           id: IC_id,
           name,
           score,
+          entries,
         }))}
       />
       <div className="MyICs-containers">

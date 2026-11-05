@@ -2,18 +2,11 @@ import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import type { Feedback, FeedbackFilters, FeedbackPageResponse, IC, Project } from '../types/feedback';
 import { obtainICs } from '../service/ObtainICs';
 import { obtainProjects } from '../service/ObtainProjects';
-import { API_URL } from '../service/api';
+import { obtainFeedbackPage } from '../service/ObtainFeedback';
 
-const FEEDBACK_URL = API_URL;
 const PAGE_SIZE = 10;
 const SCORES = [1,2,3,4,5];
 
-
-async function fetchFeedbackPage(page: number): Promise<FeedbackPageResponse> {
-  const response = await fetch(`${FEEDBACK_URL}?page=${page}&limit=${PAGE_SIZE}`);
-  if (!response.ok) throw new Error(`HTTP ${response.status}`);
-  return response.json();
-}
 
 const searchIcon = <svg xmlns="http://w3.org" height="20px" viewBox="0 -960 960 960" width="20px" fill="currentColor"><path d="M784-120 532-372q-30 24-69 38t-83 14q-109 0-184.5-75.5T120-580q0-109 75.5-184.5T380-840q109 0 184.5 75.5T640-580q0 44-14 83t-38 69l252 252-56 56ZM380-400q75 0 127.5-52.5T560-580q0-75-52.5-127.5T380-760q-75 0-127.5 52.5T200-580q0 75 52.5 127.5T380-400Z"/></svg>
 const tableChartIcon = <svg xmlns="http://w3.org" height="20px" viewBox="0 -960 960 960" width="20px" fill="currentColor"><path d="M760-120H200q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120ZM200-640h560v-120H200v120Zm100 80H200v360h100v-360Zm360 0v360h100v-360H660Zm-80 0H380v360h200v-360Z"/></svg>
@@ -57,7 +50,7 @@ function FeedbackLogComp() {
 
     async function loadFeedback() {
       try {
-        const result = await fetchFeedbackPage(page);
+        const result = await obtainFeedbackPage(page, PAGE_SIZE);
         if (cancelled) return;
         setFeedback(result.data ?? []);
         setTotalPages(Math.max(result.pagination.totalPages, 1));
