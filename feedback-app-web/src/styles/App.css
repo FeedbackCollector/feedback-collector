@@ -25,6 +25,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 16px;
   max-width: 480px;
   text-align: center;
@@ -43,15 +44,17 @@
 /* FEEDBACK LOG AND FILTERS FLOATING LAYOUT */
 .filters-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 16px;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
+  align-items: end; 
 }
 
 .filter-item {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  width: 100%; 
 }
 
 .filter-label {
@@ -60,9 +63,9 @@
   text-transform: uppercase;
   color: var(--text-muted);
   letter-spacing: 0.05em;
+  white-space: nowrap; 
 }
 
-/* SEARCH FIELD WITH ICON GAP */
 .search-wrapper {
   position: relative;
   display: flex;
@@ -79,8 +82,13 @@
 }
 
 .search-wrapper .input-control {
-  padding-left: 38px !important;
+  padding-left: 36px;
   width: 100%;
+}
+
+select.input-control {
+  padding-right: 28px;
+  text-overflow: ellipsis;
 }
 
 /* VIEW TOGGLE BUTTONS ACTIVE STATE FROM FIGMA */

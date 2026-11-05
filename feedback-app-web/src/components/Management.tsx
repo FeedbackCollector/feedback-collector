@@ -1,4 +1,4 @@
-import { useState, type FormEvent, type KeyboardEvent } from 'react';
+import { useEffect, useState, type FormEvent, type KeyboardEvent } from 'react';
 import '../styles/Management.css';
 
 type ManagementTab = 'Areas' | 'Managers' | 'ICs' | 'Projects';
@@ -88,6 +88,24 @@ function createRow(tab: ManagementTab, id: number, name: string): ManagementRow 
 export default function ManagementComp() {
   const [activeTab, setActiveTab] = useState<ManagementTab>('Areas');
   const [viewMode, setViewMode] = useState<ViewMode>('table');
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(max-width: 767px)');
+
+    if (mediaQuery.matches) {
+      setViewMode('cards');
+    }
+
+    const handleMediaChange = (event: MediaQueryListEvent) => {
+      if (event.matches) {
+        setViewMode('cards');
+      }
+    };
+
+    mediaQuery.addEventListener('change', handleMediaChange);
+    return () => mediaQuery.removeEventListener('change', handleMediaChange);
+    }, []);
+
   const [rowsByTab, setRowsByTab] = useState(INITIAL_ROWS);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);

@@ -9,6 +9,10 @@ const LINKS = [
   { label: 'FeedBack Log', to: '/feedback-log' }
 ];
 
+const closeSidebar = () => {
+    document.querySelector('.manager-sidebar')?.classList.remove('open');
+  };
+
 export function NavBar({ links = LINKS }: { links?: { label: string; to: string; }[] }) {
   return (
     <div>
@@ -27,6 +31,7 @@ export function NavBar({ links = LINKS }: { links?: { label: string; to: string;
               to={link.to}
               end={link.to === '/'}
               className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+              onClick={closeSidebar}
             >
               {link.label}
             </NavLink>
@@ -37,9 +42,7 @@ export function NavBar({ links = LINKS }: { links?: { label: string; to: string;
         className="manager-overlay"
         type="button"
         aria-label="Close sidebar"
-        onClick={() =>
-        document.querySelector('.manager-sidebar')?.classList.remove('open')
-        }
+        onClick={closeSidebar}
         />
     </div>
   );
