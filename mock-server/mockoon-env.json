@@ -1,0 +1,856 @@
+{
+  "uuid": "0a81707c-0fd0-40e2-82af-357e1e698985",
+  "lastMigration": 29,
+  "name": "Feedback API mock",
+  "endpointPrefix": "",
+  "latency": 0,
+  "port": 4010,
+  "routes": [
+    {
+      "uuid": "4f9e72f4-2fcf-4b80-9192-9908d46e4e1f",
+      "documentation": "",
+      "method": "get",
+      "endpoint": "",
+      "responses": [
+        {
+          "uuid": "5a5ef63c-256d-4570-9dd5-98879f44efa3",
+          "body": "{\"message\": \"FeedBack Controller API mock running\"}",
+          "latency": 0,
+          "statusCode": 200,
+          "label": "",
+          "headers": [],
+          "filePath": "",
+          "sendFileAsBody": false,
+          "rules": [],
+          "rulesOperator": "AND",
+          "disableTemplating": false,
+          "fallbackTo404": false,
+          "default": true,
+          "databucketID": "",
+          "bodyType": "INLINE",
+          "crudKey": "id"
+        }
+      ],
+      "enabled": true,
+      "responseMode": null,
+      "type": "http"
+    },
+    {
+      "uuid": "3307262c-2c39-42c7-9b21-57031b6c85f5",
+      "documentation": "",
+      "method": "post",
+      "endpoint": "auth/login",
+      "responses": [
+        {
+          "uuid": "be4fd71f-2531-4954-9ac5-81275a3008d5",
+          "body": "{{#with (find (dataRaw 'users' '$.*') (object email=(body 'email') password=(body 'password'))) as |u|}}{\"token\":\"{{#base64url}}{\"alg\":\"none\",\"typ\":\"JWT\"}{{/base64url}}.{{#base64url}}{\"email\":\"{{u.email}}\",\"role\":\"{{u.role}}\"}{{/base64url}}.mock\"}{{/with}}",
+          "latency": 0,
+          "statusCode": 200,
+          "label": "Login correcto",
+          "headers": [],
+          "filePath": "",
+          "sendFileAsBody": false,
+          "rules": [
+            {
+              "target": "templating",
+              "modifier": "{{#if (find (dataRaw 'users' '$.*') (object email=(body 'email') password=(body 'password')))}}ok{{/if}}",
+              "value": "ok",
+              "invert": false,
+              "operator": "equals"
+            }
+          ],
+          "rulesOperator": "AND",
+          "disableTemplating": false,
+          "fallbackTo404": false,
+          "default": false,
+          "databucketID": "",
+          "bodyType": "INLINE",
+          "crudKey": "id"
+        },
+        {
+          "uuid": "e95527a2-711d-45a0-bfcb-4628cf4fe487",
+          "body": "{\"message\": \"Invalid credentials\"}",
+          "latency": 0,
+          "statusCode": 400,
+          "label": "Credenciales inválidas",
+          "headers": [],
+          "filePath": "",
+          "sendFileAsBody": false,
+          "rules": [],
+          "rulesOperator": "AND",
+          "disableTemplating": false,
+          "fallbackTo404": false,
+          "default": true,
+          "databucketID": "",
+          "bodyType": "INLINE",
+          "crudKey": "id"
+        }
+      ],
+      "enabled": true,
+      "responseMode": null,
+      "type": "http"
+    },
+    {
+      "uuid": "6d646742-890b-4fbe-9198-1adfe51dec57",
+      "documentation": "",
+      "method": "post",
+      "endpoint": "auth/register",
+      "responses": [
+        {
+          "uuid": "9c61e0b8-f042-4e78-a4f4-c7b87073ed04",
+          "body": "{{setData 'set' 'users' (dataRaw 'counters' 'user') (objectMerge (object id=(dataRaw 'counters' 'user') role='manager') (bodyRaw))}}{{setData 'inc' 'counters' 'user'}}{\"message\": \"Usuario creado\"}",
+          "latency": 0,
+          "statusCode": 201,
+          "label": "",
+          "headers": [],
+          "filePath": "",
+          "sendFileAsBody": false,
+          "rules": [],
+          "rulesOperator": "AND",
+          "disableTemplating": false,
+          "fallbackTo404": false,
+          "default": true,
+          "databucketID": "",
+          "bodyType": "INLINE",
+          "crudKey": "id"
+        }
+      ],
+      "enabled": true,
+      "responseMode": null,
+      "type": "http"
+    },
+    {
+      "uuid": "21314d5e-22d1-4746-b919-94ada5a31536",
+      "documentation": "",
+      "method": "get",
+      "endpoint": "users",
+      "responses": [
+        {
+          "uuid": "7e16bf15-8d1e-403f-ab4e-d121e405d40b",
+          "body": "{\"data\":[{{#each (dataRaw 'users' '$.*')}}{\"id\":{{this.id}},\"name\":\"{{this.name}}\",\"email\":\"{{this.email}}\",\"role\":\"{{this.role}}\",\"area_id\":{{this.area_id}} }{{#unless @last}},{{/unless}}{{/each}}]}",
+          "latency": 0,
+          "statusCode": 200,
+          "label": "",
+          "headers": [],
+          "filePath": "",
+          "sendFileAsBody": false,
+          "rules": [],
+          "rulesOperator": "AND",
+          "disableTemplating": false,
+          "fallbackTo404": false,
+          "default": true,
+          "databucketID": "",
+          "bodyType": "INLINE",
+          "crudKey": "id"
+        }
+      ],
+      "enabled": true,
+      "responseMode": null,
+      "type": "http"
+    },
+    {
+      "uuid": "8097980e-c97d-47b9-8b26-426896a6a8d5",
+      "documentation": "",
+      "method": "get",
+      "endpoint": "projects",
+      "responses": [
+        {
+          "uuid": "51c1d6e9-e52a-4bf1-be3e-9865b7df1b01",
+          "body": "{\"data\":{{{stringify (dataRaw 'projects' '$.*')}}} }",
+          "latency": 0,
+          "statusCode": 200,
+          "label": "",
+          "headers": [],
+          "filePath": "",
+          "sendFileAsBody": false,
+          "rules": [],
+          "rulesOperator": "AND",
+          "disableTemplating": false,
+          "fallbackTo404": false,
+          "default": true,
+          "databucketID": "",
+          "bodyType": "INLINE",
+          "crudKey": "id"
+        }
+      ],
+      "enabled": true,
+      "responseMode": null,
+      "type": "http"
+    },
+    {
+      "uuid": "9840cba0-83b6-463d-8a84-ace55a64b5b9",
+      "documentation": "",
+      "method": "get",
+      "endpoint": "ics",
+      "responses": [
+        {
+          "uuid": "7f38e3d9-34db-4cb2-b635-d1fb6801a633",
+          "body": "{\"data\":{{{stringify (filter (dataRaw 'ics' '$.*') (object manager_id=(parseInt (queryParam 'manager_id'))))}}},\"pagination\":{\"page\":1,\"limit\":10,\"total\":{{len (filter (dataRaw 'ics' '$.*') (object manager_id=(parseInt (queryParam 'manager_id'))))}},\"totalPages\":1}}",
+          "latency": 0,
+          "statusCode": 200,
+          "label": "Con manager_id",
+          "headers": [],
+          "filePath": "",
+          "sendFileAsBody": false,
+          "rules": [
+            {
+              "target": "query",
+              "modifier": "manager_id",
+              "value": "",
+              "invert": true,
+              "operator": "null"
+            }
+          ],
+          "rulesOperator": "AND",
+          "disableTemplating": false,
+          "fallbackTo404": false,
+          "default": false,
+          "databucketID": "",
+          "bodyType": "INLINE",
+          "crudKey": "id"
+        },
+        {
+          "uuid": "d6473bfb-e273-46cf-97e9-236feec4fd3f",
+          "body": "{\"data\":{{{stringify (dataRaw 'ics' '$.*')}}},\"pagination\":{\"page\":1,\"limit\":10,\"total\":{{len (dataRaw 'ics' '$.*')}},\"totalPages\":1}}",
+          "latency": 0,
+          "statusCode": 200,
+          "label": "Todos",
+          "headers": [],
+          "filePath": "",
+          "sendFileAsBody": false,
+          "rules": [],
+          "rulesOperator": "AND",
+          "disableTemplating": false,
+          "fallbackTo404": false,
+          "default": true,
+          "databucketID": "",
+          "bodyType": "INLINE",
+          "crudKey": "id"
+        }
+      ],
+      "enabled": true,
+      "responseMode": null,
+      "type": "http"
+    },
+    {
+      "uuid": "902fb91b-8bf6-40c7-b43d-7a600c3dff63",
+      "documentation": "",
+      "method": "post",
+      "endpoint": "ics",
+      "responses": [
+        {
+          "uuid": "44d003ee-1893-471b-a073-54f7f84e9729",
+          "body": "{{setData 'set' 'ics' (dataRaw 'counters' 'ic') (objectMerge (object IC_id=(dataRaw 'counters' 'ic')) (bodyRaw))}}{{{stringify (dataRaw 'ics' (concat (dataRaw 'counters' 'ic')))}}}{{setData 'inc' 'counters' 'ic'}}",
+          "latency": 0,
+          "statusCode": 201,
+          "label": "",
+          "headers": [],
+          "filePath": "",
+          "sendFileAsBody": false,
+          "rules": [],
+          "rulesOperator": "AND",
+          "disableTemplating": false,
+          "fallbackTo404": false,
+          "default": true,
+          "databucketID": "",
+          "bodyType": "INLINE",
+          "crudKey": "id"
+        }
+      ],
+      "enabled": true,
+      "responseMode": null,
+      "type": "http"
+    },
+    {
+      "uuid": "ef1896e0-7e29-485a-abbb-fa20b95d1f51",
+      "documentation": "",
+      "method": "get",
+      "endpoint": "ics/:id",
+      "responses": [
+        {
+          "uuid": "aab6fde8-e3b5-4bbf-ba72-50f7a9ad45ec",
+          "body": "{{{stringify (dataRaw 'ics' (urlParam 'id'))}}}",
+          "latency": 0,
+          "statusCode": 200,
+          "label": "IC",
+          "headers": [],
+          "filePath": "",
+          "sendFileAsBody": false,
+          "rules": [
+            {
+              "target": "templating",
+              "modifier": "{{#if (dataRaw 'ics' (urlParam 'id'))}}ok{{/if}}",
+              "value": "ok",
+              "invert": false,
+              "operator": "equals"
+            }
+          ],
+          "rulesOperator": "AND",
+          "disableTemplating": false,
+          "fallbackTo404": false,
+          "default": false,
+          "databucketID": "",
+          "bodyType": "INLINE",
+          "crudKey": "id"
+        },
+        {
+          "uuid": "b685e033-92b9-4255-bad4-f2376edb0dde",
+          "body": "{\"message\": \"IC not found\"}",
+          "latency": 0,
+          "statusCode": 404,
+          "label": "No existe",
+          "headers": [],
+          "filePath": "",
+          "sendFileAsBody": false,
+          "rules": [],
+          "rulesOperator": "AND",
+          "disableTemplating": false,
+          "fallbackTo404": false,
+          "default": true,
+          "databucketID": "",
+          "bodyType": "INLINE",
+          "crudKey": "id"
+        }
+      ],
+      "enabled": true,
+      "responseMode": null,
+      "type": "http"
+    },
+    {
+      "uuid": "4ad62ac0-f963-418b-b7eb-5ab07cf0fd19",
+      "documentation": "",
+      "method": "patch",
+      "endpoint": "ics/:id",
+      "responses": [
+        {
+          "uuid": "e1a49002-2772-45fc-8e35-9796f4fd7b9b",
+          "body": "{{setData 'merge' 'ics' (urlParam 'id') (bodyRaw)}}{{{stringify (dataRaw 'ics' (urlParam 'id'))}}}",
+          "latency": 0,
+          "statusCode": 200,
+          "label": "IC editado",
+          "headers": [],
+          "filePath": "",
+          "sendFileAsBody": false,
+          "rules": [
+            {
+              "target": "templating",
+              "modifier": "{{#if (dataRaw 'ics' (urlParam 'id'))}}ok{{/if}}",
+              "value": "ok",
+              "invert": false,
+              "operator": "equals"
+            }
+          ],
+          "rulesOperator": "AND",
+          "disableTemplating": false,
+          "fallbackTo404": false,
+          "default": false,
+          "databucketID": "",
+          "bodyType": "INLINE",
+          "crudKey": "id"
+        },
+        {
+          "uuid": "002a544c-d502-49a2-9b72-158d827ae197",
+          "body": "{\"message\": \"IC not found\"}",
+          "latency": 0,
+          "statusCode": 404,
+          "label": "No existe",
+          "headers": [],
+          "filePath": "",
+          "sendFileAsBody": false,
+          "rules": [],
+          "rulesOperator": "AND",
+          "disableTemplating": false,
+          "fallbackTo404": false,
+          "default": true,
+          "databucketID": "",
+          "bodyType": "INLINE",
+          "crudKey": "id"
+        }
+      ],
+      "enabled": true,
+      "responseMode": null,
+      "type": "http"
+    },
+    {
+      "uuid": "4d722954-3cd8-4005-a724-9a2af2aba24a",
+      "documentation": "",
+      "method": "delete",
+      "endpoint": "ics/:id",
+      "responses": [
+        {
+          "uuid": "aa23f9ee-dc17-431e-91d1-f2e3ec345931",
+          "body": "{{setData 'del' 'ics' (urlParam 'id')}}",
+          "latency": 0,
+          "statusCode": 204,
+          "label": "IC borrado",
+          "headers": [],
+          "filePath": "",
+          "sendFileAsBody": false,
+          "rules": [
+            {
+              "target": "templating",
+              "modifier": "{{#if (dataRaw 'ics' (urlParam 'id'))}}ok{{/if}}",
+              "value": "ok",
+              "invert": false,
+              "operator": "equals"
+            }
+          ],
+          "rulesOperator": "AND",
+          "disableTemplating": false,
+          "fallbackTo404": false,
+          "default": false,
+          "databucketID": "",
+          "bodyType": "INLINE",
+          "crudKey": "id"
+        },
+        {
+          "uuid": "56fd9a00-3ae8-4c0c-bd79-12e7c8a9d08d",
+          "body": "{\"message\": \"IC not found\"}",
+          "latency": 0,
+          "statusCode": 404,
+          "label": "No existe",
+          "headers": [],
+          "filePath": "",
+          "sendFileAsBody": false,
+          "rules": [],
+          "rulesOperator": "AND",
+          "disableTemplating": false,
+          "fallbackTo404": false,
+          "default": true,
+          "databucketID": "",
+          "bodyType": "INLINE",
+          "crudKey": "id"
+        }
+      ],
+      "enabled": true,
+      "responseMode": null,
+      "type": "http"
+    },
+    {
+      "uuid": "9cd8e490-0511-4223-bd97-88ef49b37e70",
+      "documentation": "",
+      "method": "get",
+      "endpoint": "feedback",
+      "responses": [
+        {
+          "uuid": "62ea16c0-7322-4c2b-989b-cc785cb83ca7",
+          "body": "{\"data\":{{{stringify (dataRaw 'feedback' '$.*')}}} }",
+          "latency": 0,
+          "statusCode": 200,
+          "label": "",
+          "headers": [],
+          "filePath": "",
+          "sendFileAsBody": false,
+          "rules": [],
+          "rulesOperator": "AND",
+          "disableTemplating": false,
+          "fallbackTo404": false,
+          "default": true,
+          "databucketID": "",
+          "bodyType": "INLINE",
+          "crudKey": "id"
+        }
+      ],
+      "enabled": true,
+      "responseMode": null,
+      "type": "http"
+    },
+    {
+      "uuid": "c67a2ea9-244c-4695-830e-e2c172d60360",
+      "documentation": "",
+      "method": "post",
+      "endpoint": "feedback",
+      "responses": [
+        {
+          "uuid": "551b0832-fb22-453a-880b-e9c4c7a39540",
+          "body": "{{setData 'set' 'feedback' (dataRaw 'counters' 'feedback') (objectMerge (object id=(dataRaw 'counters' 'feedback') ic_id=null comment=null screenshot_url=null created_at=(now)) (bodyRaw))}}{\"data\":{{{stringify (dataRaw 'feedback' (concat (dataRaw 'counters' 'feedback')))}}} }{{setData 'inc' 'counters' 'feedback'}}",
+          "latency": 0,
+          "statusCode": 201,
+          "label": "",
+          "headers": [],
+          "filePath": "",
+          "sendFileAsBody": false,
+          "rules": [],
+          "rulesOperator": "AND",
+          "disableTemplating": false,
+          "fallbackTo404": false,
+          "default": true,
+          "databucketID": "",
+          "bodyType": "INLINE",
+          "crudKey": "id"
+        }
+      ],
+      "enabled": true,
+      "responseMode": null,
+      "type": "http"
+    },
+    {
+      "uuid": "ff689589-f4a4-4578-bf63-c742abb9fb35",
+      "documentation": "",
+      "method": "get",
+      "endpoint": "feedback/:id",
+      "responses": [
+        {
+          "uuid": "b78ccad4-2d6a-4863-bce7-2f46fc58b11c",
+          "body": "{\"data\":{{{stringify (dataRaw 'feedback' (urlParam 'id'))}}} }",
+          "latency": 0,
+          "statusCode": 200,
+          "label": "Feedback",
+          "headers": [],
+          "filePath": "",
+          "sendFileAsBody": false,
+          "rules": [
+            {
+              "target": "templating",
+              "modifier": "{{#if (dataRaw 'feedback' (urlParam 'id'))}}ok{{/if}}",
+              "value": "ok",
+              "invert": false,
+              "operator": "equals"
+            }
+          ],
+          "rulesOperator": "AND",
+          "disableTemplating": false,
+          "fallbackTo404": false,
+          "default": false,
+          "databucketID": "",
+          "bodyType": "INLINE",
+          "crudKey": "id"
+        },
+        {
+          "uuid": "3797509f-b704-406d-9f45-17368fe465f1",
+          "body": "{\"error\": \"Feedback not found\"}",
+          "latency": 0,
+          "statusCode": 404,
+          "label": "No existe",
+          "headers": [],
+          "filePath": "",
+          "sendFileAsBody": false,
+          "rules": [],
+          "rulesOperator": "AND",
+          "disableTemplating": false,
+          "fallbackTo404": false,
+          "default": true,
+          "databucketID": "",
+          "bodyType": "INLINE",
+          "crudKey": "id"
+        }
+      ],
+      "enabled": true,
+      "responseMode": null,
+      "type": "http"
+    },
+    {
+      "uuid": "3dcea688-7ed8-49ef-89bb-49674291d094",
+      "documentation": "",
+      "method": "patch",
+      "endpoint": "feedback/:id",
+      "responses": [
+        {
+          "uuid": "2de76069-d86e-4e43-9e9a-9392e561779a",
+          "body": "{{setData 'merge' 'feedback' (urlParam 'id') (bodyRaw)}}{\"data\":{{{stringify (dataRaw 'feedback' (urlParam 'id'))}}} }",
+          "latency": 0,
+          "statusCode": 200,
+          "label": "Feedback editado",
+          "headers": [],
+          "filePath": "",
+          "sendFileAsBody": false,
+          "rules": [
+            {
+              "target": "templating",
+              "modifier": "{{#if (dataRaw 'feedback' (urlParam 'id'))}}ok{{/if}}",
+              "value": "ok",
+              "invert": false,
+              "operator": "equals"
+            }
+          ],
+          "rulesOperator": "AND",
+          "disableTemplating": false,
+          "fallbackTo404": false,
+          "default": false,
+          "databucketID": "",
+          "bodyType": "INLINE",
+          "crudKey": "id"
+        },
+        {
+          "uuid": "9fbb93db-8580-42fc-bd7c-bbc51b443bfa",
+          "body": "{\"error\": \"Feedback not found\"}",
+          "latency": 0,
+          "statusCode": 404,
+          "label": "No existe",
+          "headers": [],
+          "filePath": "",
+          "sendFileAsBody": false,
+          "rules": [],
+          "rulesOperator": "AND",
+          "disableTemplating": false,
+          "fallbackTo404": false,
+          "default": true,
+          "databucketID": "",
+          "bodyType": "INLINE",
+          "crudKey": "id"
+        }
+      ],
+      "enabled": true,
+      "responseMode": null,
+      "type": "http"
+    },
+    {
+      "uuid": "ddc2786b-337a-4c37-9666-1d598df9d492",
+      "documentation": "",
+      "method": "put",
+      "endpoint": "feedback/:id",
+      "responses": [
+        {
+          "uuid": "a21e970b-328c-467d-9826-8ec5c33dd1be",
+          "body": "{{setData 'merge' 'feedback' (urlParam 'id') (objectMerge (object ic_id=null comment=null screenshot_url=null) (bodyRaw))}}{\"data\":{{{stringify (dataRaw 'feedback' (urlParam 'id'))}}} }",
+          "latency": 0,
+          "statusCode": 200,
+          "label": "Feedback reemplazado",
+          "headers": [],
+          "filePath": "",
+          "sendFileAsBody": false,
+          "rules": [
+            {
+              "target": "templating",
+              "modifier": "{{#if (dataRaw 'feedback' (urlParam 'id'))}}ok{{/if}}",
+              "value": "ok",
+              "invert": false,
+              "operator": "equals"
+            }
+          ],
+          "rulesOperator": "AND",
+          "disableTemplating": false,
+          "fallbackTo404": false,
+          "default": false,
+          "databucketID": "",
+          "bodyType": "INLINE",
+          "crudKey": "id"
+        },
+        {
+          "uuid": "64579107-eaef-441a-97fc-379667cb89a0",
+          "body": "{\"error\": \"Feedback not found\"}",
+          "latency": 0,
+          "statusCode": 404,
+          "label": "No existe",
+          "headers": [],
+          "filePath": "",
+          "sendFileAsBody": false,
+          "rules": [],
+          "rulesOperator": "AND",
+          "disableTemplating": false,
+          "fallbackTo404": false,
+          "default": true,
+          "databucketID": "",
+          "bodyType": "INLINE",
+          "crudKey": "id"
+        }
+      ],
+      "enabled": true,
+      "responseMode": null,
+      "type": "http"
+    },
+    {
+      "uuid": "60379d6a-fd9e-4459-9bf6-a6c6ea640991",
+      "documentation": "",
+      "method": "delete",
+      "endpoint": "feedback/:id",
+      "responses": [
+        {
+          "uuid": "6c00a3fd-9fff-47e8-a0d4-77d0c318d8a9",
+          "body": "{{setData 'del' 'feedback' (urlParam 'id')}}",
+          "latency": 0,
+          "statusCode": 204,
+          "label": "Feedback borrado",
+          "headers": [],
+          "filePath": "",
+          "sendFileAsBody": false,
+          "rules": [
+            {
+              "target": "templating",
+              "modifier": "{{#if (dataRaw 'feedback' (urlParam 'id'))}}ok{{/if}}",
+              "value": "ok",
+              "invert": false,
+              "operator": "equals"
+            }
+          ],
+          "rulesOperator": "AND",
+          "disableTemplating": false,
+          "fallbackTo404": false,
+          "default": false,
+          "databucketID": "",
+          "bodyType": "INLINE",
+          "crudKey": "id"
+        },
+        {
+          "uuid": "eb7cddde-b2e3-48af-8b99-3f40169d6f6c",
+          "body": "{\"error\": \"Feedback not found\"}",
+          "latency": 0,
+          "statusCode": 404,
+          "label": "No existe",
+          "headers": [],
+          "filePath": "",
+          "sendFileAsBody": false,
+          "rules": [],
+          "rulesOperator": "AND",
+          "disableTemplating": false,
+          "fallbackTo404": false,
+          "default": true,
+          "databucketID": "",
+          "bodyType": "INLINE",
+          "crudKey": "id"
+        }
+      ],
+      "enabled": true,
+      "responseMode": null,
+      "type": "http"
+    }
+  ],
+  "proxyMode": false,
+  "proxyHost": "",
+  "proxyRemovePrefix": false,
+  "tlsOptions": {
+    "enabled": false,
+    "type": "CERT",
+    "pfxPath": "",
+    "certPath": "",
+    "keyPath": "",
+    "caPath": "",
+    "passphrase": ""
+  },
+  "cors": true,
+  "headers": [
+    {
+      "key": "Content-Type",
+      "value": "application/json"
+    },
+    {
+      "key": "Access-Control-Allow-Origin",
+      "value": "*"
+    },
+    {
+      "key": "Access-Control-Allow-Methods",
+      "value": "GET,POST,PUT,PATCH,DELETE,OPTIONS"
+    },
+    {
+      "key": "Access-Control-Allow-Headers",
+      "value": "Content-Type, Authorization"
+    }
+  ],
+  "proxyReqHeaders": [
+    {
+      "key": "",
+      "value": ""
+    }
+  ],
+  "proxyResHeaders": [
+    {
+      "key": "",
+      "value": ""
+    }
+  ],
+  "data": [
+    {
+      "uuid": "1ea24930-2d88-42c4-9a1c-a93ce9561491",
+      "id": "users",
+      "name": "users",
+      "documentation": "",
+      "value": "{\n  \"1\": {\n    \"id\": 1,\n    \"name\": \"Manager Demo\",\n    \"email\": \"manager@example.com\",\n    \"password\": \"password\",\n    \"role\": \"manager\",\n    \"area_id\": 1\n  },\n  \"2\": {\n    \"id\": 2,\n    \"name\": \"Director Demo\",\n    \"email\": \"director@example.com\",\n    \"password\": \"password\",\n    \"role\": \"director\",\n    \"area_id\": 1\n  }\n}"
+    },
+    {
+      "uuid": "c2c6d44b-4fcd-4c04-b781-bcecf625eaa5",
+      "id": "projects",
+      "name": "projects",
+      "documentation": "",
+      "value": "{\n  \"1\": {\n    \"id\": 1,\n    \"name\": \"Customer Portal\"\n  },\n  \"2\": {\n    \"id\": 2,\n    \"name\": \"Mobile App\"\n  },\n  \"3\": {\n    \"id\": 3,\n    \"name\": \"Internal Tools\"\n  }\n}"
+    },
+    {
+      "uuid": "14349dff-c9e0-44af-bd17-cad63df73b6d",
+      "id": "ics",
+      "name": "ics",
+      "documentation": "",
+      "value": "{\n  \"1\": {\n    \"IC_id\": 1,\n    \"name\": \"Ana Torres\",\n    \"title\": \"Software Engineer\",\n    \"manager_id\": 1,\n    \"entries\": 4\n  },\n  \"2\": {\n    \"IC_id\": 2,\n    \"name\": \"Luis Pérez\",\n    \"title\": \"QA Engineer\",\n    \"manager_id\": 1,\n    \"entries\": 2\n  },\n  \"3\": {\n    \"IC_id\": 3,\n    \"name\": \"Marta Gómez\",\n    \"title\": \"Product Designer\",\n    \"manager_id\": 1,\n    \"entries\": 5\n  }\n}"
+    },
+    {
+      "uuid": "1b1c4d7d-46e7-4506-a981-242cdee7c96a",
+      "id": "feedback",
+      "name": "feedback",
+      "documentation": "",
+      "value": "{\n  \"1\": {\n    \"id\": 1,\n    \"author_id\": 1,\n    \"ic_id\": 1,\n    \"project_id\": 1,\n    \"date\": \"2026-10-05\",\n    \"source_name\": \"Sprint review\",\n    \"score\": 5,\n    \"comment\": \"Excellent delivery and communication.\",\n    \"screenshot_url\": null,\n    \"created_at\": \"2026-10-05T14:30:00.000Z\"\n  },\n  \"2\": {\n    \"id\": 2,\n    \"author_id\": 1,\n    \"ic_id\": 2,\n    \"project_id\": 2,\n    \"date\": \"2026-10-12\",\n    \"source_name\": \"Code review\",\n    \"score\": 3,\n    \"comment\": \"Needs more test coverage.\",\n    \"screenshot_url\": null,\n    \"created_at\": \"2026-10-12T09:15:00.000Z\"\n  },\n  \"3\": {\n    \"id\": 3,\n    \"author_id\": 1,\n    \"ic_id\": 3,\n    \"project_id\": 1,\n    \"date\": \"2026-10-20\",\n    \"source_name\": \"Design critique\",\n    \"score\": 4,\n    \"comment\": null,\n    \"screenshot_url\": \"https://example.com/screenshot.png\",\n    \"created_at\": \"2026-10-20T16:45:00.000Z\"\n  }\n}"
+    },
+    {
+      "uuid": "a2943044-b1be-47ce-9f6f-0ac219c11143",
+      "id": "counters",
+      "name": "counters",
+      "documentation": "",
+      "value": "{\n  \"user\": 3,\n  \"ic\": 4,\n  \"feedback\": 4\n}"
+    }
+  ],
+  "folders": [],
+  "rootChildren": [
+    {
+      "type": "route",
+      "uuid": "4f9e72f4-2fcf-4b80-9192-9908d46e4e1f"
+    },
+    {
+      "type": "route",
+      "uuid": "3307262c-2c39-42c7-9b21-57031b6c85f5"
+    },
+    {
+      "type": "route",
+      "uuid": "6d646742-890b-4fbe-9198-1adfe51dec57"
+    },
+    {
+      "type": "route",
+      "uuid": "21314d5e-22d1-4746-b919-94ada5a31536"
+    },
+    {
+      "type": "route",
+      "uuid": "8097980e-c97d-47b9-8b26-426896a6a8d5"
+    },
+    {
+      "type": "route",
+      "uuid": "9840cba0-83b6-463d-8a84-ace55a64b5b9"
+    },
+    {
+      "type": "route",
+      "uuid": "902fb91b-8bf6-40c7-b43d-7a600c3dff63"
+    },
+    {
+      "type": "route",
+      "uuid": "ef1896e0-7e29-485a-abbb-fa20b95d1f51"
+    },
+    {
+      "type": "route",
+      "uuid": "4ad62ac0-f963-418b-b7eb-5ab07cf0fd19"
+    },
+    {
+      "type": "route",
+      "uuid": "4d722954-3cd8-4005-a724-9a2af2aba24a"
+    },
+    {
+      "type": "route",
+      "uuid": "9cd8e490-0511-4223-bd97-88ef49b37e70"
+    },
+    {
+      "type": "route",
+      "uuid": "c67a2ea9-244c-4695-830e-e2c172d60360"
+    },
+    {
+      "type": "route",
+      "uuid": "ff689589-f4a4-4578-bf63-c742abb9fb35"
+    },
+    {
+      "type": "route",
+      "uuid": "3dcea688-7ed8-49ef-89bb-49674291d094"
+    },
+    {
+      "type": "route",
+      "uuid": "ddc2786b-337a-4c37-9666-1d598df9d492"
+    },
+    {
+      "type": "route",
+      "uuid": "60379d6a-fd9e-4459-9bf6-a6c6ea640991"
+    }
+  ],
+  "callbacks": []
+}
