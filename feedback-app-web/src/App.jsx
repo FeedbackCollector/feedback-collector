@@ -1,121 +1,85 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import { BrowserRouter, Navigate, Outlet, useLocation, useRoutes } from 'react-router-dom'
+import { Header } from './components/Header'
+import { NavBar } from './components/Manager-Nav'
+import { useAuthStore } from './store/authStore'
+import './styles/App.css'
+import MyICs from './pages/MyICs'
+import Dashboard from './pages/Dashboard'
+import Management from './pages/Management'
+import MyManagement from './pages/MyManagement'
+import FeedbackLogComp from './components/Feedback-log-comp'
+import Login from './pages/login'
 
-function App() {
-  const [count, setCount] = useState(0)
+const VALID_ROLES = ['manager', 'director']
+
+const managerRoutes = [
+  { path: '/MyICs', title: 'My ICs', element: <MyICs /> },
+  { path: '/feedback-log', title: 'FeedBack Log', element: <FeedbackLogComp /> },
+]
+
+const directorRoutes = [
+  { path: '/dashboard', title: 'Dashboard', element: <Dashboard /> },
+  { path: '/my-management', title: 'My Managers', element: <MyManagement /> },
+]
+
+function AppLayout({ links }) {
+  const { pathname } = useLocation()
+  const title = links.find(({ to }) => to === pathname)?.label ?? 'Página no encontrada'
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <div className="app-layout">
+      <NavBar links={links} />
+      <main className="app-content">
+        <Header title={title} />
+        <Outlet />
+      </main>
+    </div>
+  )
+}
 
-      <div className="ticks"></div>
+function AppRoutes() {
+  const user = useAuthStore((state) => state.user)
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+  const hasValidSession = isAuthenticated
+    && user !== null
+    && VALID_ROLES.includes(user.role)
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+  const routes = hasValidSession
+    ? (() => {
+        const homePath = user.role === 'director' ? '/dashboard' : '/MyICs'
+        const visibleRoutes = user.role === 'director'
+          ? [...directorRoutes, ...managerRoutes, { path: '/management', title: 'Management', element: <Management /> }]
+          : managerRoutes
+        const links = visibleRoutes.map(({ path, title }) => ({ to: path, label: title }))
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+        return [
+          {
+            element: <AppLayout links={links} />,
+            children: [
+              { index: true, element: <Navigate to={homePath} replace /> },
+              ...visibleRoutes.map(({ path, title, element }) => ({
+                path,
+                element,
+                handle: { title },
+              })),
+              { path: '*', element: <Navigate to={homePath} replace /> },
+            ],
+          },
+        ]
+      })()
+    : [
+      { path: '/', element: <Login /> },
+      { path: '*', element: <Navigate to="/" replace /> },
+    ]
+
+  return useRoutes(routes)
+}
+
+function App() {
+  return (
+    <BrowserRouter>
+      <AppRoutes />
+    </BrowserRouter>
   )
 }
 

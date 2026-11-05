@@ -1,0 +1,21 @@
+.user-profile {
+  display: flex;
+  padding: 5%;
+  gap: 1rem;
+}
+
+.user-profile_name {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  flex-direction: column;
+}
+
+.user-profile__avatar {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  border: 1px solid #d1d5db;
+  border-radius: 50%;
+  background: #f3f4f6;
+}
