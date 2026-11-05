@@ -1,4 +1,5 @@
 import { API_URL } from './api';
+import { authHeaders } from './authHeaders';
 
 export interface Area {
   id: number;
@@ -10,7 +11,7 @@ interface AreasResponse {
 }
 
 export async function obtainAreas(): Promise<Area[]> {
-  const response = await fetch(`${API_URL}/areas`);
+  const response = await fetch(`${API_URL}/areas`, { headers: authHeaders()});
   if (!response.ok) {
     throw new Error(`Request failed (${response.status}): ${API_URL}/areas`);
   }

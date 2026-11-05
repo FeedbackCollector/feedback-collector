@@ -1,4 +1,5 @@
 import { API_URL } from './api';
+import { authHeaders } from './authHeaders';
 
 export interface Manager {
   id: number;
@@ -80,9 +81,7 @@ export async function obtainManagers(token: string | null): Promise<{
   const [usersResponse, ics, feedbackResponse] = await Promise.all([
     fetchJSON<UsersResponse>(`${API_URL}/users`),
     obtainAllICs(token),
-    fetchJSON<FeedbackResponse>(`${API_URL}/feedback`, {
-      headers: { Authorization: `Bearer ${token}` },
-    }),
+    fetchJSON<FeedbackResponse>(`${API_URL}/feedback?limit=100`, { headers: authHeaders() }),
   ]);
 
   if (!Array.isArray(usersResponse.data) || !Array.isArray(feedbackResponse.data)) {
