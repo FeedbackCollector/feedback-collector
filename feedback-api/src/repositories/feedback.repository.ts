@@ -1,4 +1,4 @@
-import { Feedback as FeedbackModel } from "../models/Index.ts";
+import { Feedback as FeedbackModel, ICs } from "../models/Index.ts";
 import { Feedback,NewFeedback, UpdateFeedback } from "../types/feedback.ts";
 
 export async function getFeedbackByID(id: number): Promise<Feedback | null> {

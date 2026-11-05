@@ -21,7 +21,7 @@ export async function getAll(req: Request, res: Response) {
 }
 
 export async function getById(req: Request, res: Response) {
-    const result = await getFeedbackByIdService(Number(req.params.id));
+    const result = await getFeedbackByIdService(Number(req.params.id), res.locals.user);
     if (result === "FEEDBACK_NOT_FOUND") return res.status(404).json({ error: "Feedback not found" });
     return res.json({ data: result });
 }
