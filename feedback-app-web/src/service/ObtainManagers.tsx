@@ -48,12 +48,13 @@ async function obtainAllICs(token: string): Promise<IC[]> {
   const limit = 100;
   const headers = { Authorization: `Bearer ${token}` };
   const firstPage = await fetchJSON<ICsResponse>(`${API_URL}/ics?page=1&limit=${limit}`, { headers });
-  if (!Array.isArray(firstPage.data) || !Number.isInteger(firstPage.pagination?.totalPages)) {
+  const totalPages = firstPage.pagination?.totalPages;
+  if (!Array.isArray(firstPage.data) || totalPages === undefined || !Number.isInteger(totalPages)) {
     throw new Error('The ICs response has an invalid format.');
   }
 
   const remainingPages = await Promise.all(
-    Array.from({ length: Math.max(0, firstPage.pagination.totalPages - 1) }, (_, index) =>
+    Array.from({ length: Math.max(0, totalPages - 1) }, (_, index) =>
       fetchJSON<ICsResponse>(`${API_URL}/ics?page=${index + 2}&limit=${limit}`, { headers })
     )
   );

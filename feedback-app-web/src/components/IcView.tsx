@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react';
 import type { Feedback, Project } from '../types/feedback';
-import { obtainFeedback } from '../service/ObtainFeedback';
+import { obtainAllFeedback } from '../service/ObtainFeedback';
 
 import { useAuthStore } from '../store/authStore';
 import { formatDate, getInitials } from '../utils/feedbackFormat';
-import { getProjects } from '../service/ObtainProjects';
+import { obtainProjects } from '../service/ObtainProjects';
 import '../styles/IcView.css';
 
 type ICInfo = {
@@ -100,7 +100,7 @@ function ICView({ ic, onBack }: ICViewProps) {
     setError('');
 
     try {
-      const data = await obtainFeedback();
+      const data = await obtainAllFeedback();
       setFeedbacks(data.filter((item) => item.ic_id === ic.IC_id));
     } catch (err) {
       console.error('Error loading feedback:', err);
@@ -115,7 +115,7 @@ function ICView({ ic, onBack }: ICViewProps) {
   }, [ic.IC_id]);
 
   useEffect(() => {
-    getProjects().then(setProjects);
+    obtainProjects().then(setProjects);
   }, []);
 
   const newestFirst = useMemo(

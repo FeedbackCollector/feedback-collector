@@ -3,6 +3,7 @@ import type { Feedback, FeedbackFilters, FeedbackPageResponse, IC, Project } fro
 import { obtainICs } from '../service/ObtainICs';
 import { obtainProjects } from '../service/ObtainProjects';
 import { obtainFeedbackPage } from '../service/ObtainFeedback';
+import ICView from './IcView';
 import '../styles/index.css'
 import { API_URL } from '../service/api';
 
@@ -157,6 +158,14 @@ function FeedbackLogComp() {
         .includes(filters.icName.toLowerCase());
     })
     .filter((item) => {
+      if (!filters.projectId) return true;
+      return String(item.project_id) === filters.projectId;
+    })
+    .filter((item) => {
+      if (!filters.score) return true;
+      return item.score === Number(filters.score);
+    })
+    .filter((item) => {
       if (filters.text === '') return true;
       const commentText = item.comment ?? '';
       return commentText.toLowerCase().includes(filters.text.toLowerCase());
@@ -169,7 +178,22 @@ function FeedbackLogComp() {
       return (b.date ?? '').localeCompare(a.date ?? '');
     });
 
-  const pagination = (
+  function openICTimeline(item: Feedback) {
+    const ic = ics.find((entry) => entry.IC_id === item.ic_id);
+
+    if (!ic) {
+      alert('Could not find the IC associated with this feedback.');
+      return;
+    }
+
+    setSelectedIC(ic);
+  }
+
+  if (selectedIC) {
+    return <ICView ic={selectedIC} onBack={() => setSelectedIC(null)} />;
+  }
+
+   const pagination = (
     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '16px', margin: '0 0 20px 0' }}>
       <button
         type="button"
@@ -198,20 +222,74 @@ function FeedbackLogComp() {
   );
 
   return (
-    <div className="fl-page">
-      <section className="fl-card">
-        <div className="fl-filters-grid">
-          <label className="fl-field">
-            <span className="fl-label">IC</span>
-            <div className="fl-search-wrap">
-              <i className="fa-solid fa-magnifying-glass" />
+    <>
+      <div style={{ padding: '0 20px' }}>
+        <div className="box" style={{ margin: '20px 0', maxWidth: '100%' }}>
+          <div className="filters-grid">
+            <div className="filter-item">
+              <span className="filter-label">IC</span>
+              <div className="search-wrapper">
+                {searchIcon}
+                <input
+                  type="text"
+                  name="icName"
+                  placeholder='Search ICs...'
+                  className="input-control"
+                  list="ics-list"
+                  value={filters.icName}
+                  onChange={handleChange}
+                />
+              </div>
+              <datalist id="ics-list">
+                {icNames.map((name) => (
+                  <option key={name} value={name} />
+                ))}
+              </datalist>
+            </div>
+
+            <div className="filter-item">
+              <span className="filter-label">Project</span>
+              <select name="projectId" className="input-control" value={filters.projectId} onChange={handleChange}>
+                <option value="">All</option>
+                {projectOptions.map((project) => (
+                  <option key={project.id} value={String(project.id)}>
+                    {project.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="filter-item">
+              <span className="filter-label">Score</span>
+              <select name="score" className="input-control" value={filters.score} onChange={handleChange}>
+                <option value="">All</option>
+                {SCORES.map((score) => (
+                  <option key={score} value={String(score)}>
+                    {score}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="filter-item">
+              <span className="filter-label">Sort by date</span>
+              <select name="sortBy" className="input-control" value={filters.sortBy} onChange={handleChange}>
+                <option value="newest">Newest first</option>
+                <option value="oldest">Oldest first</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="filter-item">
+            <span className="filter-label">Search</span>
+            <div className="search-wrapper">
+              {searchIcon}
               <input
                 type="text"
-                name="icName"
-                placeholder="Search ICs..."
+                name="text"
+                placeholder="Search feedback text..."
                 className="input-control"
-                list="ics-list"
-                value={filters.icName}
+                value={filters.text}
                 onChange={handleChange}
               />
             </div>
@@ -281,7 +359,7 @@ function FeedbackLogComp() {
                           ) : '—'}
                         </td>
                         <td>
-                          <button className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '13px', borderRadius: '6px' }}>View in Timeline</button>
+                          <button type="button" className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '13px', borderRadius: '6px' }} onClick={() => openICTimeline(item)}>View in Timeline</button>
                         </td>
                       </tr>
                     ))}
@@ -320,7 +398,7 @@ function FeedbackLogComp() {
                       <span className="text-label-meta" style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
                         {item.source_name}
                       </span>
-                      <button className="btn btn-secondary" style={{ padding: '6px 14px', borderRadius: '6px', fontSize: '13px' }}>
+                      <button type="button" className="btn btn-secondary" style={{ padding: '6px 14px', borderRadius: '6px', fontSize: '13px' }} onClick={() => openICTimeline(item)}>
                         View in Timeline
                       </button>
                     </div>
@@ -336,5 +414,4 @@ function FeedbackLogComp() {
     </>
   );
 }
-
 export default FeedbackLogComp;
