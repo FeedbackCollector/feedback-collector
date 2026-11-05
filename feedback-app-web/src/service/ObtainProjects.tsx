@@ -1,19 +1,17 @@
 import type { Project } from '../types/feedback';
 import { API_URL } from './api';
+import { authHeaders } from './authHeaders';
 
 const URLEndpoint = `${API_URL}/projects`;
 
-export type ProjectInput = {
-  name: string;
-};
-
-async function request<T>(url: string, init: RequestInit = {}): Promise<T | null> {
-  const headers = new Headers(init.headers);
-  headers.set('Content-Type', 'application/json');
-
-  const token = useAuthStore.getState().token;
-  if (token) {
-    headers.set('Authorization', `Bearer ${token}`);
+export async function obtainProjects(): Promise<Project[]> {
+  try {
+    const response = await fetch(URLEndpoint, { headers: authHeaders() });
+    const data = await response.json();
+    return data.data ?? [];
+  } catch (error) {
+    console.error('Error retrieving projects:', error);
+    return [];
   }
 
   const response = await fetch(url, { ...init, headers });

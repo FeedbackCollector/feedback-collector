@@ -6,3 +6,4 @@ export interface Project {
 export interface NewProject {
     name: string;
 }
+export type UpdateProject = Partial<NewProject>;

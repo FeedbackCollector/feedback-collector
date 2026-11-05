@@ -1,13 +1,20 @@
-import { useEffect, useState, type ChangeEvent } from 'react';
-import type { Feedback, FeedbackFilters, IC, Project } from '../types/feedback';
-import { obtainFeedback } from '../service/ObtainFeedback';
-import ICView from './IcView';
+import { useEffect, useRef, useState, type ChangeEvent } from 'react';
+import type { Feedback, FeedbackFilters, FeedbackPageResponse, IC, Project } from '../types/feedback';
 import { obtainICs } from '../service/ObtainICs';
-import { getProjects} from '../service/ObtainProjects';
-import { formatDate } from '../utils/feedbackFormat';
-import './FeedbackLog.css';
+import { obtainProjects } from '../service/ObtainProjects';
+import { obtainFeedbackPage } from '../service/ObtainFeedback';
+import '../styles/index.css'
+import { API_URL } from '../service/api';
 
-const SCORES = [1, 2, 3, 4, 5];
+const PAGE_SIZE = 10;
+const SCORES = [1,2,3,4,5];
+
+
+const searchIcon = <svg xmlns="http://w3.org" height="20px" viewBox="0 -960 960 960" width="20px" fill="currentColor"><path d="M784-120 532-372q-30 24-69 38t-83 14q-109 0-184.5-75.5T120-580q0-109 75.5-184.5T380-840q109 0 184.5 75.5T640-580q0 44-14 83t-38 69l252 252-56 56ZM380-400q75 0 127.5-52.5T560-580q0-75-52.5-127.5T380-760q-75 0-127.5 52.5T200-580q0 75 52.5 127.5T380-400Z"/></svg>
+const tableChartIcon = <svg xmlns="http://w3.org" height="20px" viewBox="0 -960 960 960" width="20px" fill="currentColor"><path d="M760-120H200q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120ZM200-640h560v-120H200v120Zm100 80H200v360h100v-360Zm360 0v360h100v-360H660Zm-80 0H380v360h200v-360Z"/></svg>
+const viewListIcon = <svg xmlns="http://w3.org" height="20px" viewBox="0 -960 960 960" width="20px" fill="currentColor"><path d="M360-240h440v-107H360v107ZM160-613h120v-107H160v107Zm0 187h120v-107H160v107Zm0 186h120v-107H160v107Zm200-186h440v-107H360v107Zm0-187h440v-107H360v107ZM160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h640q33 0 56.5 23.5T880-720v480q0 33-23.5 56.5T800-160H160Z"/></svg>
+const arrowForward = <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" height="10px" width="10px" fill="#1f1f1f"><path d="M8.03,22L6.25,20.23L14.48,12L6.25,3.77L8.03,2l10,10l-10,10Z"/></svg>
+const arrowBack = <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" height="10px" width="10px" fill="#1f1f1f"><path d="M10,22L0,12L10,2l1.78,1.77L3.55,12l8.23,8.23L10,22Z"/></svg>
 
 function FeedbackLogComp() {
   const [feedback, setFeedback] = useState<Feedback[]>([]);
@@ -23,7 +30,9 @@ function FeedbackLogComp() {
   } | null>(null);
 
   const [viewMode, setViewMode] = useState<'table' | 'list'>('table');
-
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
   const [filters, setFilters] = useState<FeedbackFilters>({
     icName: '',
     projectId: '',
@@ -31,50 +40,89 @@ function FeedbackLogComp() {
     sortBy: 'newest',
     text: '',
   });
+  const feedbackContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    async function loadData() {
-      try {
-        const [feedbackData, icsData, projectsData] = await Promise.all([
-          obtainFeedback(),
-          obtainICs(),
-          getProjects(),
-        ]);
+  const mediaQuery = window.matchMedia('(max-width: 767px)');
 
-        setFeedback(feedbackData);
+  if (mediaQuery.matches) {
+    setViewMode('list');
+  }
+
+  const handleMediaChange = (e: MediaQueryListEvent) => {
+    if (e.matches) {
+      setViewMode('list');
+    }
+  }; 
+  mediaQuery.addEventListener('change', handleMediaChange);
+  return () => mediaQuery.removeEventListener('change', handleMediaChange);
+  }, []);
+  
+
+  useEffect(() => {
+    async function loadReferences() {
+      try {
+        const [icsData, projectsData] = await Promise.all([obtainICs(), obtainProjects()]);
         setIcs(icsData);
         setProjects(projectsData);
       } catch (error) {
-        console.error('Error loading feedback log data:', error);
+        console.error('Error loading data:', error);
+      }
+    }
+    loadReferences();
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadFeedback() {
+      try {
+        const result = await obtainFeedbackPage(page, PAGE_SIZE);
+        if (cancelled) return;
+        setFeedback(result.data ?? []);
+        setTotalPages(Math.max(result.pagination.totalPages, 1));
+        setTotalItems(result.pagination.total);
+      } catch (error) {
+        if (cancelled) return;
+        console.error('Error retrieving feedback:', error);
+        setFeedback([]);
+        setTotalPages(1);
+        setTotalItems(0);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
 
-    void loadData();
-  }, []);
+    loadFeedback();
+    return () => {
+      cancelled = true;
+    };
+  }, [page]);
 
-  function handleChange(
-    event: ChangeEvent<HTMLInputElement | HTMLSelectElement>
-  ) {
-    const { name, value } = event.target;
+  useEffect(() => {
+    const el = feedbackContainerRef.current;
+    if (!el) return;
+    el.animate(
+      [
+        { opacity: 0, transform: 'translateY(16px)' },
+        { opacity: 1, transform: 'translateY(0)' },
+      ],
+      { duration: 600, easing: 'ease-out' }
+    );
+  }, [feedback, viewMode]);
 
-    setFilters((current) => ({
-      ...current,
-      [name]: value,
-    }));
+  function handleChange(e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
+    setFilters({ ...filters, [e.target.name]: e.target.value });
+  }
+
+  function goToPage(next: number) {
+    if (next < 1 || next > totalPages || next === page) return;
+    setPage(next);
   }
 
   const enrichedFeedback = feedback.map((item) => {
-    const matchedIC =
-      item.ic_id === null
-        ? undefined
-        : ics.find((ic) => ic.IC_id === item.ic_id);
-
-    const matchedProject =
-      item.project_id === null
-        ? undefined
-        : projects.find((project) => project.id === item.project_id);
+    const matchedIC = ics.find((ic) => ic.IC_id === item.ic_id);
+    const matchedProject = projects.find((p) => p.id === item.project_id);
 
     return {
       ...item,
@@ -109,21 +157,9 @@ function FeedbackLogComp() {
         .includes(filters.icName.toLowerCase());
     })
     .filter((item) => {
-      if (!filters.projectId) return true;
-
-      return String(item.project_id) === filters.projectId;
-    })
-    .filter((item) => {
-      if (!filters.score) return true;
-
-      return item.score === Number(filters.score);
-    })
-    .filter((item) => {
-      if (!filters.text) return true;
-
-      return (item.comment ?? '')
-        .toLowerCase()
-        .includes(filters.text.toLowerCase());
+      if (filters.text === '') return true;
+      const commentText = item.comment ?? '';
+      return commentText.toLowerCase().includes(filters.text.toLowerCase());
     })
     .sort((a, b) => {
       if (filters.sortBy === 'oldest') {
@@ -133,43 +169,33 @@ function FeedbackLogComp() {
       return (b.date ?? '').localeCompare(a.date ?? '');
     });
 
-  function openICTimeline(item: Feedback) {
-    if (item.ic_id === null) {
-      alert(
-        'This feedback does not have an associated IC. ' +
-          'Please check the feedback data in the backend.'
-      );
-      return;
-    }
-
-    const ic = ics.find((entry) => entry.IC_id === item.ic_id);
-
-    if (!ic) {
-      alert('Could not find the IC associated with this feedback.');
-      return;
-    }
-
-    setSelectedIC({
-      IC_id: ic.IC_id,
-      name: ic.name,
-      title: ic.title,
-      entries: ic.entries,
-    });
-  }
-
-  if (selectedIC) {
-    return (
-      <ICView
-        ic={selectedIC}
-        onBack={() => setSelectedIC(null)}
-      />
-    );
-  }
-
-  const timelineButtonTitle = (item: Feedback) =>
-    item.ic_id === null
-      ? 'This feedback has no associated IC'
-      : 'View IC timeline';
+  const pagination = (
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '16px', margin: '0 0 20px 0' }}>
+      <button
+        type="button"
+        className="btn btn-icon btn-secondary"
+        onClick={() => goToPage(page - 1)}
+        disabled={page <= 1}
+        aria-label="Previous page"
+        style={{ width: '32px', height: '32px', padding: 0, borderRadius: '6px', color: 'var(--text)', background: 'var(--surface)', right:'4px' }}
+      >
+        {arrowBack}
+      </button>
+      <span style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
+        Page {page} of {totalPages}
+      </span>
+      <button
+        type="button"
+        className="btn btn-icon btn-secondary"
+        onClick={() => goToPage(page + 1)}
+        disabled={page >= totalPages}
+        aria-label="Next page"
+        style={{ width: '32px', height: '32px', padding: 0, borderRadius: '6px', color: 'var(--text)', background: 'var(--surface)', left:'4px' }}
+      >
+        {arrowForward}
+      </button>
+    </div>
+  );
 
   return (
     <div className="fl-page">
@@ -189,226 +215,125 @@ function FeedbackLogComp() {
                 onChange={handleChange}
               />
             </div>
-            <datalist id="ics-list">
-              {icNames.map((name) => (
-                <option key={name} value={name} />
-              ))}
-            </datalist>
-          </label>
-
-          <label className="fl-field">
-            <span className="fl-label">Project</span>
-            <select
-              name="projectId"
-              className="input-control"
-              value={filters.projectId}
-              onChange={handleChange}
-            >
-              <option value="">All</option>
-              {projectOptions.map((project) => (
-                <option key={project.id} value={String(project.id)}>
-                  {project.name}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="fl-field">
-            <span className="fl-label">Score</span>
-            <select
-              name="score"
-              className="input-control"
-              value={filters.score}
-              onChange={handleChange}
-            >
-              <option value="">All</option>
-              {SCORES.map((score) => (
-                <option key={score} value={String(score)}>
-                  {score}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="fl-field">
-            <span className="fl-label">Sort by date</span>
-            <select
-              name="sortBy"
-              className="input-control"
-              value={filters.sortBy}
-              onChange={handleChange}
-            >
-              <option value="newest">Newest first</option>
-              <option value="oldest">Oldest first</option>
-            </select>
-          </label>
-        </div>
-
-        <label className="fl-field fl-search-full">
-          <span className="fl-label">Search</span>
-          <div className="fl-search-wrap">
-            <i className="fa-solid fa-magnifying-glass" />
-            <input
-              type="text"
-              name="text"
-              placeholder="Search feedback text..."
-              className="input-control"
-              value={filters.text}
-              onChange={handleChange}
-            />
-          </div>
-        </label>
-
-      </section>
-        <div className="fl-toolbar">
-          <div className="fl-toggle" role="group" aria-label="View mode">
-            <button
-              type="button"
-              className={viewMode === 'table' ? 'is-active' : ''}
-              onClick={() => setViewMode('table')}
-              aria-label="Table view"
-              aria-pressed={viewMode === 'table'}
-            >
-              <i className="fa-solid fa-table-cells" />
-            </button>
-            <button
-              type="button"
-              className={viewMode === 'list' ? 'is-active' : ''}
-              onClick={() => setViewMode('list')}
-              aria-label="List view"
-              aria-pressed={viewMode === 'list'}
-            >
-              <i className="fa-solid fa-table-list" />
-            </button>
           </div>
         </div>
 
-      {loading && <p className="fl-empty">Loading data...</p>}
+        <div className="view-toggle-container">
+          <button
+            type="button"
+            onClick={() => setViewMode('table')}
+            className={`btn-toggle-view ${viewMode === 'table' ? 'active' : ''}`}
+            style={{ color: viewMode === 'table' ? 'var(--surface)' : 'var(--text-muted)' }}
+          >
+            {tableChartIcon}
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode('list')}
+            className={`btn-toggle-view ${viewMode === 'list' ? 'active' : ''}`}
+            style={{ color: viewMode === 'list' ? 'var(--surface)' : 'var(--text-muted)' }}
+          >
+            {viewListIcon}
+          </button>
+        </div>
 
-      {!loading && filteredFeedback.length === 0 && (
-        <p className="fl-empty">No feedback entries match the applied filters.</p>
-      )}
+        {loading && <p>Loading data...</p>}
+        {!loading && filteredFeedback.length === 0 && <p>No feedback entries match the applied filters.</p>}
 
-      {!loading && filteredFeedback.length > 0 && viewMode === 'table' && (
-        <div className="fl-table-wrap animate-slide-up">
-          <table className="fl-table">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Subject</th>
-                <th>Project</th>
-                <th>Source</th>
-                <th>Score</th>
-                <th>Excerpt</th>
-                <th>Attachment</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredFeedback.map((item) => (
-                <tr key={item.id}>
-                  <td>{formatDate(item.date)}</td>
+        {!loading && filteredFeedback.length > 0 && (
+          <div ref={feedbackContainerRef}>
+            {viewMode === 'table' && (
+              <div className="box" style={{ margin: '0 0 20px 0', padding: '0', maxWidth: '100%', overflowX: 'auto' }}>
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Subject</th>
+                      <th>Project</th>
+                      <th>Source</th>
+                      <th>Score</th>
+                      <th>Excerpt</th>
+                      <th>Attachment</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredFeedback.map((item) => (
+                      <tr key={item.id}>
+                        <td className="text-caption-default" style={{ color: 'var(--text-muted)' }}>{item.date}</td>
+                        <td>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            <span style={{ fontWeight: 600 }}>{item.ic_name ?? '—'}</span>
+                            {item.source_name.toLowerCase().includes('peer') && <span className="badge-shared" style={{ width: 'fit-content' }}>Shared</span>}
+                          </div>
+                        </td>
+                        <td>{item.project_name ?? '—'}</td>
+                        <td style={{ color: 'var(--text-muted)' }}>{item.source_name}</td>
+                        <td>
+                          <span className="score-badge" data-score={item.score}>{item.score}</span>
+                        </td>
+                        <td style={{ maxWidth: '280px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {item.comment ?? '—'}
+                        </td>
+                        <td>
+                          {item.screenshot_url ? (
+                            <a href={item.screenshot_url} target="_blank" rel="noreferrer" style={{ color: 'var(--primary)', fontWeight: 600 }}>View</a>
+                          ) : '—'}
+                        </td>
+                        <td>
+                          <button className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '13px', borderRadius: '6px' }}>View in Timeline</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
 
-                  <td>
-                    <div className="fl-subject">
-                      <span>{item.ic_name ?? '—'}</span>
-                      {item.source_name.toLowerCase().includes('peer') && (
-                        <span className="badge-shared">Shared</span>
-                      )}
+            {viewMode === 'list' && (
+              <div className="box-columns" style={{ gap: '16px', marginBottom: '20px' }}>
+                {filteredFeedback.map((item) => (
+                  <div key={item.id} className="feedback-card">
+                    <div className="feedback-card-header">
+                      <span className="score-badge" data-score={item.score} style={{ width: '32px', height: '32px', fontSize: '14px'}}>
+                        {item.score}
+                      </span>
+
+                      <div className="feedback-card-meta">
+                        <div className="feedback-card-name-row">
+                          <h4 className="feedback-card-name">{item.ic_name ?? '—'}</h4>
+                          {(item.source_name.toLowerCase().includes('peer') || item.id === 3) && (
+                            <span className="badge-shared">Shared</span>
+                          )}
+                        </div>
+                        <span className="feedback-card-subtext">
+                          {item.date} • {item.project_name ?? '—'}
+                        </span>
+                      </div>
                     </div>
-                  </td>
 
-                  <td>{item.project_name ?? '—'}</td>
-                  <td>{item.source_name}</td>
+                    <p className="feedback-card-body">
+                      {item.comment ?? '—'}
+                    </p>
 
-                  <td>
-                    <span className="score-badge" data-score={item.score}>
-                      {item.score}
-                    </span>
-                  </td>
-
-                  <td>
-                    <div className="fl-excerpt">{item.comment ?? '—'}</div>
-                  </td>
-
-                  <td>
-                    {item.screenshot_url ? (
-                      <a href={item.screenshot_url} target="_blank" rel="noreferrer">
-                        View
-                      </a>
-                    ) : (
-                      <span className="fl-muted">—</span>
-                    )}
-                  </td>
-
-                  <td>
-                    <button
-                      type="button"
-                      className="fl-action-btn"
-                      onClick={() => openICTimeline(item)}
-                      disabled={item.ic_id === null}
-                      title={timelineButtonTitle(item)}
-                    >
-                      View in Timeline
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {!loading && filteredFeedback.length > 0 && viewMode === 'list' && (
-        <div className="box-columns animate-slide-up" style={{ gap: '16px' }}>
-          {filteredFeedback.map((item) => (
-            <div key={item.id} className="feedback-card">
-              <div className="feedback-card-header">
-                <span className="score-badge" data-score={item.score}>
-                  {item.score}
-                </span>
-
-                <div className="feedback-card-meta">
-                  <div className="feedback-card-name-row">
-                    <h4 className="feedback-card-name">{item.ic_name ?? '—'}</h4>
-                    {item.source_name.toLowerCase().includes('peer') && (
-                      <span className="badge-shared">Shared</span>
-                    )}
+                    <div className="feedback-card-footer">
+                      <span className="text-label-meta" style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
+                        {item.source_name}
+                      </span>
+                      <button className="btn btn-secondary" style={{ padding: '6px 14px', borderRadius: '6px', fontSize: '13px' }}>
+                        View in Timeline
+                      </button>
+                    </div>
                   </div>
-                  <span className="feedback-card-subtext">
-                    {formatDate(item.date)} · {item.project_name ?? '—'}
-                  </span>
-                </div>
+                ))}
               </div>
+            )}
+          </div>
+        )}
 
-              <p className="feedback-card-body">{item.comment ?? '—'}</p>
-
-              <div className="feedback-card-footer">
-                <span className="fl-muted" style={{ fontSize: '12px' }}>
-                  {item.source_name}
-                </span>
-
-                {item.screenshot_url && (
-                  <a href={item.screenshot_url} target="_blank" rel="noreferrer">
-                    Screenshot
-                  </a>
-                )}
-
-                <button
-                  type="button"
-                  className="fl-action-btn"
-                  onClick={() => openICTimeline(item)}
-                  disabled={item.ic_id === null}
-                  title={timelineButtonTitle(item)}
-                >
-                  View in Timeline
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
+        {!loading && totalItems > 0 && pagination}
+      </div>
+    </>
   );
 }
 

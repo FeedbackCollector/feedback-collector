@@ -3,8 +3,12 @@ import { getAll, getById, create, replace, update, remove } from '../controllers
 import { authenticateToken } from '../middleware/auth.ts';
 import { validate } from '../middleware/validate.ts';
 import { createFeedbackScheme, updateFeedbackScheme } from '../schemes/feedback.schema.ts';
+import { authenticateToken, authorizeRole } from '../middleware/auth.ts';
 
 const router = Router();
+
+// authorizeRole reads res.locals.user, which only authenticateToken fills in.
+router.use(authenticateToken);
 
 router.param('id', (req, res, next, value) => {
     const id = Number(value);
@@ -17,16 +21,16 @@ router.param('id', (req, res, next, value) => {
 
 
 
-router.get('/', authenticateToken, getAll);
+router.get('/',  authorizeRole("director","manager"),getAll);
 
-router.get('/:id', authenticateToken, getById);
+router.get('/:id',  authorizeRole("director","manager"),getById);
 
-router.post('/', validate(createFeedbackScheme), create);
+router.post('/', authorizeRole("director","manager"),validate(createFeedbackScheme), create);
 
-router.put('/:id', validate(createFeedbackScheme), replace);
+router.put('/:id', authorizeRole("director","manager"), validate(createFeedbackScheme), replace);
 
-router.patch('/:id', validate(updateFeedbackScheme), update);
+router.patch('/:id', authorizeRole("director","manager"), validate(updateFeedbackScheme), update);
 
-router.delete('/:id', remove);
+router.delete('/:id', authorizeRole("director","manager"), remove);
 
 export default router;

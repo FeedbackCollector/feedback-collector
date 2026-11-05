@@ -10,7 +10,8 @@ export function authenticateToken(req: Request, res: Response, next: NextFunctio
     }
 
     try {
-        req.user = jwt.verify(token, process.env.JWT_SECRET as string) as AuthRequest['user'];
+        const payload = jwt.verify(token, process.env.JWT_SECRET as string) as { email: string; role: string; id: number };
+        res.locals.user = { email: payload.email, role: payload.role, id: payload.id };
         next();
     } catch {
         return res.status(401).json({ error: 'Invalid or expired token' });

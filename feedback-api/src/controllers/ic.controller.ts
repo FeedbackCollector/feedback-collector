@@ -2,13 +2,15 @@ import { Request, Response } from "express";
 import { getAllICsService, getICByIdService, createICService, updateICService, deleteICService } from "../services/ic.service.ts";
 
 export async function getAll(req: Request, res: Response) {
-    const result = await getAllICsService(res.locals.query);
+    const result = await getAllICsService(res.locals.query, res.locals.user);
+    if (result === "FORBIDDEN") return res.status(401).json({ error: "UNAUTHORIZED" });
     return res.json(result);
 }
 
 export async function getById(req: Request, res: Response) {
-    const result = await getICByIdService(Number(req.params.id));
+    const result = await getICByIdService(Number(req.params.id), res.locals.user);
     if (result === "IC_NOT_FOUND") return res.status(404).json({ error: "IC not found" });
+    if (result === "FORBIDDEN") return res.status(401).json({ error: "UNAUTHORIZED" });
     return res.json({ data: result });
 }
 
