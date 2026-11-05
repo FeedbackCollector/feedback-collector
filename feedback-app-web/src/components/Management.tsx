@@ -84,7 +84,7 @@ function ManagementComp() {
     return () => mediaQuery.removeEventListener('change', handleMediaChange);
     }, []);
 
-  const [rowsByTab, setRowsByTab] = useState(INITIAL_ROWS);
+
   const [rows, setRows] = useState<ManagementRow[]>([]);
   const [areas, setAreas] = useState<ManagementData['areas']>([]);
   const [managers, setManagers] = useState<ManagementData['managers']>([]);
