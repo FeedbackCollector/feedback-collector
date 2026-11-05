@@ -131,6 +131,58 @@
   text-align: left;
 }
 
+.management-managers-table {
+  min-width: 900px;
+}
+
+.management-managers-table th {
+  height: 56px;
+  padding: 0 18px;
+}
+
+.management-managers-table td {
+  height: 84px;
+  padding: 10px 18px;
+}
+
+.management-managers-table th:last-child,
+.management-managers-table td:last-child {
+  width: 154px;
+}
+
+.management-area-select {
+  width: min(100%, 164px);
+  min-width: 130px;
+  height: 54px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: #fff;
+  color: var(--text);
+  font: inherit;
+}
+
+.management-area-select:focus-visible {
+  border-color: var(--primary);
+  outline: 2px solid var(--primary-light);
+}
+
+.management-area-select:disabled {
+  cursor: wait;
+}
+
+.management-no-score {
+  display: inline-flex;
+  min-width: 82px;
+  justify-content: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #f1eafa;
+  color: #51316e;
+  font-size: 13px;
+  font-weight: 600;
+}
+
 .management-table th {
   height: 44px;
   padding: 0 14px;
@@ -185,6 +237,26 @@
 }
 
 .management-row-action:hover {
+  border-color: var(--primary);
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+.management-feedback-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: #fff;
+  color: var(--text-muted);
+  cursor: pointer;
+  font: inherit;
+}
+
+.management-feedback-button:hover {
   border-color: var(--primary);
   background: var(--primary-light);
   color: var(--primary);
@@ -283,6 +355,36 @@
   box-shadow: 0 16px 48px rgb(23 24 26 / 20%);
 }
 
+.management-feedback-dialog {
+  max-height: min(80vh, 720px);
+}
+
+.management-feedback-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow: auto;
+}
+
+.management-feedback-entry {
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.management-feedback-entry-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.management-feedback-entry p {
+  margin: 8px 0 0;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
 .management-dialog h2 {
   margin-bottom: 4px;
   font-size: 20px;
@@ -292,17 +394,42 @@
   font-weight: 600;
 }
 
-.management-dialog input {
+.management-dialog input,
+.management-dialog select {
+  width: 100%;
   min-height: 42px;
   padding: 8px 12px;
   border: 1px solid var(--border);
   border-radius: 8px;
+  background: #fff;
+  color: var(--text);
   font: inherit;
 }
 
-.management-dialog input:focus {
+.management-dialog input:focus,
+.management-dialog select:focus {
   border-color: var(--primary);
   outline: 2px solid var(--primary-light);
+}
+
+.management-loading,
+.management-error,
+.management-form-hint {
+  margin: 12px 0;
+  font-size: 13px;
+}
+
+.management-loading,
+.management-form-hint {
+  color: var(--text-muted);
+}
+
+.management-error {
+  padding: 12px 14px;
+  border: 1px solid #f1b8b8;
+  border-radius: 8px;
+  background: #fff1f1;
+  color: #a32121;
 }
 
 .management-dialog-actions {
@@ -326,6 +453,14 @@
 
 .management-cancel-button:hover {
   background: #f4f4f8;
+}
+
+.management-add-button:disabled,
+.management-row-action:disabled,
+.management-tab:disabled,
+.management-cancel-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .management-visually-hidden {
