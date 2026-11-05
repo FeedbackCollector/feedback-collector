@@ -68,7 +68,7 @@ const FeedbackDashboard: React.FC<FeedbackDashboardProps> = ({ teamICs, icCompar
       <div style={{ backgroundColor: '#ffffff', padding: '16px 20px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
         <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '14px', color: '#1a202c', fontWeight: '600' }}>IC Comparison</h3>
         {sortedICs.map((ic) => (
-          <ICComparisonRow key={ic.id} name={ic.name} score={ic.score} />
+          <ICComparisonRow key={ic.id} {...ic} />
         ))}
       </div>
     </div>
