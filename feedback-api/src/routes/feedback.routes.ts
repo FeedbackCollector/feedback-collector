@@ -1,6 +1,5 @@
 import { Router } from 'express';
 import { getAll, getById, create, replace, update, remove } from '../controllers/feedback.controller.ts';
-import { authenticateToken } from '../middleware/auth.ts';
 import { validate } from '../middleware/validate.ts';
 import { createFeedbackScheme, updateFeedbackScheme } from '../schemes/feedback.schema.ts';
 import { authenticateToken, authorizeRole } from '../middleware/auth.ts';

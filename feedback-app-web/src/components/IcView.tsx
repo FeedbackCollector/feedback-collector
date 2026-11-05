@@ -5,6 +5,8 @@ import { obtainAllFeedback } from '../service/ObtainFeedback';
 import { useAuthStore } from '../store/authStore';
 import { formatDate, getInitials } from '../utils/feedbackFormat';
 import { obtainProjects } from '../service/ObtainProjects';
+import { API_URL as BASE_URL } from '../service/api';
+import { authHeaders } from '../service/authHeaders';
 import '../styles/IcView.css';
 
 type ICInfo = {
@@ -29,7 +31,7 @@ type EntryForm = {
   screenshot_url: string;
 };
 
-const API_URL = 'https://localhost:3000/feedback';
+const API_URL = `${BASE_URL}/feedback`;
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -229,7 +231,7 @@ function ICView({ ic, onBack }: ICViewProps) {
         isEditing ? `${API_URL}/${editingItem.id}` : API_URL,
         {
           method: isEditing ? 'PATCH' : 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...authHeaders() },
           body: JSON.stringify(payload),
         }
       );
@@ -264,7 +266,10 @@ function ICView({ ic, onBack }: ICViewProps) {
     setSuccess('');
 
     try {
-      const response = await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+      const response = await fetch(`${API_URL}/${id}`, {
+        method: 'DELETE',
+        headers: authHeaders(),
+      });
 
       if (!response.ok) {
         const responseText = await response.text();

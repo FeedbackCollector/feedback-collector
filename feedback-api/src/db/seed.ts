@@ -1,4 +1,4 @@
-import "dotenv/config";
+import "../env.ts";
 import bcrypt from "bcryptjs"; // tiene que ir primero: connection.ts lee process.env al cargarse
 import { sequelize } from "./connection.ts";
 import "../models/Index.ts"; 

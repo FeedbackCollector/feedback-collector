@@ -5,6 +5,8 @@ import { getProjectByID } from '../repositories/project.repository.ts';
 import { Feedback, NewFeedback, UpdateFeedback } from '../types/feedback.ts';
 import { Request } from 'express'
 
+type Caller = { id: number; email: string; role: string };
+
 type ReferenceError = "AUTHOR_NOT_FOUND" | "IC_NOT_FOUND" | "PROJECT_NOT_FOUND";
 
 async function checkReferences(data: UpdateFeedback): Promise<ReferenceError | null> {

@@ -1,5 +1,4 @@
 import { Request, Response } from 'express';
-import { AuthRequest } from '../middleware/auth.ts';
 import { getAllFeedbacksService, createFeedbackService, deleteFeedbackService, getFeedbackByIdService, replaceFeedbackService, updateFeedbackService } from '../services/feedback.service.ts';
 
 const isPositiveInt = (v: unknown) => Number.isInteger(v) && Number(v) >= 1;
@@ -21,8 +20,8 @@ export async function getAll(req: Request, res: Response) {
     }
 }
 
-export async function getById(req: AuthRequest, res: Response) {
-    const result = await getFeedbackByIdService(Number(req.params.id), req.user!);
+export async function getById(req: Request, res: Response) {
+    const result = await getFeedbackByIdService(Number(req.params.id), res.locals.user);
     if (result === "FEEDBACK_NOT_FOUND") return res.status(404).json({ error: "Feedback not found" });
     return res.json({ data: result });
 }
