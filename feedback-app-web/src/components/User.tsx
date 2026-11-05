@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import '../styles/User.css';
 import { useAuthStore } from '../store/authStore';
 import { useNavigate } from "react-router-dom";
+import { API_URL } from '../service/api';
 
 
 export function User() {
@@ -57,7 +58,7 @@ export function User() {
   setLoading(true);
 
   try {
-    const response = await fetch('http://localhost:3000/auth/password', {
+    const response = await fetch(`${API_URL}/auth/password`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',

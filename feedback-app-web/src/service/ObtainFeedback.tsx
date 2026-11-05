@@ -1,14 +1,26 @@
-import type { Feedback } from '../types/feedback';
+import type { Feedback, FeedbackPageResponse } from '../types/feedback';
+import { API_URL } from './api';
+import { authHeaders } from './authHeaders';
 
-const URLEndpoint = 'http://localhost:3000/feedback';
+const URLEndpoint = `${API_URL}/feedback`;
+const PAGE_LIMIT = 100;
 
-export async function obtainFeedback(): Promise<Feedback[]> {
-  try {
-    const response = await fetch(URLEndpoint);
-    const data = await response.json();
-    return data.data ?? [];
-  } catch (error) {
-    console.error('Error retrieving feedback:', error);
-    return [];
+export async function obtainFeedbackPage(page: number, limit: number = PAGE_LIMIT): Promise<FeedbackPageResponse> {
+  const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+  const response = await fetch(`${URLEndpoint}?${params}`, { headers: authHeaders() });
+  if (!response.ok) {
+    throw new Error(`Could not load feedback (${response.status}).`);
   }
+  return response.json() as Promise<FeedbackPageResponse>;
+}
+
+export async function obtainAllFeedback(): Promise<(Feedback & { ic_id: number })[]> {
+  const firstPage = await obtainFeedbackPage(1);
+  const totalPages = Math.max(firstPage.pagination.totalPages, 1);
+  const remainingPages = await Promise.all(
+    Array.from({ length: totalPages - 1 }, (_, index) => obtainFeedbackPage(index + 2))
+  );
+  return [firstPage, ...remainingPages]
+    .flatMap((page) => page.data ?? [])
+    .filter((item): item is Feedback & { ic_id: number } => item.ic_id !== null);
 }

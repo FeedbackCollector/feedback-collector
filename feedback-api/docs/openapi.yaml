@@ -29,7 +29,7 @@ paths:
                 properties:
                   message:
                     type: string
-                    example: Library API running
+                    example: Feedback-Collector API running
                   docs:
                     type: string
                     example: http://localhost:3000/docs

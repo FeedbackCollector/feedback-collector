@@ -13,3 +13,13 @@ export interface NewIC {
     entries: number;
 }
 
+
+export type UpdateIC = Partial<NewIC>;
+
+export interface ICFilters {
+    name?: string;
+    title?: string;
+    manager_id?: number;
+    page: number;
+    limit: number;
+}

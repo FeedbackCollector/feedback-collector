@@ -118,3 +118,12 @@
     gap: 12px;
   }
 }
+
+.dashboard-state {
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.dashboard-state.is-error {
+  color: #b42318;
+}

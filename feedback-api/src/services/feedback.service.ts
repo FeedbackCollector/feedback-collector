@@ -5,6 +5,8 @@ import { getProjectByID } from '../repositories/project.repository.ts';
 import { Feedback, NewFeedback, UpdateFeedback } from '../types/feedback.ts';
 import { Request } from 'express'
 
+type Caller = { id: number; email: string; role: string };
+
 type ReferenceError = "AUTHOR_NOT_FOUND" | "IC_NOT_FOUND" | "PROJECT_NOT_FOUND";
 
 async function checkReferences(data: UpdateFeedback): Promise<ReferenceError | null> {
@@ -17,14 +19,18 @@ async function checkReferences(data: UpdateFeedback): Promise<ReferenceError | n
         return null;
 }
 
-export async function getAllFeedbacksService(): Promise<Feedback[]> {
-    return FeedbackRepository.getAllFeedbacks();
+export async function getAllFeedbacksService(page: number, limit: number) {
+    return FeedbackRepository.getAllFeedbacks(page, limit);
 }
 
-export async function getFeedbackByIdService(id: number): Promise<Feedback | "FEEDBACK_NOT_FOUND"> {
+export async function getFeedbackByIdService(id: number, user: Caller): Promise<Feedback | "FEEDBACK_NOT_FOUND"> {
     const feedback = await FeedbackRepository.getFeedbackByID(id);
-    
     if (!feedback) return "FEEDBACK_NOT_FOUND";
+
+    if (user.role !== "director") {
+        const ic = await icFindByID(feedback.ic_id);
+        if (!ic || ic.manager_id !== user.id) return "FEEDBACK_NOT_FOUND";
+    }
     return feedback;
 }
 
