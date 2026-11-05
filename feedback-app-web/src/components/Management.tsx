@@ -66,6 +66,25 @@ function ManagementComp() {
   const token = useAuthStore((state) => state.token);
   const [activeTab, setActiveTab] = useState<ManagementTab>('Areas');
   const [viewMode, setViewMode] = useState<ViewMode>('table');
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(max-width: 767px)');
+
+    if (mediaQuery.matches) {
+      setViewMode('cards');
+    }
+
+    const handleMediaChange = (event: MediaQueryListEvent) => {
+      if (event.matches) {
+        setViewMode('cards');
+      }
+    };
+
+    mediaQuery.addEventListener('change', handleMediaChange);
+    return () => mediaQuery.removeEventListener('change', handleMediaChange);
+    }, []);
+
+  const [rowsByTab, setRowsByTab] = useState(INITIAL_ROWS);
   const [rows, setRows] = useState<ManagementRow[]>([]);
   const [areas, setAreas] = useState<ManagementData['areas']>([]);
   const [managers, setManagers] = useState<ManagementData['managers']>([]);
