@@ -3,6 +3,7 @@ import type { Feedback, FeedbackFilters, FeedbackPageResponse, IC, Project } fro
 import { obtainICs } from '../service/ObtainICs';
 import { obtainProjects } from '../service/ObtainProjects';
 import { obtainFeedbackPage } from '../service/ObtainFeedback';
+import ICView from './IcView';
 import '../styles/index.css'
 import { API_URL } from '../service/api';
 
@@ -21,6 +22,14 @@ function FeedbackLogComp() {
   const [ics, setIcs] = useState<IC[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const [selectedIC, setSelectedIC] = useState<{
+    IC_id: number;
+    name: string;
+    title: string;
+    entries: number;
+  } | null>(null);
+
   const [viewMode, setViewMode] = useState<'table' | 'list'>('table');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -118,44 +127,73 @@ function FeedbackLogComp() {
 
     return {
       ...item,
-      ic_name: item.ic_name || (matchedIC ? matchedIC.name : '—'),
-      project_name: item.project_name || (matchedProject ? matchedProject.name : '—'),
+      ic_name: matchedIC?.name ?? item.ic_name ?? null,
+      project_name: matchedProject?.name ?? item.project_name ?? null,
     };
   });
 
   const icNames = Array.from(
-    new Set(enrichedFeedback.map((item) => item.ic_name ?? '').filter((name) => name !== ''))
+    new Set(
+      enrichedFeedback
+        .map((item) => item.ic_name ?? '')
+        .filter((name) => name !== '')
+    )
   );
 
-  const projectOptions: { id: number; name: string }[] = [];
-  enrichedFeedback.forEach((item) => {
-    if (item.project_id !== null && item.project_name !== null && item.project_name !== undefined) {
-      const exists = projectOptions.some((p) => p.id === item.project_id);
-      if (!exists) projectOptions.push({ id: item.project_id, name: item.project_name });
-    }
-  });
+  const projectOptions = projects
+    .filter((project) =>
+      enrichedFeedback.some((item) => item.project_id === project.id)
+    )
+    .map((project) => ({
+      id: project.id,
+      name: project.name,
+    }));
 
   const filteredFeedback = enrichedFeedback
     .filter((item) => {
-      if (filters.icName === '') return true;
-      const name = item.ic_name ?? '';
-      return name.toLowerCase().includes(filters.icName.toLowerCase());
+      if (!filters.icName) return true;
+
+      return (item.ic_name ?? '')
+        .toLowerCase()
+        .includes(filters.icName.toLowerCase());
     })
-    .filter((item) => filters.projectId === '' || String(item.project_id) === filters.projectId)
-    .filter((item) => filters.score === '' || item.score === Number(filters.score))
+    .filter((item) => {
+      if (!filters.projectId) return true;
+      return String(item.project_id) === filters.projectId;
+    })
+    .filter((item) => {
+      if (!filters.score) return true;
+      return item.score === Number(filters.score);
+    })
     .filter((item) => {
       if (filters.text === '') return true;
       const commentText = item.comment ?? '';
       return commentText.toLowerCase().includes(filters.text.toLowerCase());
     })
     .sort((a, b) => {
-      const dateA = a.date ?? '';
-      const dateB = b.date ?? '';
-      if (filters.sortBy === 'oldest') return dateA.localeCompare(dateB);
-      return dateB.localeCompare(dateA);
+      if (filters.sortBy === 'oldest') {
+        return (a.date ?? '').localeCompare(b.date ?? '');
+      }
+
+      return (b.date ?? '').localeCompare(a.date ?? '');
     });
 
-  const pagination = (
+  function openICTimeline(item: Feedback) {
+    const ic = ics.find((entry) => entry.IC_id === item.ic_id);
+
+    if (!ic) {
+      alert('Could not find the IC associated with this feedback.');
+      return;
+    }
+
+    setSelectedIC(ic);
+  }
+
+  if (selectedIC) {
+    return <ICView ic={selectedIC} onBack={() => setSelectedIC(null)} />;
+  }
+
+   const pagination = (
     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '16px', margin: '0 0 20px 0' }}>
       <button
         type="button"
@@ -321,7 +359,7 @@ function FeedbackLogComp() {
                           ) : '—'}
                         </td>
                         <td>
-                          <button className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '13px', borderRadius: '6px' }}>View in Timeline</button>
+                          <button type="button" className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '13px', borderRadius: '6px' }} onClick={() => openICTimeline(item)}>View in Timeline</button>
                         </td>
                       </tr>
                     ))}
@@ -360,7 +398,7 @@ function FeedbackLogComp() {
                       <span className="text-label-meta" style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
                         {item.source_name}
                       </span>
-                      <button className="btn btn-secondary" style={{ padding: '6px 14px', borderRadius: '6px', fontSize: '13px' }}>
+                      <button type="button" className="btn btn-secondary" style={{ padding: '6px 14px', borderRadius: '6px', fontSize: '13px' }} onClick={() => openICTimeline(item)}>
                         View in Timeline
                       </button>
                     </div>
@@ -376,5 +414,4 @@ function FeedbackLogComp() {
     </>
   );
 }
-
 export default FeedbackLogComp;

@@ -1,5 +1,5 @@
 
-import "dotenv/config"; 
+import "./env.ts";
 import express, { Request, Response } from "express";
 import { sequelize } from "./db/connection.ts";
 import userRoutes from "./routes/user.routes.ts";

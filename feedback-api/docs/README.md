@@ -1,4 +1,4 @@
-# parqueJurasico-API
+# FEEDBACK COLLECTOR PROJECT
 
 REST API for managing the dinosaurs, enclosures, incidents, and users of a
 Jurassic park.
