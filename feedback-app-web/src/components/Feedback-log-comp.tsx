@@ -3,6 +3,8 @@ import type { Feedback, FeedbackFilters, FeedbackPageResponse, IC, Project } fro
 import { obtainICs } from '../service/ObtainICs';
 import { obtainProjects } from '../service/ObtainProjects';
 import { obtainFeedbackPage } from '../service/ObtainFeedback';
+import '../styles/index.css'
+import { API_URL } from '../service/api';
 
 const PAGE_SIZE = 10;
 const SCORES = [1,2,3,4,5];
@@ -31,6 +33,23 @@ function FeedbackLogComp() {
     text: '',
   });
   const feedbackContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+  const mediaQuery = window.matchMedia('(max-width: 767px)');
+
+  if (mediaQuery.matches) {
+    setViewMode('list');
+  }
+
+  const handleMediaChange = (e: MediaQueryListEvent) => {
+    if (e.matches) {
+      setViewMode('list');
+    }
+  }; 
+  mediaQuery.addEventListener('change', handleMediaChange);
+  return () => mediaQuery.removeEventListener('change', handleMediaChange);
+  }, []);
+  
 
   useEffect(() => {
     async function loadReferences() {
