@@ -99,15 +99,17 @@ function clearPasswordFields() {
 
   return (
     <>
-      <section className='user-section' aria-label="Perfil de usuario">
+      <hr />
+      <section aria-label="Perfil de usuario">
         <div className='user-profile' onClick={openModal} style={{ cursor: 'pointer' }}>
           <div className="user-profile__avatar" aria-hidden="true" />
           <div className='user-profile_name'>
             <span>{user?.name}</span>
-            <p style={{ color:'#5f2169', fontWeight: '600', textTransform: 'capitalize' }}>{user?.role}</p>
+            <p style={{ color:'#5f2169', fontWeight: '600' }}>{user?.role}</p>
           </div>
         </div>
       </section>
+      <hr />
 
       <dialog 
         ref={dialogRef} 

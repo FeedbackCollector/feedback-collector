@@ -62,7 +62,6 @@
   align-items: flex-end;
   justify-content: flex-start;
   gap: 12px;
-  margin-bottom: 16px;
 }
 
 .management-add-button {
@@ -491,12 +490,5 @@
 
   .management-table {
     min-width: 600px;
-  }
-}
-
-
-@media (max-width: 767px) {
-  .management-view-toggle {
-    display: none !important;
   }
 }

@@ -2,7 +2,6 @@ import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import type { Feedback, FeedbackFilters, FeedbackPageResponse, IC, Project } from '../types/feedback';
 import { obtainICs } from '../service/ObtainICs';
 import { obtainProjects } from '../service/ObtainProjects';
-import '../styles/index.css'
 import { obtainFeedbackPage } from '../service/ObtainFeedback';
 import ICView from './IcView';
 import '../styles/index.css'
@@ -43,23 +42,6 @@ function FeedbackLogComp() {
     text: '',
   });
   const feedbackContainerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-  const mediaQuery = window.matchMedia('(max-width: 767px)');
-
-  if (mediaQuery.matches) {
-    setViewMode('list');
-  }
-
-  const handleMediaChange = (e: MediaQueryListEvent) => {
-    if (e.matches) {
-      setViewMode('list');
-    }
-  }; 
-  mediaQuery.addEventListener('change', handleMediaChange);
-  return () => mediaQuery.removeEventListener('change', handleMediaChange);
-  }, []);
-  
 
   useEffect(() => {
   const mediaQuery = window.matchMedia('(max-width: 767px)');
