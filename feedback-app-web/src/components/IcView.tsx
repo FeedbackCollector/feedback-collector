@@ -483,9 +483,7 @@ function ICView({ ic, onBack }: ICViewProps) {
                   onChange={handleFieldChange}
                   placeholder="e.g. Product Manager, Client, Peer"
                 />
-                <span className="icv-hint">
-                  Not saved yet: the API has no field for it.
-                </span>
+          
               </label>
 
               <label className="icv-field">
