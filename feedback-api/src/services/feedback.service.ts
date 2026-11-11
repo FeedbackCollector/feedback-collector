@@ -19,8 +19,13 @@ async function checkReferences(data: UpdateFeedback): Promise<ReferenceError | n
         return null;
 }
 
-export async function getAllFeedbacksService(page: number, limit: number, filters: FeedbackFilters = {}) {
-    return FeedbackRepository.getAllFeedbacks(page, limit, filters);
+export async function getAllFeedbacksService(page: number, limit: number, filters: FeedbackFilters, user: Caller) {
+    if (user.role === "director") return FeedbackRepository.getAllFeedbacks(page, limit, filters);
+
+    if (user.role === "manager" && Number.isInteger(user.id)) {
+        return FeedbackRepository.getAllFeedbacks(page, limit, { ...filters, manager_id: user.id });
+    }
+    return "FORBIDDEN" as const;
 }
 
 export async function getFeedbackByIdService(id: number, user: Caller): Promise<Feedback | "FEEDBACK_NOT_FOUND"> {

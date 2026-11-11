@@ -40,6 +40,7 @@ export interface FeedbackFilters {
     author_id?: number;
     project_id?: number;
     ic_name?: string;
+    manager_id?: number;
     score?: number;
     text?: string;
     sort?: 'newest' | 'oldest';

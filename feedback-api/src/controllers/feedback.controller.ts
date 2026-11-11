@@ -41,7 +41,8 @@ export async function getAll(req: Request, res: Response) {
         }
         filters.sort = sort;
 
-        const result = await getAllFeedbacksService(page, limit, filters);
+        const result = await getAllFeedbacksService(page, limit, filters, res.locals.user);
+        if (result === "FORBIDDEN") return res.status(403).json({ message: "Forbidden" });
         res.status(200).json(result);
     } catch {
         res.status(500).json({ message: "Error retrieving feedback" });
