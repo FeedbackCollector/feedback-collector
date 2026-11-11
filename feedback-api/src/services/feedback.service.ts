@@ -2,7 +2,7 @@ import * as FeedbackRepository from '../repositories/feedback.repository.ts';
 import { getUserByID } from '../repositories/user.repositories.ts';
 import { icFindByID } from '../repositories/ic.repository.ts';
 import { getProjectByID } from '../repositories/project.repository.ts';
-import { Feedback, NewFeedback, UpdateFeedback } from '../types/feedback.ts';
+import { Feedback, FeedbackFilters, NewFeedback, UpdateFeedback } from '../types/feedback.ts';
 import { Request } from 'express'
 
 type Caller = { id: number; email: string; role: string };
@@ -19,8 +19,8 @@ async function checkReferences(data: UpdateFeedback): Promise<ReferenceError | n
         return null;
 }
 
-export async function getAllFeedbacksService(page: number, limit: number) {
-    return FeedbackRepository.getAllFeedbacks(page, limit);
+export async function getAllFeedbacksService(page: number, limit: number, filters: FeedbackFilters = {}) {
+    return FeedbackRepository.getAllFeedbacks(page, limit, filters);
 }
 
 export async function getFeedbackByIdService(id: number, user: Caller): Promise<Feedback | "FEEDBACK_NOT_FOUND"> {

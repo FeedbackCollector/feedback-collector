@@ -1,5 +1,6 @@
 import { Feedback as FeedbackModel, ICs } from "../models/Index.ts";
-import { Feedback,NewFeedback, UpdateFeedback } from "../types/feedback.ts";
+import { Feedback, FeedbackFilters, NewFeedback, UpdateFeedback } from "../types/feedback.ts";
+import { Op, type WhereOptions, type Order } from 'sequelize';
 
 export async function getFeedbackByID(id: number): Promise<Feedback | null> {
     const row = await FeedbackModel.findByPk(id);
@@ -7,11 +8,24 @@ export async function getFeedbackByID(id: number): Promise<Feedback | null> {
 }
 
 
-export async function getAllFeedbacks(page: number, limit: number) {
+export async function getAllFeedbacks(page: number, limit: number, filters: FeedbackFilters = {}) {
+    const where: WhereOptions = {};
+    for (const key of ['project_id', 'ic_id', 'score'] as const) {
+        if (filters[key] !== undefined) where[key] = filters[key];
+    }
+    const contains = (value: string) => `%${value.replace(/[\\%_]/g, '\\$&')}%`;
+    if (filters.text) where.comment = { [Op.iLike]: contains(filters.text) };
+    const order: Order = filters.sort
+        ? [['date', filters.sort === 'newest' ? 'DESC' : 'ASC'], ['id', filters.sort === 'newest' ? 'DESC' : 'ASC']]
+        : [['id', 'ASC']];
     const result = await FeedbackModel.findAndCountAll({
+        where,
+        ...(filters.ic_name ? {
+            include: [{ model: ICs, attributes: [], required: true, where: { name: { [Op.iLike]: contains(filters.ic_name) } } }],
+        } : {}),
         limit,
         offset: (page - 1) * limit,
-        order: [["id", "ASC"]],
+        order,
     });
 
     return {
