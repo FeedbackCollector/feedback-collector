@@ -86,6 +86,71 @@
   background: var(--primary-dk);
 }
 
+.management-requests {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.management-requests-title {
+  margin: 0;
+  color: var(--text);
+  font-size: 18px;
+}
+
+.management-requests-table {
+  min-width: 720px;
+}
+
+.management-request-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.management-request-approve,
+.management-request-delete {
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.management-request-approve {
+  background: var(--primary);
+  color: #fff;
+}
+
+.management-request-approve:hover {
+  background: var(--primary-dk);
+}
+
+.management-request-delete {
+  border-color: #e8b8b8;
+  background: #fff;
+  color: #a32121;
+}
+
+.management-request-delete:hover {
+  background: #fff1f1;
+}
+
+.management-request-approve:focus-visible,
+.management-request-delete:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.management-request-approve:disabled,
+.management-request-delete:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
 .management-view-toggle {
   display: flex;
   gap: 6px;
@@ -116,6 +181,20 @@
   border-color: var(--primary);
   background: var(--primary);
   color: #fff;
+}
+
+.management-pending-toggle {
+  width: auto;
+  min-width: 88px;
+  padding: 0 12px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.management-pending-toggle:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .management-table-wrap {
@@ -496,7 +575,7 @@
 
 
 @media (max-width: 767px) {
-  .management-view-toggle {
-    display: none !important;
+  .management-view-button:not(.management-pending-toggle) {
+    display: none;
   }
 }

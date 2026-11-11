@@ -31,6 +31,14 @@ export interface ManagementData {
   rows: ManagementRow[];
   areas: Array<{ id: number; name: string }>;
   managers: Array<{ id: number; name: string }>;
+  pendingAccounts: PendingAccount[];
+}
+
+export interface PendingAccount {
+  id: number;
+  name: string;
+  email: string;
+  areaId: number | null;
 }
 
 export interface ManagementFormValues {
@@ -49,6 +57,7 @@ interface APIUser {
   email: string;
   role: string;
   area_id: number | null;
+  status?: 'pending' | 'approved';
 }
 
 interface APIArea {
@@ -148,12 +157,13 @@ export async function loadManagementData(
   token: string
 ): Promise<ManagementData> {
   if (tab === 'Areas') {
-    const [areas, managers, ics, feedback] = await Promise.all([
+    const [areas, managerAccounts, ics, feedback] = await Promise.all([
       getList<APIArea>('/areas', token),
       getList<APIUser>(withQuery('/users', 'role=manager'), token),
       getAllPages<APIC>('/ics', token),
       getAllPages<APIFeedback>('/feedback', token),
     ]);
+    const managers = managerAccounts.filter((manager) => manager.status !== 'pending');
     const managersById = new Map(managers.map((manager) => [manager.id, manager]));
     const areaByICId = new Map<number, number>();
     const icsByArea = new Map<number, number>();
@@ -189,17 +199,27 @@ export async function loadManagementData(
       }),
       areas,
       managers: managers.map(({ id, name }) => ({ id, name })),
+      pendingAccounts: [],
     };
   }
 
   if (tab === 'Managers') {
-    const [areas, managers, ics, feedback, projects] = await Promise.all([
+    const [areas, managerAccounts, ics, feedback, projects] = await Promise.all([
       getList<APIArea>('/areas', token),
       getList<APIUser>(withQuery('/users', 'role=manager'), token),
       getAllPages<APIC>('/ics', token),
       getAllPages<APIFeedback>('/feedback', token),
       getList<APIProject>('/projects', token),
     ]);
+    const managers = managerAccounts.filter((manager) => manager.status !== 'pending');
+    const pendingAccounts = managerAccounts
+      .filter((manager) => manager.status === 'pending')
+      .map((manager) => ({
+        id: manager.id,
+        name: manager.name,
+        email: manager.email,
+        areaId: manager.area_id,
+      }));
     const areasById = new Map(areas.map((area) => [area.id, area.name]));
     const projectsById = new Map(projects.map((project) => [project.id, project.name]));
     const icsById = new Map(ics.map((ic) => [ic.IC_id, ic]));
@@ -249,15 +269,17 @@ export async function loadManagementData(
       }),
       areas,
       managers: managers.map(({ id, name }) => ({ id, name })),
+      pendingAccounts,
     };
   }
 
   if (tab === 'ICs') {
-    const [areas, managers, ics] = await Promise.all([
+    const [areas, managerAccounts, ics] = await Promise.all([
       getList<APIArea>('/areas', token),
       getList<APIUser>(withQuery('/users', 'role=manager'), token),
       getAllPages<APIC>('/ics', token),
     ]);
+    const managers = managerAccounts.filter((manager) => manager.status !== 'pending');
     const areasById = new Map(areas.map((area) => [area.id, area.name]));
     const managersById = new Map(managers.map((manager) => [manager.id, manager]));
 
@@ -278,6 +300,7 @@ export async function loadManagementData(
       }),
       areas,
       managers: managers.map(({ id, name }) => ({ id, name })),
+      pendingAccounts: [],
     };
   }
 
@@ -293,6 +316,7 @@ export async function loadManagementData(
     })),
     areas: [],
     managers: [],
+    pendingAccounts: [],
   };
 }
 
@@ -349,6 +373,10 @@ export async function updateManagerArea(
     method: 'PATCH',
     body: JSON.stringify({ area_id: areaId }),
   });
+}
+
+export async function approvePendingAccount(id: number, token: string): Promise<void> {
+  await request(`/users/${id}/approve`, token, { method: 'PATCH' });
 }
 
 export async function deleteManagementRow(

@@ -1,11 +1,13 @@
 import { useEffect, useState, type FormEvent, type KeyboardEvent } from 'react';
 import {
+  approvePendingAccount,
   deleteManagementRow,
   loadManagementData,
   saveManagementRow,
   updateManagerArea,
   type ManagementData,
   type ManagementFormValues,
+  type PendingAccount,
   type ManagementRow,
   type ManagementTab,
 } from '../service/ManagementApi';
@@ -88,6 +90,8 @@ function ManagementComp() {
   const [rows, setRows] = useState<ManagementRow[]>([]);
   const [areas, setAreas] = useState<ManagementData['areas']>([]);
   const [managers, setManagers] = useState<ManagementData['managers']>([]);
+  const [pendingAccounts, setPendingAccounts] = useState<PendingAccount[]>([]);
+  const [showPendingRequests, setShowPendingRequests] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isMutating, setIsMutating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -97,12 +101,17 @@ function ManagementComp() {
   const [formValues, setFormValues] = useState<ManagementFormValues>(EMPTY_FORM);
 
   useEffect(() => {
+    setShowPendingRequests(false);
+  }, [activeTab]);
+
+  useEffect(() => {
     let isCurrent = true;
     setLoading(true);
     setError(null);
 
     if (!token) {
       setRows([]);
+      setPendingAccounts([]);
       setError('You must be logged in to load management data.');
       setLoading(false);
       return () => {
@@ -116,6 +125,7 @@ function ManagementComp() {
           setRows(data.rows);
           setAreas(data.areas);
           setManagers(data.managers);
+          setPendingAccounts(data.pendingAccounts);
         }
       })
       .catch((reason: unknown) => {
@@ -175,6 +185,7 @@ function ManagementComp() {
     setRows(data.rows);
     setAreas(data.areas);
     setManagers(data.managers);
+    setPendingAccounts(data.pendingAccounts);
   };
 
   const saveRow = async (event: FormEvent<HTMLFormElement>) => {
@@ -213,6 +224,62 @@ function ManagementComp() {
       setIsMutating(false);
     }
   };
+
+  const approveAccount = async (account: PendingAccount) => {
+    if (!token) {
+      setError('You must be logged in to approve accounts.');
+      return;
+    }
+
+    setIsMutating(true);
+    setError(null);
+    try {
+      await approvePendingAccount(account.id, token);
+      await refreshRows();
+    } catch (reason: unknown) {
+      console.error('Could not approve account:', reason);
+      setError(getErrorMessage(reason));
+    } finally {
+      setIsMutating(false);
+    }
+  };
+
+  const deletePendingAccount = async (account: PendingAccount) => {
+    if (!token || !window.confirm(`Delete the account request for ${account.name}?`)) return;
+
+    setIsMutating(true);
+    setError(null);
+    try {
+      await deleteManagementRow('Managers', account.id, token);
+      await refreshRows();
+    } catch (reason: unknown) {
+      console.error('Could not delete pending account:', reason);
+      setError(getErrorMessage(reason));
+    } finally {
+      setIsMutating(false);
+    }
+  };
+
+  const renderPendingActions = (account: PendingAccount) => (
+    <div className="management-request-actions">
+      <button
+        type="button"
+        className="management-request-approve"
+        onClick={() => void approveAccount(account)}
+        disabled={isMutating}
+      >
+        Approve
+      </button>
+      <button
+        type="button"
+        className="management-request-delete"
+        onClick={() => void deletePendingAccount(account)}
+        disabled={isMutating}
+      >
+        Delete
+      </button>
+    </div>
+  );
 
   const changeManagerArea = async (row: ManagementRow, areaId: number) => {
     if (!token || row.areaId === areaId) return;
@@ -292,17 +359,19 @@ function ManagementComp() {
         aria-labelledby={`management-tab-${activeTab}`}
       >
         <div className="management-toolbar">
-          <button
-            type="button"
-            className="management-add-button"
-            onClick={openAddDialog}
-            disabled={loading || isMutating}
-          >
-            <i className="fa-solid fa-plus" aria-hidden="true" />
-            Add {TAB_SINGULAR[activeTab]}
-          </button>
+          {activeTab !== 'Managers' && (
+            <button
+              type="button"
+              className="management-add-button"
+              onClick={openAddDialog}
+              disabled={loading || isMutating}
+            >
+              <i className="fa-solid fa-plus" aria-hidden="true" />
+              Add {TAB_SINGULAR[activeTab]}
+            </button>
+          )}
 
-          <div className="management-view-toggle" role="group" aria-label="Choose layout">
+          <div className="management-view-toggle" role="group" aria-label="Management view">
             <button
               type="button"
               className={`management-view-button${viewMode === 'cards' ? ' is-active' : ''}`}
@@ -325,6 +394,17 @@ function ManagementComp() {
                 <path d="M360-240h440v-107H360v107ZM160-613h120v-107H160v107Zm0 187h120v-107H160v107Zm0 186h120v-107H160v107Zm200-186h440v-107H360v107Zm0-187h440v-107H360v107ZM160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h640q33 0 56.5 23.5T880-720v480q0 33-23.5 56.5T800-160H160Z" />
               </svg>
             </button>
+            {activeTab === 'Managers' && (
+              <button
+                type="button"
+                className={`management-view-button management-pending-toggle${showPendingRequests ? ' is-active' : ''}`}
+                aria-pressed={showPendingRequests}
+                onClick={() => setShowPendingRequests((showing) => !showing)}
+                disabled={loading || isMutating}
+              >
+                {showPendingRequests ? 'Managers' : `Pending (${pendingAccounts.length})`}
+              </button>
+            )}
           </div>
         </div>
 
@@ -340,9 +420,72 @@ function ManagementComp() {
         )}
         {loading ? (
           <p className="management-loading" role="status">Loading {activeTab.toLowerCase()}...</p>
-        ) : error && !isDialogOpen ? null : rows.length === 0 ? (
+        ) : error && !isDialogOpen ? null : (
+          <>
+            {activeTab === 'Managers' && showPendingRequests ? (
+              <section
+                className="management-requests"
+                id="management-pending-requests"
+                aria-labelledby="management-requests-title"
+              >
+                <h2 className="management-requests-title" id="management-requests-title">
+                  Pending account requests ({pendingAccounts.length})
+                </h2>
+                {pendingAccounts.length === 0 ? (
+                  <p className="management-empty-state">There are no accounts waiting for approval.</p>
+                ) : viewMode === 'table' ? (
+                  <div className="management-table-wrap">
+                    <table className="management-table management-requests-table">
+                      <thead>
+                        <tr>
+                          <th>Name</th>
+                          <th>Email</th>
+                          <th>Area</th>
+                          <th><span className="management-visually-hidden">Actions</span></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {pendingAccounts.map((account) => (
+                          <tr key={account.id}>
+                            <td data-label="Name">{account.name}</td>
+                            <td data-label="Email">{account.email}</td>
+                            <td data-label="Area">
+                              {areas.find((area) => area.id === account.areaId)?.name ?? '—'}
+                            </td>
+                            <td className="management-actions-cell" data-label="Actions">
+                              {renderPendingActions(account)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="management-cards">
+                    {pendingAccounts.map((account) => (
+                      <article className="management-card" key={account.id}>
+                        <div className="management-card-heading">
+                          <h2>{account.name}</h2>
+                        </div>
+                        <dl>
+                          <div className="management-card-detail">
+                            <dt>Email</dt>
+                            <dd>{account.email}</dd>
+                          </div>
+                          <div className="management-card-detail">
+                            <dt>Area</dt>
+                            <dd>{areas.find((area) => area.id === account.areaId)?.name ?? '—'}</dd>
+                          </div>
+                        </dl>
+                        {renderPendingActions(account)}
+                      </article>
+                    ))}
+                  </div>
+                )}
+              </section>
+            ) : rows.length === 0 ? (
           <p className="management-empty-state">No {activeTab.toLowerCase()} to display.</p>
-        ) : viewMode === 'table' ? (
+            ) : viewMode === 'table' ? (
           <div className="management-table-wrap">
             <table className={`management-table${activeTab === 'Managers' ? ' management-managers-table' : ''}`}>
               <thead>
@@ -458,6 +601,8 @@ function ManagementComp() {
               </article>
             ))}
           </div>
+            )}
+          </>
         )}
         {feedbackManager && (
           <div className="management-dialog-backdrop" onMouseDown={(event) => {
