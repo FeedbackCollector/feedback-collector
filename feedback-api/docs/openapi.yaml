@@ -11,6 +11,7 @@ servers:
 tags:
   - name: Health
   - name: Auth
+  - name: Users
   - name: ICs
 
 paths:
@@ -38,7 +39,7 @@ paths:
     post:
       tags: [Auth]
       summary: Register a new user
-      description: Creates a user with the `manager` role.
+      description: Creates a manager account in the pending state. A director must approve it before login is allowed.
       operationId: register
       requestBody:
         required: true
@@ -48,7 +49,7 @@ paths:
               $ref: "#/components/schemas/RegisterRequest"
       responses:
         "201":
-          description: User created
+          description: Registration submitted for approval
           content:
             application/json:
               schema:
@@ -56,7 +57,9 @@ paths:
                 properties:
                   message:
                     type: string
-                    example: Usuario creado
+                    example: Registration pending approval
+                  status:
+                    $ref: "#/components/schemas/AccountStatus"
         "400":
           description: Validation error
           content:
@@ -78,7 +81,7 @@ paths:
     post:
       tags: [Auth]
       summary: Log in
-      description: Returns a JWT valid for one hour.
+      description: Returns a JWT for an approved account. Pending accounts receive invalid credentials.
       operationId: login
       requestBody:
         required: true
@@ -109,7 +112,85 @@ paths:
                 invalidCredentials:
                   summary: Invalid credentials
                   value:
-                    message: Credenciales inválidas
+                    message: Invalid credentials
+
+  /users:
+    get:
+      tags: [Users]
+      summary: List users
+      operationId: listUsers
+      parameters:
+        - name: role
+          in: query
+          schema:
+            type: string
+            enum: [manager, director]
+      responses:
+        "200":
+          description: Users, including their account status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/User"
+
+  /users/{id}/approve:
+    patch:
+      tags: [Users]
+      summary: Approve a pending user account
+      description: Changes the status of an existing pending account to approved. Does not create an account.
+      operationId: approveUser
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        "200":
+          description: Existing account approved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/User"
+        "400":
+          description: Invalid user ID
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: Invalid id
+        "401":
+          description: Authentication token required or invalid
+        "403":
+          description: Only directors can approve accounts
+        "404":
+          description: User does not exist
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: User not found
+        "409":
+          description: Account is not pending
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: User account is not pending approval
 
   /auth/password:
     patch:
@@ -371,6 +452,11 @@ paths:
                 message: Error deleting the IC
 
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
   parameters:
     ICId:
       name: id
@@ -385,6 +471,33 @@ components:
       properties:
         message:
           type: string
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+    AccountStatus:
+      type: string
+      enum: [pending, approved]
+    User:
+      type: object
+      required: [id, name, email, role, status]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          enum: [manager, director]
+        area_id:
+          type: integer
+          nullable: true
+        status:
+          $ref: "#/components/schemas/AccountStatus"
     ValidationError:
       type: object
       properties:

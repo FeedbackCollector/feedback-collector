@@ -6,8 +6,7 @@
     "dev": "tsx watch src/server.ts",
     "seed": "tsx src/db/seed.ts",
     "build": "tsc",
-    "start": "node dist/server.js",
-    "test:api": "bash tests/run-tests.sh"
+    "start": "node dist/server.js"
   },
   "dependencies": {
     "@scarf/scarf": "^1.4.0",
