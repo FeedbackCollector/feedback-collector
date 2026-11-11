@@ -1,8 +1,9 @@
 import { useAuthStore } from "../store/authStore";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 // @ts-ignore CSS files are handled by the bundler.
 import "../styles/login.css";
+import { obtainAreas, type Area } from "../service/ObtainAreas";
 
 function Login() {
     const activeForm = useAuthStore((state) => state.activeForm);
@@ -27,6 +28,8 @@ function Login() {
     const setRegPassword = useAuthStore((state) => state.setRegPassword);
     const setRegConfirmPassword = useAuthStore((state) => state.setRegConfirmPassword);
     const createAccount = useAuthStore((state) => state.createAccount);
+    
+    const [areas, setAreas] = useState<Area[]>([]);
 
 
     const navigate = useNavigate();
@@ -36,6 +39,22 @@ function Login() {
             navigate("/", { replace: true });
         }
     }, [isAuthenticated, navigate]);
+
+    useEffect(() => {
+    Promise.allSettled([obtainAreas()])
+      .then(([areaResult]) => {
+
+        if (areaResult.status === 'fulfilled') {
+          setAreas(areaResult.value);
+        } else {
+          const message = areaResult.reason instanceof Error
+            ? areaResult.reason.message
+            : String(areaResult.reason);
+          console.error('Could not load areas:', areaResult.reason);
+
+        }
+      })
+    }, [])
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -144,11 +163,14 @@ function Login() {
 
                     <div className={`form-group ${activeForm === 'register' ? 'show' : ''}`}>
                         <label className="label-field">Area</label>
-                        <select className="select-area" defaultValue="Design">
-                            <option value="Design">Design</option>
-                            <option value="Delivery">Delivery</option>
-                            <option value="Engineering">Engineering</option>
-                            <option value="Product">Product</option>
+                        <select className="select-area" defaultValue= "area">
+                            {areas.map((area) => (
+                                <option
+                                value={area.name}
+                                >
+                                {area.name}
+                                </option>
+                            ))}
                         </select>
                     </div>
 
