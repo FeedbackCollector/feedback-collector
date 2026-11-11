@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { obtainManagers, type Manager } from '../service/ObtainManagers';
 import { obtainAreas, type Area } from '../service/ObtainAreas';
 import { useAuthStore } from '../store/authStore';
 import '../styles/MyManagement.css';
+import { UserAvatar } from './UserAvatar';
 
 type ViewMode = 'cards' | 'list';
 
@@ -24,6 +25,45 @@ export default function MyManagementComp() {
   const [areasError, setAreasError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('cards');
+  const viewContainerRef = useRef<HTMLDivElement>(null);
+  const shouldAnimateViewChange = useRef(false);
+
+  const changeViewMode = (nextMode: ViewMode) => {
+    if (nextMode === viewMode) return;
+
+    shouldAnimateViewChange.current = true;
+    setViewMode(nextMode);
+  };
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(max-width: 768px)');
+
+    if (mediaQuery.matches) {
+      setViewMode('cards');
+    }
+
+    const handleMediaChange = (event: MediaQueryListEvent) => {
+      if (event.matches) {
+        setViewMode('cards');
+      }
+    };
+
+    mediaQuery.addEventListener('change', handleMediaChange);
+    return () => mediaQuery.removeEventListener('change', handleMediaChange);
+  }, []);
+
+  useEffect(() => {
+    if (!shouldAnimateViewChange.current) return;
+
+    shouldAnimateViewChange.current = false;
+    viewContainerRef.current?.animate(
+      [
+        { opacity: 0, transform: 'translateY(16px)' },
+        { opacity: 1, transform: 'translateY(0)' },
+      ],
+      { duration: 300, easing: 'ease-out' }
+    );
+  }, [viewMode]);
 
   useEffect(() => {
     let isCurrent = true;
@@ -115,7 +155,9 @@ export default function MyManagementComp() {
         <h2>All Managers</h2>
         <div className="my-management-toolbar">
           <label className="my-management-search">
-            <i className="fa-solid fa-magnifying-glass" aria-hidden="true" />
+            <svg aria-hidden="true" height="20" viewBox="0 -960 960 960" width="20" fill="currentColor">
+              <path d="M360-240h440v-107H360v107ZM160-613h120v-107H160v107Zm0 187h120v-107H160v107Zm0 186h120v-107H160v107Zm200-186h440v-107H360v107Zm0-187h440v-107H360v107ZM160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h640q33 0 56.5 23.5T880-720v480q0 33-23.5 56.5T800-160H160Z" />
+            </svg>
             <input
               type="search"
               value={search}
@@ -130,16 +172,18 @@ export default function MyManagementComp() {
               className={viewMode === 'cards' ? 'is-active' : ''}
               aria-label="Card view"
               aria-pressed={viewMode === 'cards'}
-              onClick={() => setViewMode('cards')}
+              onClick={() => changeViewMode('cards')}
             >
-              <i className="fa-solid fa-table-cells-large" aria-hidden="true" />
+              <svg aria-hidden="true" height="20" viewBox="0 -960 960 960" width="20" fill="currentColor">
+                <path d="M760-120H200q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120ZM200-640h560v-120H200v120Zm100 80H200v360h100v-360Zm360 0v360h100v-360H660Zm-80 0H380v360h200v-360Z" />
+              </svg>
             </button>
             <button
               type="button"
               className={viewMode === 'list' ? 'is-active' : ''}
               aria-label="List view"
               aria-pressed={viewMode === 'list'}
-              onClick={() => setViewMode('list')}
+              onClick={() => changeViewMode('list')}
             >
               <i className="fa-solid fa-table-list" aria-hidden="true" />
             </button>
@@ -195,10 +239,16 @@ export default function MyManagementComp() {
             </section>
 
             {viewMode === 'cards' ? (
-              <div className="my-management-manager-grid">
+              <div className="my-management-manager-grid" ref={viewContainerRef}>
                 {visibleManagers.map((manager) => (
                   <article className="my-management-manager-card" key={manager.id}>
-                    <div className="my-management-avatar" aria-hidden="true" />
+                    <UserAvatar
+                      name={manager.name}
+                      id={manager.id}
+                      entityType="manager"
+                      size={48}
+                      className="team-metric-avatar"
+                    />
                     <div className="my-management-manager-info">
                       <h3>{manager.name}</h3>
                       <p className="my-management-area">
@@ -222,7 +272,7 @@ export default function MyManagementComp() {
                 ))}
               </div>
             ) : (
-              <div className="my-management-table-wrap">
+              <div className="my-management-table-wrap" ref={viewContainerRef}>
                 <table className="my-management-table">
                   <thead>
                     <tr>

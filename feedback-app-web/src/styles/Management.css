@@ -500,3 +500,41 @@
     display: none !important;
   }
 }
+
+
+.management-dialog-backdrop {
+  animation: popup-backdrop-in 300ms ease both;
+}
+
+.management-dialog {
+  animation: popup-in 300ms ease both;
+}
+
+.management-dialog-backdrop.is-closing {
+  animation: popup-backdrop-out 300ms ease both;
+  pointer-events: none;
+}
+
+.management-dialog-backdrop.is-closing .management-dialog {
+  animation: popup-out 300ms ease both;
+}
+
+@keyframes popup-backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes popup-backdrop-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes popup-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes popup-out {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(8px) scale(0.98); }
+}
