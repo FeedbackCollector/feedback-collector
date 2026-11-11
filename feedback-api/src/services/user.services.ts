@@ -2,7 +2,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import * as UsersRepository from '../repositories/user.repositories.ts';
 import { getAreaByID } from '../repositories/area.repository.ts';
-import { User, CreateUser, UpdateUser, UserFilters } from '../types/user.ts';
+import { AccountStatus, User, CreateUser, UpdateUser, UserFilters } from '../types/user.ts';
 
 export async function getAllUsersService(filters: UserFilters = {}) {
     return UsersRepository.getAllUsers(filters);
@@ -37,8 +37,11 @@ export async function createUserService(data: CreateUser): Promise<User | Refere
 }
 
 export async function registerService(email: string, password: string , name: string , area_id: number): Promise<"EMAIL_TAKEN" | "AREA_NOT_FOUND" | "REGISTERED"> {
-    const result = await createUserService({ email, password, name, area_id, role: 'manager' });
-    if (result === "AREA_NOT_FOUND" || result === "EMAIL_TAKEN") return result;
+    const invalid = await checkReferences({ email, area_id });
+    if (invalid) return invalid;
+
+    const passwordHash = await bcrypt.hash(password, 10);
+    await UsersRepository.insertUser(email, passwordHash, "manager", area_id, name, "pending");
     return "REGISTERED";
 }
 
@@ -68,10 +71,26 @@ export async function loginService(email: string, password: string): Promise<str
     if (!user) return "INVALID_CREDENTIALS";
 
     const passwordOk = await bcrypt.compare(password, user.passwordHash);
-    if (!passwordOk) return "INVALID_CREDENTIALS";
+    if (!passwordOk || user.status !== "approved") return "INVALID_CREDENTIALS";
 
     return jwt.sign({ email: user.email, role: user.role, id: user.id }, process.env.JWT_SECRET as string, {expiresIn: '1h',
     });
+}
+
+export async function approveUserService(id: number): Promise<User | "USER_NOT_FOUND" | "ACCOUNT_NOT_PENDING"> {
+    const user = await UsersRepository.getPublicUserByID(id);
+    if (!user) return "USER_NOT_FOUND";
+    if (user.status !== "pending") return "ACCOUNT_NOT_PENDING";
+
+    const approved = await UsersRepository.approvePendingUser(id);
+    if (!approved) {
+        const currentUser = await UsersRepository.getPublicUserByID(id);
+        if (!currentUser) return "USER_NOT_FOUND";
+        return "ACCOUNT_NOT_PENDING";
+    }
+
+    const approvedUser = await UsersRepository.getPublicUserByID(id);
+    return approvedUser ?? "USER_NOT_FOUND";
 }
 
 export async function changePasswordService(userId: number, currentPassword: string, newPassword: string): Promise<"INVALID_CREDENTIALS" | "UPDATED"> {

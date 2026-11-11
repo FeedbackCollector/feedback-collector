@@ -1,6 +1,6 @@
 import { fn, col, where } from "sequelize";
 import { User as UserModel, ICs as ICModel, Feedback as FeedbackModel } from "../models/Index.ts";
-import { User, UpdateUser, UserFilters } from "../types/user.ts";
+import { AccountStatus, User, UpdateUser, UserFilters } from "../types/user.ts";
 
 export async function getUserByEmail(email: string) {
     const row = await UserModel.findOne({ where: where(fn("lower", col("email")), email.trim().toLowerCase()) });
@@ -21,9 +21,24 @@ export async function getAllUsers(filters: UserFilters = {}): Promise<User[]> {
     return rows.map(row => row.toJSON());
 }
 
-export async function insertUser(email: string, passwordHash: string, role: string , area_id: number, name:string) {
-    const row = await UserModel.create({ name , email: email.trim().toLowerCase(), passwordHash, role , area_id});
+export async function insertUser(
+    email: string,
+    passwordHash: string,
+    role: string,
+    area_id: number,
+    name: string,
+    status: AccountStatus = "approved",
+) {
+    const row = await UserModel.create({ name, email: email.trim().toLowerCase(), passwordHash, role, area_id, status });
     return row.toJSON();
+}
+
+export async function approvePendingUser(id: number): Promise<boolean> {
+    const [affected] = await UserModel.update(
+        { status: "approved" },
+        { where: { id, status: "pending" } },
+    );
+    return affected > 0;
 }
 
 
