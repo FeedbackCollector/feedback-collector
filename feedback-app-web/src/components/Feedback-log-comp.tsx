@@ -44,6 +44,15 @@ function FeedbackLogComp() {
   });
   const feedbackContainerRef = useRef<HTMLDivElement>(null);
 
+  const shouldAnimateViewChange = useRef(false);
+
+  function changeViewMode(nextMode: 'table' | 'list') {
+    if (nextMode === viewMode) return;
+
+    shouldAnimateViewChange.current = true;
+    setViewMode(nextMode);
+  }
+
   useEffect(() => {
   const mediaQuery = window.matchMedia('(max-width: 767px)');
 
@@ -119,16 +128,20 @@ function FeedbackLogComp() {
   }, [page]);
 
   useEffect(() => {
-    const el = feedbackContainerRef.current;
-    if (!el) return;
-    el.animate(
+    if (!shouldAnimateViewChange.current) return;
+
+    shouldAnimateViewChange.current = false;
+    const element = feedbackContainerRef.current;
+    if (!element) return;
+
+    element.animate(
       [
         { opacity: 0, transform: 'translateY(16px)' },
         { opacity: 1, transform: 'translateY(0)' },
       ],
-      { duration: 600, easing: 'ease-out' }
+      { duration: 300, easing: 'ease-out' }
     );
-  }, [feedback, viewMode]);
+  }, [viewMode]);
 
   function handleChange(e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
     setFilters({ ...filters, [e.target.name]: e.target.value });
@@ -317,17 +330,15 @@ function FeedbackLogComp() {
         <div className="view-toggle-container">
           <button
             type="button"
-            onClick={() => setViewMode('table')}
+            onClick={() => changeViewMode('table')}
             className={`btn-toggle-view ${viewMode === 'table' ? 'active' : ''}`}
-            style={{ color: viewMode === 'table' ? 'var(--surface)' : 'var(--text-muted)' }}
           >
             {tableChartIcon}
           </button>
           <button
             type="button"
-            onClick={() => setViewMode('list')}
+            onClick={() => changeViewMode('list')}
             className={`btn-toggle-view ${viewMode === 'list' ? 'active' : ''}`}
-            style={{ color: viewMode === 'list' ? 'var(--surface)' : 'var(--text-muted)' }}
           >
             {viewListIcon}
           </button>

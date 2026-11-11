@@ -86,19 +86,28 @@
 
 .my-management-view-toggle {
   display: flex;
-  gap: 4px;
+  gap: 6px;
 }
 
 .my-management-view-toggle button {
   display: grid;
-  width: 30px;
-  height: 30px;
+  width: 38px;
+  height: 36px;
   place-items: center;
   border: 1px solid var(--border);
-  border-radius: 7px;
+  border-radius: 8px;
   background: #fff;
-  color: #757c81;
+  color: var(--text-muted);
   cursor: pointer;
+  font-size: 17px;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.my-management-view-toggle button:hover {
+  background: var(--primary-light);
+  color: var(--primary);
 }
 
 .my-management-view-toggle button.is-active {
@@ -292,5 +301,11 @@
   .my-management-comparison-row {
     grid-template-columns: minmax(88px, 105px) minmax(30px, 1fr) 25px;
     gap: 7px;
+  }
+}
+
+@media (max-width: 768px) {
+  .my-management-view-toggle {
+    display: none !important;
   }
 }

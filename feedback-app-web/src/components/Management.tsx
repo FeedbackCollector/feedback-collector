@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
 import {
   deleteManagementRow,
   loadManagementData,
@@ -66,6 +66,15 @@ function ManagementComp() {
   const token = useAuthStore((state) => state.token);
   const [activeTab, setActiveTab] = useState<ManagementTab>('Areas');
   const [viewMode, setViewMode] = useState<ViewMode>('table');
+  const viewContainerRef = useRef<HTMLDivElement>(null);
+  const shouldAnimateViewChange = useRef(false);
+
+  const changeViewMode = (nextMode: ViewMode) => {
+    if (nextMode === viewMode) return;
+
+    shouldAnimateViewChange.current = true;
+    setViewMode(nextMode);
+  };
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(max-width: 767px)');
@@ -84,6 +93,18 @@ function ManagementComp() {
     return () => mediaQuery.removeEventListener('change', handleMediaChange);
     }, []);
 
+  useEffect(() => {
+    if (!shouldAnimateViewChange.current) return;
+
+    shouldAnimateViewChange.current = false;
+    viewContainerRef.current?.animate(
+      [
+        { opacity: 0, transform: 'translateY(16px)' },
+        { opacity: 1, transform: 'translateY(0)' },
+      ],
+      { duration: 300, easing: 'ease-out' }
+    );
+  }, [viewMode]);
 
   const [rows, setRows] = useState<ManagementRow[]>([]);
   const [areas, setAreas] = useState<ManagementData['areas']>([]);
@@ -95,6 +116,7 @@ function ManagementComp() {
   const [editingRow, setEditingRow] = useState<ManagementRow | null>(null);
   const [feedbackManager, setFeedbackManager] = useState<ManagementRow | null>(null);
   const [formValues, setFormValues] = useState<ManagementFormValues>(EMPTY_FORM);
+  const [closingPopup, setClosingPopup] = useState<'feedback' | 'form' | null>(null);
 
   useEffect(() => {
     let isCurrent = true;
@@ -140,6 +162,7 @@ function ManagementComp() {
       managerId: managers[0] ? String(managers[0].id) : '',
     });
     setError(null);
+    setClosingPopup(null);
     setIsDialogOpen(true);
   };
 
@@ -155,14 +178,31 @@ function ManagementComp() {
       entries: String(row.entries ?? 0),
     });
     setError(null);
+    setClosingPopup(null);
     setIsDialogOpen(true);
   };
 
   const closeDialog = () => {
-    setIsDialogOpen(false);
-    setEditingRow(null);
-    setFormValues(EMPTY_FORM);
-    setError(null);
+  if (closingPopup) return;
+
+    setClosingPopup('form');
+    window.setTimeout(() => {
+      setIsDialogOpen(false);
+      setEditingRow(null);
+      setFormValues(EMPTY_FORM);
+      setError(null);
+      setClosingPopup(null);
+    }, 300);
+  };
+
+  const closeFeedbackDialog = () => {
+  if (closingPopup) return;
+
+    setClosingPopup('feedback');
+    window.setTimeout(() => {
+      setFeedbackManager(null);
+      setClosingPopup(null);
+    }, 300);
   };
 
   const updateFormValue = (key: keyof ManagementFormValues, value: string) => {
@@ -308,7 +348,7 @@ function ManagementComp() {
               className={`management-view-button${viewMode === 'cards' ? ' is-active' : ''}`}
               aria-label="Card view"
               aria-pressed={viewMode === 'cards'}
-              onClick={() => setViewMode('cards')}
+              onClick={() => changeViewMode('cards')}
             >
               <svg aria-hidden="true" height="20" viewBox="0 -960 960 960" width="20" fill="currentColor">
                 <path d="M760-120H200q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120ZM200-640h560v-120H200v120Zm100 80H200v360h100v-360Zm360 0v360h100v-360H660Zm-80 0H380v360h200v-360Z" />
@@ -319,7 +359,7 @@ function ManagementComp() {
               className={`management-view-button${viewMode === 'table' ? ' is-active' : ''}`}
               aria-label="Table view"
               aria-pressed={viewMode === 'table'}
-              onClick={() => setViewMode('table')}
+              onClick={() => changeViewMode('table')}
             >
               <svg aria-hidden="true" height="20" viewBox="0 -960 960 960" width="20" fill="currentColor">
                 <path d="M360-240h440v-107H360v107ZM160-613h120v-107H160v107Zm0 187h120v-107H160v107Zm0 186h120v-107H160v107Zm200-186h440v-107H360v107Zm0-187h440v-107H360v107ZM160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h640q33 0 56.5 23.5T880-720v480q0 33-23.5 56.5T800-160H160Z" />
@@ -333,17 +373,12 @@ function ManagementComp() {
             Could not complete the request: {error}
           </p>
         )}
-        {error && isDialogOpen && (
-          <p className="management-error" role="alert">
-            Could not complete the request: {error}
-          </p>
-        )}
         {loading ? (
           <p className="management-loading" role="status">Loading {activeTab.toLowerCase()}...</p>
         ) : error && !isDialogOpen ? null : rows.length === 0 ? (
           <p className="management-empty-state">No {activeTab.toLowerCase()} to display.</p>
         ) : viewMode === 'table' ? (
-          <div className="management-table-wrap">
+          <div className="management-table-wrap" ref={viewContainerRef}>
             <table className={`management-table${activeTab === 'Managers' ? ' management-managers-table' : ''}`}>
               <thead>
                 <tr>
@@ -410,7 +445,7 @@ function ManagementComp() {
             </table>
           </div>
         ) : (
-          <div className="management-cards">
+          <div className="management-cards" ref={viewContainerRef}>
             {rows.map((row) => (
               <article className="management-card" key={row.id}>
                 <div className="management-card-heading">
@@ -460,9 +495,12 @@ function ManagementComp() {
           </div>
         )}
         {feedbackManager && (
-          <div className="management-dialog-backdrop" onMouseDown={(event) => {
-            if (event.target === event.currentTarget) setFeedbackManager(null);
-          }}>
+          <div
+            className={`management-dialog-backdrop${closingPopup === 'feedback' ? ' is-closing' : ''}`}
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) closeFeedbackDialog();
+            }}
+            >
             <section
               className="management-dialog management-feedback-dialog"
               role="dialog"
@@ -492,7 +530,7 @@ function ManagementComp() {
                 <button
                   type="button"
                   className="management-cancel-button"
-                  onClick={() => setFeedbackManager(null)}
+                  onClick={closeFeedbackDialog}
                 >
                   Close
                 </button>
@@ -503,7 +541,12 @@ function ManagementComp() {
       </div>
 
       {isDialogOpen && (
-        <div className="management-dialog-backdrop">
+        <div
+          className={`management-dialog-backdrop${closingPopup === 'form' ? ' is-closing' : ''}`}
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !isMutating) closeDialog();
+          }}
+        >
           <form
             className="management-dialog"
             role="dialog"
