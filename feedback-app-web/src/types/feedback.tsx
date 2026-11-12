@@ -17,7 +17,7 @@ export type FeedbackFilters = {
   icName: string;
   projectId: string;
   score: string;
-  sortBy: string;
+  sortBy: 'newest' | 'oldest';
   text: string;
 };
 
