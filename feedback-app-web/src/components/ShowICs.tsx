@@ -3,7 +3,7 @@ import { useAuthStore } from '../store/authStore';
 import { obtainAllICs } from '../service/ObtainICs';
 import { obtainAllFeedback } from '../service/ObtainFeedback';
 import FeedbackDashboard from './FeedbackDashboard';
-import './ShowICs.css';
+import '../styles/ShowICs.css';
 
 type IC = {
   IC_id: number;
