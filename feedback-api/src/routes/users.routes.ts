@@ -15,7 +15,7 @@ router.param('id', (req, res, next, value) => {
     next();
 });
 
-router.get('/', validateQuery(listUsersQueryScheme), getAll);
+router.get('/', authenticateToken, validateQuery(listUsersQueryScheme), getAll);
 router.get('/:id', authenticateToken, authorizeRole('director'), getById);
 router.post('/', authenticateToken, authorizeRole('director'), validate(createUserScheme), create);
 router.patch('/:id', authenticateToken, authorizeRole('director'), validate(updateUserScheme), update);
