@@ -9,6 +9,12 @@ type Caller = { id: number; email: string; role: string };
 
 type ReferenceError = "AUTHOR_NOT_FOUND" | "IC_NOT_FOUND" | "PROJECT_NOT_FOUND";
 
+async function canManageIC(user: Caller, icId: number): Promise<boolean> {
+    if (user.role === "director") return true;
+    const ic = await icFindByID(icId);
+    return !!ic && Number.isInteger(user.id) && ic.manager_id === user.id;
+}
+
 async function checkReferences(data: UpdateFeedback): Promise<ReferenceError | null> {
     if (data.author_id !== undefined && !(await getUserByID(data.author_id))) return "AUTHOR_NOT_FOUND";
     
@@ -19,8 +25,13 @@ async function checkReferences(data: UpdateFeedback): Promise<ReferenceError | n
         return null;
 }
 
-export async function getAllFeedbacksService(page: number, limit: number, filters: FeedbackFilters = {}) {
-    return FeedbackRepository.getAllFeedbacks(page, limit, filters);
+export async function getAllFeedbacksService(page: number, limit: number, filters: FeedbackFilters, user: Caller) {
+    if (user.role === "director") return FeedbackRepository.getAllFeedbacks(page, limit, filters);
+
+    if (user.role === "manager" && Number.isInteger(user.id)) {
+        return FeedbackRepository.getAllFeedbacks(page, limit, { ...filters, manager_id: user.id });
+    }
+    return "FORBIDDEN" as const;
 }
 
 export async function getFeedbackByIdService(id: number, user: Caller): Promise<Feedback | "FEEDBACK_NOT_FOUND"> {
@@ -35,7 +46,13 @@ export async function getFeedbackByIdService(id: number, user: Caller): Promise<
 }
 
 
-export async function createFeedbackService(feedbackData: NewFeedback): Promise<Feedback | ReferenceError> {
+export async function createFeedbackService(feedbackData: NewFeedback, user: Caller): Promise<Feedback | ReferenceError> {
+    if (user.role !== "director") {
+        if (!(await canManageIC(user, feedbackData.ic_id))) return "IC_NOT_FOUND";
+        // A manager always signs their own feedback, whatever author_id the client sent.
+        feedbackData = { ...feedbackData, author_id: user.id };
+    }
+
     const invalid = await checkReferences(feedbackData);
     if (invalid) return invalid;
 
@@ -43,9 +60,14 @@ export async function createFeedbackService(feedbackData: NewFeedback): Promise<
     return newFeedback[0];
 }
 
-export async function replaceFeedbackService(feedbackData: NewFeedback, id: number): Promise<Feedback | ReferenceError | "FEEDBACK_NOT_FOUND"> {
+export async function replaceFeedbackService(feedbackData: NewFeedback, id: number, user: Caller): Promise<Feedback | ReferenceError | "FEEDBACK_NOT_FOUND"> {
     const feedback = await FeedbackRepository.getFeedbackByID(id);
-    if (!feedback) return "FEEDBACK_NOT_FOUND";
+    if (!feedback || !(await canManageIC(user, feedback.ic_id))) return "FEEDBACK_NOT_FOUND";
+
+    if (user.role !== "director") {
+        if (!(await canManageIC(user, feedbackData.ic_id))) return "IC_NOT_FOUND";
+        feedbackData = { ...feedbackData, author_id: user.id };
+    }
 
     const invalid = await checkReferences(feedbackData);
     if (invalid) return invalid;
@@ -54,9 +76,14 @@ export async function replaceFeedbackService(feedbackData: NewFeedback, id: numb
     return replacedFeedback[0];
 }
 
-export async function updateFeedbackService(feedbackData: UpdateFeedback, id: number): Promise<Feedback | ReferenceError | "FEEDBACK_NOT_FOUND"> {
+export async function updateFeedbackService(feedbackData: UpdateFeedback, id: number, user: Caller): Promise<Feedback | ReferenceError | "FEEDBACK_NOT_FOUND"> {
     const feedback = await FeedbackRepository.getFeedbackByID(id);
-    if (!feedback) return "FEEDBACK_NOT_FOUND";
+    if (!feedback || !(await canManageIC(user, feedback.ic_id))) return "FEEDBACK_NOT_FOUND";
+
+    if (user.role !== "director") {
+        if (feedbackData.ic_id !== undefined && !(await canManageIC(user, feedbackData.ic_id))) return "IC_NOT_FOUND";
+        if (feedbackData.author_id !== undefined) feedbackData = { ...feedbackData, author_id: user.id };
+    }
 
     const invalid = await checkReferences(feedbackData);
     if (invalid) return invalid;
@@ -65,9 +92,9 @@ export async function updateFeedbackService(feedbackData: UpdateFeedback, id: nu
     return updatedFeedback[0];
 }
 
-export async function deleteFeedbackService(id: number): Promise<"FEEDBACK_NOT_FOUND" | "DELETED"> {
+export async function deleteFeedbackService(id: number, user: Caller): Promise<"FEEDBACK_NOT_FOUND" | "DELETED"> {
     const feedback = await FeedbackRepository.getFeedbackByID(id);
-    if (!feedback) return "FEEDBACK_NOT_FOUND";
+    if (!feedback || !(await canManageIC(user, feedback.ic_id))) return "FEEDBACK_NOT_FOUND";
 
     await FeedbackRepository.deleteFeedback(id);
     return "DELETED";

@@ -21,6 +21,9 @@ export async function getAllFeedbacks(page: number, limit: number, filters: Feed
     }
     const contains = (value: string) => `%${value.replace(/[\\%_]/g, '\\$&')}%`;
     if (filters.text) where[Op.and] = [...((where[Op.and] as unknown[]) ?? []), unaccentIlike('Feedback.comment', contains(filters.text))];
+    const icWhere: WhereOptions = {};
+    if (filters.ic_name) icWhere.name = { [Op.iLike]: contains(filters.ic_name) };
+    if (filters.manager_id !== undefined) icWhere.manager_id = filters.manager_id;
     const order: Order = filters.sort
         ? [['date', filters.sort === 'newest' ? 'DESC' : 'ASC'], ['id', filters.sort === 'newest' ? 'DESC' : 'ASC']]
         : [['id', 'ASC']];
@@ -33,6 +36,7 @@ export async function getAllFeedbacks(page: number, limit: number, filters: Feed
     }
     const result = await FeedbackModel.findAndCountAll({
         where,
+        ...(Reflect.ownKeys(icWhere).length > 0 ? { include: [{ model: ICs, attributes: [], required: true, where: icWhere }] } : {}),
         limit,
         offset: (page - 1) * limit,
         order,
