@@ -2,7 +2,7 @@ import { NavLink } from 'react-router-dom';
 import '../styles/Manager-Nav.css';
 import { User } from './User';
 import chatIcon from '../images/chat.png';
-
+import { useAuthStore } from '../store/authStore';
 
 const LINKS = [
   { label: 'MyICs', to: '/MyICs' },
@@ -14,13 +14,15 @@ const closeSidebar = () => {
   };
 
 export function NavBar({ links = LINKS }: { links?: { label: string; to: string; }[] }) {
+  const role = useAuthStore((state) => state.user?.role);
+  const homePath = role === 'director' ? '/dashboard' : '/MyICs';
   return (
     <div>
       <aside className="manager-sidebar">
-        <div className="manager-sidebar-header">
-          <img src={chatIcon} alt="chaticon" width="32" height="32"/>
+        <NavLink to={homePath} className="manager-sidebar-header">
+          <img src={chatIcon} alt="" width="32" height="32" />
           <h1>Feedback Collector</h1>
-        </div>
+        </NavLink>
         
         <User />
         

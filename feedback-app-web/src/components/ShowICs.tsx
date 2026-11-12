@@ -1,8 +1,9 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { obtainAllICs } from '../service/ObtainICs';
 import { obtainAllFeedback } from '../service/ObtainFeedback';
 import FeedbackDashboard from './FeedbackDashboard';
+import { UserAvatar } from '../components/UserAvatar';
 import '../styles/ShowICs.css';
 
 type IC = {
@@ -20,6 +21,46 @@ function ObtainICs() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('cards');
+  const viewContainerRef = useRef<HTMLDivElement>(null);
+  const shouldAnimateViewChange = useRef(false);
+
+  const changeViewMode = (nextMode: ViewMode) => {
+    if (nextMode === viewMode) return;
+
+    shouldAnimateViewChange.current = true;
+    setViewMode(nextMode);
+  };
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(max-width: 768px)');
+
+    if (mediaQuery.matches) {
+      setViewMode('cards');
+    }
+
+    const handleMediaChange = (event: MediaQueryListEvent) => {
+      if (event.matches) {
+        setViewMode('cards');
+      }
+    };
+
+    mediaQuery.addEventListener('change', handleMediaChange);
+    return () => mediaQuery.removeEventListener('change', handleMediaChange);
+  }, []);
+
+  useEffect(() => {
+    if (!shouldAnimateViewChange.current) return;
+
+    shouldAnimateViewChange.current = false;
+    viewContainerRef.current?.animate(
+      [
+        { opacity: 0, transform: 'translateY(16px)' },
+        { opacity: 1, transform: 'translateY(0)' },
+      ],
+      { duration: 300, easing: 'ease-out' }
+    );
+  }, [viewMode]);
+
   const user = useAuthStore((state) => state.user);
   const token = useAuthStore((state) => state.token);
 
@@ -126,7 +167,9 @@ function ObtainICs() {
           <h2>Your Team</h2>
           <div className="team-toolbar">
             <label className="team-search">
-              <i className="fa-solid fa-magnifying-glass" aria-hidden="true" />
+              <svg aria-hidden="true" height="20" viewBox="0 -960 960 960" width="20" fill="currentColor">
+                <path d="M360-240h440v-107H360v107ZM160-613h120v-107H160v107Zm0 187h120v-107H160v107Zm0 186h120v-107H160v107Zm200-186h440v-107H360v107Zm0-187h440v-107H360v107ZM160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h640q33 0 56.5 23.5T880-720v480q0 33-23.5 56.5T800-160H160Z" />
+              </svg>
               <input
                 type="search"
                 value={search}
@@ -141,16 +184,18 @@ function ObtainICs() {
                 className={viewMode === 'cards' ? 'is-active' : ''}
                 aria-label="Card view"
                 aria-pressed={viewMode === 'cards'}
-                onClick={() => setViewMode('cards')}
+                onClick={() => changeViewMode('cards')}
               >
-                <i className="fa-solid fa-table-cells-large" aria-hidden="true" />
+                <svg aria-hidden="true" height="20" viewBox="0 -960 960 960" width="20" fill="currentColor">
+                  <path d="M760-120H200q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120ZM200-640h560v-120H200v120Zm100 80H200v360h100v-360Zm360 0v360h100v-360H660Zm-80 0H380v360h200v-360Z" />
+                </svg>
               </button>
               <button
                 type="button"
                 className={viewMode === 'list' ? 'is-active' : ''}
                 aria-label="List view"
                 aria-pressed={viewMode === 'list'}
-                onClick={() => setViewMode('list')}
+                onClick={() => changeViewMode('list')}
               >
                 <i className="fa-solid fa-table-list" aria-hidden="true" />
               </button>
@@ -160,11 +205,16 @@ function ObtainICs() {
           {visibleICs.length === 0 ? (
             <p className="team-empty">No ICs match your search.</p>
           ) : viewMode === 'cards' ? (
-            <div className="team-metrics">
+            <div className="team-metrics" ref={viewContainerRef}> 
               {visibleICs.map((item) => (
                 <article className="team-metric-card" key={item.IC_id}>
-                  <div className="team-metric-avatar" />
-
+                  <UserAvatar
+                    name={item.name}
+                    id={item.IC_id}
+                    entityType="ic"
+                    size={48}
+                    className="team-metric-avatar"
+                  />
                   <div className="team-metric-info">
                     <h3>{item.name}</h3>
                     <p className="team-metric-role">{item.title}</p>
@@ -183,7 +233,7 @@ function ObtainICs() {
               ))}
             </div>
           ) : (
-            <div className="team-table-wrap">
+            <div className="team-table-wrap" ref={viewContainerRef}>
               <table className="team-table">
                 <thead>
                   <tr>

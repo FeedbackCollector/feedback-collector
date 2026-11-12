@@ -1,82 +1,5 @@
+import { ManagementTab, ManagementData, ManagerFeedback, ManagementFormValues, APIFeedback, APIArea, APIUser, APIC, APIProject } from '../types/managementTypes';
 import { API_URL } from './api';
-
-export type ManagementTab = 'Areas' | 'Managers' | 'ICs' | 'Projects';
-
-export interface ManagementRow {
-  id: number;
-  name: string;
-  managers?: number;
-  ics?: number;
-  averageScore?: number;
-  area?: string;
-  manager?: string;
-  entries?: number;
-  email?: string;
-  areaId?: number;
-  managerId?: number;
-  title?: string;
-  feedbackEntries?: ManagerFeedback[];
-}
-
-export interface ManagerFeedback {
-  id: number;
-  icName: string;
-  projectName: string;
-  date: string;
-  score: number;
-  comment: string | null;
-}
-
-export interface ManagementData {
-  rows: ManagementRow[];
-  areas: Array<{ id: number; name: string }>;
-  managers: Array<{ id: number; name: string }>;
-}
-
-export interface ManagementFormValues {
-  name: string;
-  email: string;
-  password: string;
-  areaId: string;
-  title: string;
-  managerId: string;
-  entries: string;
-}
-
-interface APIUser {
-  id: number;
-  name: string;
-  email: string;
-  role: string;
-  area_id: number | null;
-}
-
-interface APIArea {
-  id: number;
-  name: string;
-}
-
-interface APIC {
-  IC_id: number;
-  name: string;
-  title: string;
-  manager_id: number;
-  entries: number;
-}
-
-interface APIProject {
-  id: number;
-  name: string;
-}
-
-interface APIFeedback {
-  id: number;
-  ic_id: number;
-  project_id: number;
-  date: string;
-  score: number;
-  comment: string | null;
-}
 
 interface ListResponse<T> {
   data?: T[];
@@ -123,15 +46,22 @@ async function getList<T>(path: string, token: string): Promise<T[]> {
 
 async function getAllPages<T>(path: string, token: string): Promise<T[]> {
   const firstPage = await request<ListResponse<T>>(`${path}?page=1&limit=100`, token);
-  if (!Array.isArray(firstPage.data) || !Number.isInteger(firstPage.pagination?.totalPages)) {
+  const totalPages = firstPage.pagination?.totalPages;
+
+  if (
+    !Array.isArray(firstPage.data) ||
+    typeof totalPages !== 'number' ||
+    !Number.isInteger(totalPages)
+  ) {
     throw new Error(`Invalid paginated response from ${path}.`);
   }
 
   const pages = await Promise.all(
-    Array.from({ length: Math.max(0, firstPage.pagination.totalPages - 1) }, (_, index) =>
+    Array.from({ length: Math.max(0, totalPages - 1) }, (_, index) =>
       request<ListResponse<T>>(`${path}?page=${index + 2}&limit=100`, token)
     )
-  );
+  )
+
   if (pages.some((page) => !Array.isArray(page.data))) {
     throw new Error(`Invalid paginated response from ${path}.`);
   }
@@ -148,12 +78,13 @@ export async function loadManagementData(
   token: string
 ): Promise<ManagementData> {
   if (tab === 'Areas') {
-    const [areas, managers, ics, feedback] = await Promise.all([
+    const [areas, managerAccounts, ics, feedback] = await Promise.all([
       getList<APIArea>('/areas', token),
       getList<APIUser>(withQuery('/users', 'role=manager'), token),
       getAllPages<APIC>('/ics', token),
       getAllPages<APIFeedback>('/feedback', token),
     ]);
+    const managers = managerAccounts.filter((manager) => manager.status !== 'pending');
     const managersById = new Map(managers.map((manager) => [manager.id, manager]));
     const areaByICId = new Map<number, number>();
     const icsByArea = new Map<number, number>();
@@ -189,17 +120,27 @@ export async function loadManagementData(
       }),
       areas,
       managers: managers.map(({ id, name }) => ({ id, name })),
+      pendingAccounts: [],
     };
   }
 
   if (tab === 'Managers') {
-    const [areas, managers, ics, feedback, projects] = await Promise.all([
+    const [areas, managerAccounts, ics, feedback, projects] = await Promise.all([
       getList<APIArea>('/areas', token),
       getList<APIUser>(withQuery('/users', 'role=manager'), token),
       getAllPages<APIC>('/ics', token),
       getAllPages<APIFeedback>('/feedback', token),
       getList<APIProject>('/projects', token),
     ]);
+    const managers = managerAccounts.filter((manager) => manager.status !== 'pending');
+    const pendingAccounts = managerAccounts
+      .filter((manager) => manager.status === 'pending')
+      .map((manager) => ({
+        id: manager.id,
+        name: manager.name,
+        email: manager.email,
+        areaId: manager.area_id,
+      }));
     const areasById = new Map(areas.map((area) => [area.id, area.name]));
     const projectsById = new Map(projects.map((project) => [project.id, project.name]));
     const icsById = new Map(ics.map((ic) => [ic.IC_id, ic]));
@@ -249,15 +190,17 @@ export async function loadManagementData(
       }),
       areas,
       managers: managers.map(({ id, name }) => ({ id, name })),
+      pendingAccounts,
     };
   }
 
   if (tab === 'ICs') {
-    const [areas, managers, ics] = await Promise.all([
+    const [areas, managerAccounts, ics] = await Promise.all([
       getList<APIArea>('/areas', token),
       getList<APIUser>(withQuery('/users', 'role=manager'), token),
       getAllPages<APIC>('/ics', token),
     ]);
+    const managers = managerAccounts.filter((manager) => manager.status !== 'pending');
     const areasById = new Map(areas.map((area) => [area.id, area.name]));
     const managersById = new Map(managers.map((manager) => [manager.id, manager]));
 
@@ -278,6 +221,7 @@ export async function loadManagementData(
       }),
       areas,
       managers: managers.map(({ id, name }) => ({ id, name })),
+      pendingAccounts: [],
     };
   }
 
@@ -293,6 +237,7 @@ export async function loadManagementData(
     })),
     areas: [],
     managers: [],
+    pendingAccounts: [],
   };
 }
 
@@ -349,6 +294,10 @@ export async function updateManagerArea(
     method: 'PATCH',
     body: JSON.stringify({ area_id: areaId }),
   });
+}
+
+export async function approvePendingAccount(id: number, token: string): Promise<void> {
+  await request(`/users/${id}/approve`, token, { method: 'PATCH' });
 }
 
 export async function deleteManagementRow(
