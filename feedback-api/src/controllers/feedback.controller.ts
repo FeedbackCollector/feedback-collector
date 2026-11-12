@@ -41,7 +41,8 @@ export async function getAll(req: Request, res: Response) {
         }
         filters.sort = sort;
 
-        const result = await getAllFeedbacksService(page, limit, filters);
+        const result = await getAllFeedbacksService(page, limit, filters, res.locals.user);
+        if (result === "FORBIDDEN") return res.status(403).json({ message: "Forbidden" });
         res.status(200).json(result);
     } catch {
         res.status(500).json({ message: "Error retrieving feedback" });
@@ -56,7 +57,7 @@ export async function getById(req: Request, res: Response) {
 
 
 export async function create(req: Request, res: Response) {
-    const result = await createFeedbackService(req.body);
+    const result = await createFeedbackService(req.body, res.locals.user);
     if (result === "AUTHOR_NOT_FOUND") return res.status(404).json({ error: "Author not found" });
     if (result === "IC_NOT_FOUND") return res.status(404).json({ error: "IC not found" });
     if (result === "PROJECT_NOT_FOUND") return res.status(404).json({ error: "Project not found" });
@@ -64,7 +65,7 @@ export async function create(req: Request, res: Response) {
 }
 
 export async function replace(req: Request, res: Response) {
-    const result = await replaceFeedbackService(req.body, Number(req.params.id));
+    const result = await replaceFeedbackService(req.body, Number(req.params.id), res.locals.user);
     if (result === "FEEDBACK_NOT_FOUND") return res.status(404).json({ error: "Feedback not found" });
     if (result === "AUTHOR_NOT_FOUND") return res.status(404).json({ error: "Author not found" });
     if (result === "IC_NOT_FOUND") return res.status(404).json({ error: "IC not found" });
@@ -73,7 +74,7 @@ export async function replace(req: Request, res: Response) {
 }
 
 export async function update(req: Request, res: Response) {
-    const result = await updateFeedbackService(req.body, Number(req.params.id));
+    const result = await updateFeedbackService(req.body, Number(req.params.id), res.locals.user);
     if (result === "FEEDBACK_NOT_FOUND") return res.status(404).json({ error: "Feedback not found" });
     if (result === "AUTHOR_NOT_FOUND") return res.status(404).json({ error: "Author not found" });
     if (result === "IC_NOT_FOUND") return res.status(404).json({ error: "IC not found" });
@@ -82,7 +83,7 @@ export async function update(req: Request, res: Response) {
 }
 
 export async function remove(req: Request, res: Response) {
-    const result = await deleteFeedbackService(Number(req.params.id));
+    const result = await deleteFeedbackService(Number(req.params.id), res.locals.user);
     if (result === "FEEDBACK_NOT_FOUND") return res.status(404).json({ error: "Feedback not found" });
     res.status(204).send();
 }
