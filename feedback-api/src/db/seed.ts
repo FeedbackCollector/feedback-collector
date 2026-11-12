@@ -41,11 +41,11 @@ async function seed() {
     { name : "Méndez"  ,email: "Mendez@example.com", passwordHash: userPasswordHash, area_id: research.id },
 ]);
 const [lucia, nicolas, camila] = await ICs.bulkCreate([
-  { name: "Lucía Fernández", title: "UX Designer",     manager_id: carolina.id, entries: 6 },
-  { name: "Nicolás Herrera", title: "UX Designer Jr.", manager_id: carolina.id, entries: 5 },
-  { name: "Camila Rojas",    title: "UX Researcher",   manager_id: milito.id,   entries: 4 },
-  { name: "Tomás Ibarra",    title: "UI Designer",     manager_id: lautaro.id,  entries: 0 },
-  { name: "Sofía Paz",       title: "UX Researcher",   manager_id: mendez.id,   entries: 0 },
+  { name: "Lucía Fernández", title: "UX Designer",     manager_id: carolina.id, area_id: ux.id, entries: 6 },
+  { name: "Nicolás Herrera", title: "UX Designer Jr.", manager_id: carolina.id, area_id: ux.id, entries: 5 },
+  { name: "Camila Rojas",    title: "UX Researcher",   manager_id: milito.id, area_id: research.id,   entries: 4 },
+  { name: "Tomás Ibarra",    title: "UI Designer",     manager_id: lautaro.id, area_id: ui.id,  entries: 0 },
+  { name: "Sofía Paz",       title: "UX Researcher",   manager_id: mendez.id, area_id: research.id,   entries: 0 },
 ]);
     // The feedback author is the manager of the IC it is about.
     const fb = (ic: { IC_id: number; manager_id: number }, project: { id: number }, date: string, source_name: string, score: number, comment: string | null) =>

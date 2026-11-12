@@ -37,7 +37,8 @@ export async function createICService(icData: NewIC): Promise<IC | "MANAGER_NOT_
     const invalid = await checkReferences(icData);
     if (invalid) return invalid;
 
-    return ICRepository.icCreate(icData);
+    const area_id = await ICRepository.managerAreaId(icData.manager_id);
+    return ICRepository.icCreate({ ...icData, area_id });
 }
 
 export async function updateICService(icData: UpdateIC, id: number): Promise<IC  | "IC_NOT_FOUND" | "MANAGER_NOT_FOUND"> {
@@ -47,7 +48,11 @@ export async function updateICService(icData: UpdateIC, id: number): Promise<IC 
     const invalid = await checkReferences(icData);
     if (invalid) return invalid;
 
-    const updated = await ICRepository.icUpdate(icData, id);
+    // Moving an IC to another manager moves it to that manager's area.
+    const data: UpdateIC & { area_id?: number | null } = { ...icData };
+    if (icData.manager_id !== undefined) data.area_id = await ICRepository.managerAreaId(icData.manager_id);
+
+    const updated = await ICRepository.icUpdate(data, id);
     return updated as IC;
 }
 

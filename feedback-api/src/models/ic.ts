@@ -12,6 +12,7 @@ export class ICs extends Model<InferAttributes<ICs>, InferCreationAttributes<ICs
   declare name: string;
   declare title: string;
   declare manager_id: number;
+  declare area_id: number | null;
   declare entries: number;
 }
 
@@ -21,6 +22,7 @@ ICs.init(
     name: { type: DataTypes.STRING(200), allowNull: false },
     title: { type: DataTypes.STRING(200), allowNull: false },
     manager_id: { type: DataTypes.INTEGER, allowNull: false },
+    area_id: { type: DataTypes.INTEGER, allowNull: true },
     entries: { type: DataTypes.INTEGER, allowNull: false },
   },
   { sequelize, tableName: "ics", timestamps: false }

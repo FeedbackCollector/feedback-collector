@@ -13,3 +13,18 @@ export async function ensureAccountStatusColumn(): Promise<void> {
         });
     }
 }
+
+export async function ensureICAreaColumn(): Promise<void> {
+    const queryInterface = sequelize.getQueryInterface();
+    const columns = await queryInterface.describeTable("ics");
+
+    if (!columns.area_id) {
+        await queryInterface.addColumn("ics", "area_id", {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+        });
+        await sequelize.query(
+            `UPDATE ics SET area_id = (SELECT area_id FROM users WHERE users.id = ics.manager_id)`
+        );
+    }
+}
