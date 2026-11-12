@@ -1,11 +1,16 @@
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+import { signToken } from '../utils/token.ts';
 import * as UsersRepository from '../repositories/user.repositories.ts';
 import { getAreaByID } from '../repositories/area.repository.ts';
 import { AccountStatus, User, CreateUser, UpdateUser, UserFilters } from '../types/user.ts';
 
-export async function getAllUsersService(filters: UserFilters = {}) {
-    return UsersRepository.getAllUsers(filters);
+// Directors list every user; a manager only gets their own record.
+export async function getAllUsersService(filters: UserFilters, requester: { id: number; role: string }) {
+    if (requester.role === 'director') return UsersRepository.getAllUsers(filters);
+
+    const self = await UsersRepository.getPublicUserByID(requester.id);
+    if (!self || (filters.role && self.role !== filters.role)) return [];
+    return [self];
 }
 
 export async function getUserByIdService(id: number): Promise<User | "USER_NOT_FOUND"> {
@@ -73,8 +78,7 @@ export async function loginService(email: string, password: string): Promise<str
     const passwordOk = await bcrypt.compare(password, user.passwordHash);
     if (!passwordOk || user.status !== "approved") return "INVALID_CREDENTIALS";
 
-    return jwt.sign({ email: user.email, role: user.role, id: user.id }, process.env.JWT_SECRET as string, {expiresIn: '1h',
-    });
+    return signToken(user);
 }
 
 export async function approveUserService(id: number): Promise<User | "USER_NOT_FOUND" | "ACCOUNT_NOT_PENDING"> {
@@ -93,7 +97,7 @@ export async function approveUserService(id: number): Promise<User | "USER_NOT_F
     return approvedUser ?? "USER_NOT_FOUND";
 }
 
-export async function changePasswordService(userId: number, currentPassword: string, newPassword: string): Promise<"INVALID_CREDENTIALS" | "UPDATED"> {
+export async function changePasswordService(userId: number, currentPassword: string, newPassword: string): Promise<"INVALID_CREDENTIALS" | { token: string }> {
     const user = await UsersRepository.getUserByID(userId);
     if (!user) return "INVALID_CREDENTIALS";
 
@@ -102,5 +106,8 @@ export async function changePasswordService(userId: number, currentPassword: str
 
     const passwordHash = await bcrypt.hash(newPassword, 10);
     const updated = await UsersRepository.patchUserPassword(user.id, passwordHash);
-    return updated ? "UPDATED" : "INVALID_CREDENTIALS";
+    if (!updated) return "INVALID_CREDENTIALS";
+
+    // Tokens issued before the change stop working, so the caller gets a fresh one.
+    return { token: signToken({ ...user, passwordHash }) };
 }
