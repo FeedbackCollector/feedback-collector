@@ -77,7 +77,6 @@ export async function putFeedback(feedbackData: NewFeedback, feedbackId: number)
     return row ? [row.toJSON()] : [];
 }
 
-// Recomputes the average for every IC touched by a change (the old and the new one if the feedback moved).
 async function syncScores(...icIds: (number | undefined)[]) {
     for (const id of new Set(icIds)) {
         if (id !== undefined) await recalculateICScore(id);

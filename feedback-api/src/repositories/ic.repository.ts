@@ -73,7 +73,6 @@ export async function icDelete(id: number): Promise<boolean> {
     return deleted > 0;
 }
 
-// Sets ics.score to the average of the IC's feedback scores (null when it has none).
 export async function recalculateICScore(icId: number): Promise<void> {
     await sequelize.query(
         `UPDATE ics SET score = (SELECT ROUND(AVG(score)::numeric, 2) FROM feedback WHERE ic_id = :icId) WHERE "IC_id" = :icId`,
