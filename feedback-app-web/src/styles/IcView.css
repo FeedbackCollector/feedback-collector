@@ -373,3 +373,21 @@
     align-items: flex-start;
   }
 }
+
+
+.icv-overlay {
+  animation: popup-backdrop-in 300ms ease both;
+}
+
+.icv-modal {
+  animation: popup-in 300ms ease both;
+}
+
+.icv-overlay.is-closing {
+  animation: popup-backdrop-out 300ms ease both;
+  pointer-events: none;
+}
+
+.icv-overlay.is-closing .icv-modal {
+  animation: popup-out 300ms ease both;
+}

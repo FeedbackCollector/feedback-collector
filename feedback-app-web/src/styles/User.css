@@ -12,10 +12,11 @@
 }
 
 .user-profile__avatar {
-  width: 40px;
-  height: 40px;
-  flex: 0 0 40px;
-  border: 1px solid #d1d5db;
+  flex: 0 0 48px;
   border-radius: 50%;
-  background: #f3f4f6;
+}
+
+.user-section {
+  border-top: 0.7px grey solid;
+  border-bottom: 0.7px grey solid;
 }

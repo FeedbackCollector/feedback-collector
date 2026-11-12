@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getAll, getById, create, update, remove } from '../controllers/users.controller.ts';
+import { getAll, getById, create, update, remove, approve } from '../controllers/users.controller.ts';
 import { authenticateToken, authorizeRole } from '../middleware/auth.ts';
 import { validate, validateQuery } from '../middleware/validate.ts';
 import { createUserScheme, updateUserScheme, listUsersQueryScheme } from '../schemes/user.schema.ts';
@@ -19,6 +19,7 @@ router.get('/', validateQuery(listUsersQueryScheme), getAll);
 router.get('/:id', authenticateToken, authorizeRole('director'), getById);
 router.post('/', authenticateToken, authorizeRole('director'), validate(createUserScheme), create);
 router.patch('/:id', authenticateToken, authorizeRole('director'), validate(updateUserScheme), update);
+router.patch('/:id/approve', authenticateToken, authorizeRole('director'), approve);
 router.delete('/:id', authenticateToken, authorizeRole('director'), remove);
 
 export default router;

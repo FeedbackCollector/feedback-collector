@@ -8,6 +8,7 @@ import { obtainProjects } from '../service/ObtainProjects';
 import { API_URL as BASE_URL } from '../service/api';
 import { authHeaders } from '../service/authHeaders';
 import '../styles/IcView.css';
+import { UserAvatar } from './UserAvatar';
 
 type ICInfo = {
   IC_id: number;
@@ -99,6 +100,7 @@ function ICView({ ic, onBack }: ICViewProps) {
 
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
   const [editingItem, setEditingItem] = useState<Feedback | null>(null);
   const [form, setForm] = useState<EntryForm>(emptyForm);
   const [formError, setFormError] = useState('');
@@ -184,9 +186,15 @@ function ICView({ ic, onBack }: ICViewProps) {
   }
 
   function closeModal() {
-    setModalOpen(false);
-    setEditingItem(null);
-    setFormError('');
+    if (isClosing) return;
+
+    setIsClosing(true);
+    window.setTimeout(() => {
+      setModalOpen(false);
+      setEditingItem(null);
+      setFormError('');
+      setIsClosing(false);
+    }, 300);
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -328,7 +336,13 @@ function ICView({ ic, onBack }: ICViewProps) {
 
       <section className="icv-summary">
         <div className="icv-person">
-          <div className="icv-avatar">{getInitials(ic.name)}</div>
+          <UserAvatar
+                    name={ic.name}
+                    id={ic.IC_id}
+                    entityType="ic"
+                    size={48}
+                    className="team-metric-avatar"
+                  />
           <div>
             <div className="icv-person-name">{ic.name}</div>
             <div className="icv-person-role">{ic.title}</div>
@@ -421,7 +435,10 @@ function ICView({ ic, onBack }: ICViewProps) {
       </section>
 
       {modalOpen && (
-        <div className="icv-overlay" onClick={closeModal}>
+        <div
+          className={`icv-overlay${isClosing ? ' is-closing' : ''}`}
+          onClick={closeModal}
+        >
           <div
             className="icv-modal"
             role="dialog"

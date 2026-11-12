@@ -1,53 +1,14 @@
-
 import "./env.ts";
-import express, { Request, Response } from "express";
+import app from "./app.ts";
 import { sequelize } from "./db/connection.ts";
-import userRoutes from "./routes/user.routes.ts";
-import icRoutes from "./routes/ic.routes.ts"
-import feedbackRoutes from "./routes/feedback.routes.ts"
-import usersRoutes from "./routes/users.routes.ts"
-import areaRoutes from "./routes/area.routes.ts"
-import projectRoutes from "./routes/project.routes.ts"
-import swaggerUi from "swagger-ui-express";
-import YAML from "yaml";
-import { readFileSync } from "node:fs";
+import { ensureAccountStatusColumn } from "./db/migrations.ts";
 
-import cors from "cors";
-
-
-const app = express();
 const PORT = Number(process.env.PORT) || 3000;
-app.use(cors());
-
-app.use(express.json()); // permite leer JSON del body en POST / PUT / PATCH
-
-app.use((req, res, next) => {
-    console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
-    next();
-});
-
-const openApiSpec = YAML.parse(
-  readFileSync(new URL("../docs/openapi.yaml", import.meta.url), "utf8")
-);
-app.use("/docs", swaggerUi.serve, swaggerUi.setup(openApiSpec));
-
-app.get("/", (req: Request, res: Response) => {
-  res.json({ message: "FeedBack Controller API running", docs: `http://localhost:${PORT}/docs` });
-});
-
-app.use('/auth', userRoutes);
-app.use('/ics', icRoutes);
-app.use('/feedback', feedbackRoutes);
-app.use('/users', usersRoutes);
-app.use('/areas', areaRoutes);
-app.use('/projects', projectRoutes);
-
-
-
 
 async function start() {
-  await sequelize.authenticate(); // falla si Postgres no está prendido, si la base `library` no existe o si la contraseña de src/db/connection.ts está mal
-  await sequelize.sync(); // crea las tablas que falten, sin borrar datos
+  await sequelize.authenticate();
+  await sequelize.sync();
+  await ensureAccountStatusColumn();
   app.listen(PORT, () => {
     console.log(`Server listening on http://localhost:${PORT}`);
     console.log(`Docs available at    http://localhost:${PORT}/docs`);

@@ -1,4 +1,4 @@
-# parqueJurasico-API
+# FEEDBACK COLLECTOR PROJECT
 
 REST API for managing the dinosaurs, enclosures, incidents, and users of a
 Jurassic park.
@@ -70,3 +70,7 @@ documentation will be available at `http://localhost:<PORT>/api-docs`, for examp
 
 Authentication routes are mounted under `/auth`; for example,
 `POST /auth/register` and `POST /auth/login`.
+
+Public registration creates a pending manager account. A director can review
+the account status in `GET /users` and approve a pending account with
+`PATCH /users/:id/approve`. Pending accounts cannot log in.

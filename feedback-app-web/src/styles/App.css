@@ -25,6 +25,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 16px;
   max-width: 480px;
   text-align: center;
@@ -43,15 +44,17 @@
 /* FEEDBACK LOG AND FILTERS FLOATING LAYOUT */
 .filters-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 16px;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
+  align-items: end; 
 }
 
 .filter-item {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  width: 100%; 
 }
 
 .filter-label {
@@ -60,9 +63,9 @@
   text-transform: uppercase;
   color: var(--text-muted);
   letter-spacing: 0.05em;
+  white-space: nowrap; 
 }
 
-/* SEARCH FIELD WITH ICON GAP */
 .search-wrapper {
   position: relative;
   display: flex;
@@ -79,43 +82,50 @@
 }
 
 .search-wrapper .input-control {
-  padding-left: 38px !important;
+  padding-left: 36px;
   width: 100%;
+}
+
+select.input-control {
+  padding-right: 28px;
+  text-overflow: ellipsis;
 }
 
 /* VIEW TOGGLE BUTTONS ACTIVE STATE FROM FIGMA */
 .view-toggle-container {
   display: flex;
   justify-content: flex-end;
-  gap: 0px;
+  gap: 6px;
   margin: 0 0 16px 0;
 }
 
 .btn-toggle-view {
-  background: var(--surface);
+  display: grid;
+  width: 38px;
+  height: 36px;
+  place-items: center;
   border: 1px solid var(--border);
-  padding: 8px 12px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
+  border-radius: 8px;
+  background: #fff;
   color: var(--text-muted);
-  transition: all 0.2s ease;
+  cursor: pointer;
+  font-size: 17px;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
 }
 
-.btn-toggle-view:first-of-type {
-  border-radius: 6px 0 0 6px;
-}
-
-.btn-toggle-view:last-of-type {
-  border-radius: 0 6px 6px 0;
-  border-left: none;
+.btn-toggle-view:hover {
+  background: var(--primary-light);
+  color: var(--primary);
 }
 
 .btn-toggle-view.active {
-  background: var(--primary);
-  color: var(--surface);
   border-color: var(--primary);
+  background: var(--primary);
+  color: #fff;
 }
+
 
 /* LIST CARDS - FIGMA SPECIFIC STYLE */
 .feedback-card {

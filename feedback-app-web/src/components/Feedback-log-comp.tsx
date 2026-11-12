@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
-import type { Feedback, FeedbackFilters, FeedbackPageResponse, IC, Project } from '../types/feedback';
+import type { Feedback, FeedbackFilters, IC, Project } from '../types/feedback';
 import { obtainICs } from '../service/ObtainICs';
 import { obtainProjects } from '../service/ObtainProjects';
+import '../styles/index.css'
 import { obtainFeedbackPage } from '../service/ObtainFeedback';
 import ICView from './IcView';
 import '../styles/index.css'
-import { API_URL } from '../service/api';
 
 const PAGE_SIZE = 10;
 const SCORES = [1,2,3,4,5];
@@ -22,6 +22,7 @@ function FeedbackLogComp() {
   const [ics, setIcs] = useState<IC[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const [selectedIC, setSelectedIC] = useState<{
     IC_id: number;
@@ -42,6 +43,32 @@ function FeedbackLogComp() {
     text: '',
   });
   const feedbackContainerRef = useRef<HTMLDivElement>(null);
+
+  const shouldAnimateViewChange = useRef(false);
+
+  function changeViewMode(nextMode: 'table' | 'list') {
+    if (nextMode === viewMode) return;
+
+    shouldAnimateViewChange.current = true;
+    setViewMode(nextMode);
+  }
+
+  useEffect(() => {
+  const mediaQuery = window.matchMedia('(max-width: 767px)');
+
+  if (mediaQuery.matches) {
+    setViewMode('list');
+  }
+
+  const handleMediaChange = (e: MediaQueryListEvent) => {
+    if (e.matches) {
+      setViewMode('list');
+    }
+  }; 
+  mediaQuery.addEventListener('change', handleMediaChange);
+  return () => mediaQuery.removeEventListener('change', handleMediaChange);
+  }, []);
+  
 
   useEffect(() => {
   const mediaQuery = window.matchMedia('(max-width: 767px)');
@@ -75,10 +102,13 @@ function FeedbackLogComp() {
 
   useEffect(() => {
     let cancelled = false;
+    const controller = new AbortController();
 
     async function loadFeedback() {
+      setLoading(true);
+      setLoadError(null);
       try {
-        const result = await obtainFeedbackPage(page, PAGE_SIZE);
+        const result = await obtainFeedbackPage(page, PAGE_SIZE, filters, controller.signal);
         if (cancelled) return;
         setFeedback(result.data ?? []);
         setTotalPages(Math.max(result.pagination.totalPages, 1));
@@ -86,6 +116,7 @@ function FeedbackLogComp() {
       } catch (error) {
         if (cancelled) return;
         console.error('Error retrieving feedback:', error);
+        setLoadError('Could not load feedback. Please try again.');
         setFeedback([]);
         setTotalPages(1);
         setTotalItems(0);
@@ -97,27 +128,37 @@ function FeedbackLogComp() {
     loadFeedback();
     return () => {
       cancelled = true;
+      controller.abort();
     };
-  }, [page]);
+  }, [page, filters]);
 
   useEffect(() => {
-    const el = feedbackContainerRef.current;
-    if (!el) return;
-    el.animate(
+    if (!shouldAnimateViewChange.current) return;
+
+    shouldAnimateViewChange.current = false;
+    const element = feedbackContainerRef.current;
+    if (!element) return;
+
+    element.animate(
       [
         { opacity: 0, transform: 'translateY(16px)' },
         { opacity: 1, transform: 'translateY(0)' },
       ],
-      { duration: 600, easing: 'ease-out' }
+      { duration: 300, easing: 'ease-out' }
     );
-  }, [feedback, viewMode]);
+  }, [viewMode]);
 
   function handleChange(e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
-    setFilters({ ...filters, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    if (name === 'sortBy' && value !== 'newest' && value !== 'oldest') return;
+    setLoading(true);
+    setPage(1);
+    setFilters((current) => ({ ...current, [name]: value }));
   }
 
   function goToPage(next: number) {
-    if (next < 1 || next > totalPages || next === page) return;
+    if (loading || next < 1 || next > totalPages || next === page) return;
+    setLoading(true);
     setPage(next);
   }
 
@@ -148,35 +189,6 @@ function FeedbackLogComp() {
       id: project.id,
       name: project.name,
     }));
-
-  const filteredFeedback = enrichedFeedback
-    .filter((item) => {
-      if (!filters.icName) return true;
-
-      return (item.ic_name ?? '')
-        .toLowerCase()
-        .includes(filters.icName.toLowerCase());
-    })
-    .filter((item) => {
-      if (!filters.projectId) return true;
-      return String(item.project_id) === filters.projectId;
-    })
-    .filter((item) => {
-      if (!filters.score) return true;
-      return item.score === Number(filters.score);
-    })
-    .filter((item) => {
-      if (filters.text === '') return true;
-      const commentText = item.comment ?? '';
-      return commentText.toLowerCase().includes(filters.text.toLowerCase());
-    })
-    .sort((a, b) => {
-      if (filters.sortBy === 'oldest') {
-        return (a.date ?? '').localeCompare(b.date ?? '');
-      }
-
-      return (b.date ?? '').localeCompare(a.date ?? '');
-    });
 
   function openICTimeline(item: Feedback) {
     const ic = ics.find((entry) => entry.IC_id === item.ic_id);
@@ -299,26 +311,25 @@ function FeedbackLogComp() {
         <div className="view-toggle-container">
           <button
             type="button"
-            onClick={() => setViewMode('table')}
+            onClick={() => changeViewMode('table')}
             className={`btn-toggle-view ${viewMode === 'table' ? 'active' : ''}`}
-            style={{ color: viewMode === 'table' ? 'var(--surface)' : 'var(--text-muted)' }}
           >
             {tableChartIcon}
           </button>
           <button
             type="button"
-            onClick={() => setViewMode('list')}
+            onClick={() => changeViewMode('list')}
             className={`btn-toggle-view ${viewMode === 'list' ? 'active' : ''}`}
-            style={{ color: viewMode === 'list' ? 'var(--surface)' : 'var(--text-muted)' }}
           >
             {viewListIcon}
           </button>
         </div>
 
         {loading && <p>Loading data...</p>}
-        {!loading && filteredFeedback.length === 0 && <p>No feedback entries match the applied filters.</p>}
+        {!loading && loadError && <p role="alert">{loadError}</p>}
+        {!loading && !loadError && enrichedFeedback.length === 0 && <p>No feedback entries match the applied filters.</p>}
 
-        {!loading && filteredFeedback.length > 0 && (
+        {!loading && enrichedFeedback.length > 0 && (
           <div ref={feedbackContainerRef}>
             {viewMode === 'table' && (
               <div className="box" style={{ margin: '0 0 20px 0', padding: '0', maxWidth: '100%', overflowX: 'auto' }}>
@@ -336,27 +347,27 @@ function FeedbackLogComp() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredFeedback.map((item) => (
+                    {enrichedFeedback.map((item) => (
                       <tr key={item.id}>
                         <td className="text-caption-default" style={{ color: 'var(--text-muted)' }}>{item.date}</td>
                         <td>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                            <span style={{ fontWeight: 600 }}>{item.ic_name ?? '—'}</span>
+                            <span style={{ fontWeight: 600 }}>{item.ic_name ?? 'â€”'}</span>
                             {item.source_name.toLowerCase().includes('peer') && <span className="badge-shared" style={{ width: 'fit-content' }}>Shared</span>}
                           </div>
                         </td>
-                        <td>{item.project_name ?? '—'}</td>
+                        <td>{item.project_name ?? '-'}</td>
                         <td style={{ color: 'var(--text-muted)' }}>{item.source_name}</td>
                         <td>
                           <span className="score-badge" data-score={item.score}>{item.score}</span>
                         </td>
                         <td style={{ maxWidth: '280px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {item.comment ?? '—'}
+                          {item.comment ?? '-'}
                         </td>
                         <td>
                           {item.screenshot_url ? (
                             <a href={item.screenshot_url} target="_blank" rel="noreferrer" style={{ color: 'var(--primary)', fontWeight: 600 }}>View</a>
-                          ) : '—'}
+                          ) : '-'}
                         </td>
                         <td>
                           <button type="button" className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '13px', borderRadius: '6px' }} onClick={() => openICTimeline(item)}>View in Timeline</button>
@@ -370,7 +381,7 @@ function FeedbackLogComp() {
 
             {viewMode === 'list' && (
               <div className="box-columns" style={{ gap: '16px', marginBottom: '20px' }}>
-                {filteredFeedback.map((item) => (
+                {enrichedFeedback.map((item) => (
                   <div key={item.id} className="feedback-card">
                     <div className="feedback-card-header">
                       <span className="score-badge" data-score={item.score} style={{ width: '32px', height: '32px', fontSize: '14px'}}>
@@ -379,19 +390,19 @@ function FeedbackLogComp() {
 
                       <div className="feedback-card-meta">
                         <div className="feedback-card-name-row">
-                          <h4 className="feedback-card-name">{item.ic_name ?? '—'}</h4>
+                          <h4 className="feedback-card-name">{item.ic_name ?? 'â€”'}</h4>
                           {(item.source_name.toLowerCase().includes('peer') || item.id === 3) && (
                             <span className="badge-shared">Shared</span>
                           )}
                         </div>
                         <span className="feedback-card-subtext">
-                          {item.date} • {item.project_name ?? '—'}
+                          {item.date} â€¢ {item.project_name ?? 'â€”'}
                         </span>
                       </div>
                     </div>
 
                     <p className="feedback-card-body">
-                      {item.comment ?? '—'}
+                      {item.comment ?? 'â€”'}
                     </p>
 
                     <div className="feedback-card-footer">
