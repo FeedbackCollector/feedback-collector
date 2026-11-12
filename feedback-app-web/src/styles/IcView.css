@@ -220,6 +220,26 @@
   display: block;
 }
 
+.icv-thumb-btn {
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  align-self: flex-start;
+}
+
+.icv-overlay.is-dark {
+  background: rgba(23, 24, 26, 0.75);
+}
+
+.icv-preview-img {
+  max-width: min(90vw, 900px);
+  max-height: 85vh;
+  border-radius: 8px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+  background: var(--surface);
+}
+
 .icv-muted {
   color: var(--text-muted);
 }

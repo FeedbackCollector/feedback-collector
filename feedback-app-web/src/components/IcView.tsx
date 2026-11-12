@@ -97,6 +97,7 @@ function ICView({ ic, onBack }: ICViewProps) {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Feedback | null>(null);
   const [form, setForm] = useState<EntryForm>(emptyForm);
@@ -402,13 +403,18 @@ function ICView({ ic, onBack }: ICViewProps) {
               {item.comment && <p className="icv-entry-body">{item.comment}</p>}
 
               {item.screenshot_url && (
-                <a href={item.screenshot_url} target="_blank" rel="noreferrer">
+                <button
+                  type="button"
+                  className="icv-thumb-btn"
+                  onClick={() => setPreviewUrl(item.screenshot_url)}
+                  aria-label="View screenshot"
+                >
                   <img
                     className="icv-thumb"
                     src={item.screenshot_url}
                     alt="Screenshot attached to this entry"
                   />
-                </a>
+                </button>
               )}
             </article>
           ))}
@@ -483,9 +489,7 @@ function ICView({ ic, onBack }: ICViewProps) {
                   onChange={handleFieldChange}
                   placeholder="e.g. Product Manager, Client, Peer"
                 />
-                <span className="icv-hint">
-                  Not saved yet: the API has no field for it.
-                </span>
+          
               </label>
 
               <label className="icv-field">
@@ -552,6 +556,22 @@ function ICView({ ic, onBack }: ICViewProps) {
               </div>
             </form>
           </div>
+        </div>
+      )}
+
+      {previewUrl && (
+        <div
+          className="icv-overlay is-dark"
+          onClick={() => setPreviewUrl(null)}
+        >
+          <img
+            className="icv-preview-img"
+            src={previewUrl}
+            alt="Screenshot preview"
+            role="dialog"
+            aria-modal="true"
+            onClick={(event) => event.stopPropagation()}
+          />
         </div>
       )}
     </div>
