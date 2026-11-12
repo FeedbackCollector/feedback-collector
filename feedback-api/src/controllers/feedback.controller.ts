@@ -33,7 +33,8 @@ export async function getAll(req: Request, res: Response) {
             if (typeof value !== 'string') {
                 return res.status(400).json({ message: 'Invalid search parameters' });
             }
-            if (value !== '') filters[key] = value;
+            const trimmed = value.trim().replace(/\s+/g, ' ');
+            if (trimmed !== '') filters[key] = trimmed;
         }
         const sort = req.query.sort;
         if (sort !== undefined && sort !== 'newest' && sort !== 'oldest') {

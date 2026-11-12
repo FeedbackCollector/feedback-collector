@@ -1,6 +1,12 @@
 import { Feedback as FeedbackModel, ICs } from "../models/Index.ts";
 import { Feedback, FeedbackFilters, NewFeedback, UpdateFeedback } from "../types/feedback.ts";
-import { Op, type WhereOptions, type Order } from 'sequelize';
+import { Op, Sequelize, type WhereOptions, type Order } from 'sequelize';
+
+const unaccentIlike = (column: string, value: string) =>
+    Sequelize.where(
+        Sequelize.fn('unaccent', Sequelize.col(column)),
+        { [Op.iLike]: Sequelize.fn('unaccent', value) }
+    );
 
 export async function getFeedbackByID(id: number): Promise<Feedback | null> {
     const row = await FeedbackModel.findByPk(id);
@@ -14,15 +20,19 @@ export async function getAllFeedbacks(page: number, limit: number, filters: Feed
         if (filters[key] !== undefined) where[key] = filters[key];
     }
     const contains = (value: string) => `%${value.replace(/[\\%_]/g, '\\$&')}%`;
-    if (filters.text) where.comment = { [Op.iLike]: contains(filters.text) };
+    if (filters.text) where[Op.and] = [...((where[Op.and] as unknown[]) ?? []), unaccentIlike('Feedback.comment', contains(filters.text))];
     const order: Order = filters.sort
         ? [['date', filters.sort === 'newest' ? 'DESC' : 'ASC'], ['id', filters.sort === 'newest' ? 'DESC' : 'ASC']]
         : [['id', 'ASC']];
+    if (filters.ic_name) {
+        const matchedICs = await ICs.findAll({
+            attributes: ['IC_id'],
+            where: unaccentIlike('name', contains(filters.ic_name)),
+        });
+        where.ic_id = { [Op.in]: matchedICs.map((ic) => ic.IC_id) };
+    }
     const result = await FeedbackModel.findAndCountAll({
         where,
-        ...(filters.ic_name ? {
-            include: [{ model: ICs, attributes: [], required: true, where: { name: { [Op.iLike]: contains(filters.ic_name) } } }],
-        } : {}),
         limit,
         offset: (page - 1) * limit,
         order,
