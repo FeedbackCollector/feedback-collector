@@ -4,6 +4,7 @@ import { obtainAreas, type Area } from '../service/ObtainAreas';
 import { useAuthStore } from '../store/authStore';
 import '../styles/MyManagement.css';
 import { UserAvatar } from './UserAvatar';
+import { useToastStore } from './toastStore';
 
 type ViewMode = 'cards' | 'list';
 

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { API_URL } from '../service/api';
+import { useToastStore } from './toastStore';
 
 export interface User {
     id?: number;
@@ -135,6 +136,7 @@ export const useAuthStore = create<AuthState>()(
                         isAuthenticated: true,
                         error: null
                     });
+                        useToastStore.getState().addToast('Logged in successfully!', 'success');
                         return true;
                     } else {
                         set({ 
@@ -187,7 +189,7 @@ export const useAuthStore = create<AuthState>()(
                             regPassword: '',
                             regConfirmPassword: ''
                         }); 
-                        alert('Account created successfully! Please log in.');
+                        useToastStore.getState().addToast('Account created successfully! Please log in.', 'success');
                         return true;
                     } else {
                         set({ error: { field: 'regEmail', message: datos.mensaje || 'Error creating account.' } });

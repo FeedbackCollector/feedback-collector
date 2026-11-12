@@ -11,6 +11,7 @@ import {
 } from '../service/ManagementApi';
 import { useAuthStore } from '../store/authStore';
 import '../styles/Management.css';
+import {useToastStore} from '../store/toastStore';
 
 type ViewMode = 'table' | 'cards';
 
@@ -230,6 +231,7 @@ function ManagementComp() {
       await saveManagementRow(activeTab, editingRow?.id ?? null, formValues, token);
       await refreshRows();
       closeDialog();
+      useToastStore.getState().addToast('Changes saved successfully!', 'success');
     } catch (reason: unknown) {
       console.error(`Could not save ${activeTab.toLowerCase()}:`, reason);
       setError(getErrorMessage(reason));
@@ -246,6 +248,7 @@ function ManagementComp() {
     try {
       await deleteManagementRow(activeTab, row.id, token);
       await refreshRows();
+      useToastStore.getState().addToast(`${TAB_SINGULAR[activeTab]} deleted successfully!`, 'success');
     } catch (reason: unknown) {
       console.error(`Could not delete ${activeTab.toLowerCase()}:`, reason);
       setError(getErrorMessage(reason));
