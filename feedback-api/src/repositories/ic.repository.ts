@@ -6,13 +6,14 @@ import type {IC, CreateICRecord, UpdateIC, ICFilters} from "../types/ic.ts"
 
 export async function icFindAll(filters: ICFilters){
 
-    const {name, title, manager_id, area_id, page, limit} = filters
+    const {name, title, manager_id, area_id, score, page, limit} = filters
 
     const where: {
       name?: object | string;
       title?: object | string;
       area_id?: number;
       manager_id?: number;
+      score?: number;
     } = {};
 
     if(name){
@@ -26,8 +27,11 @@ export async function icFindAll(filters: ICFilters){
     }
     if (area_id !== undefined){
         where.area_id = area_id
-    }
-
+    } 
+    if (score !== undefined){
+        where.score = score
+    } 
+    
     const result = await ICs.findAndCountAll({
         where, limit,
         offset: (page - 1) * limit,
@@ -67,6 +71,14 @@ export async function icUpdate(data: UpdateIC & { area_id?: number | null }, id:
 export async function icDelete(id: number): Promise<boolean> {
     const deleted = await ICs.destroy({ where: { IC_id: id } });
     return deleted > 0;
+}
+
+// Sets ics.score to the average of the IC's feedback scores (null when it has none).
+export async function recalculateICScore(icId: number): Promise<void> {
+    await sequelize.query(
+        `UPDATE ics SET score = (SELECT ROUND(AVG(score)::numeric, 2) FROM feedback WHERE ic_id = :icId) WHERE "IC_id" = :icId`,
+        {replacements: {icId}}
+    );
 }
 
 export async function managerAreaId(id: number): Promise<number | null> {

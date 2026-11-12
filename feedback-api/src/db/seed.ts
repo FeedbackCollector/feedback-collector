@@ -4,6 +4,7 @@ import { sequelize } from "./connection.ts";
 import "../models/Index.ts"; 
 import { User } from "../models/User.ts"
 import { ICs } from "../models/ic.ts";
+import { recalculateICScore } from "../repositories/ic.repository.ts";
 import { Feedback } from "../models/feedback.ts";
 
 import { Project } from "../models/project.ts";
@@ -73,6 +74,8 @@ const [lucia, nicolas, camila] = await ICs.bulkCreate([
   fb(camila, apollo, "2026-07-25", "Demo",        4, "Síntesis de research muy útil para el equipo"),
   fb(camila, zephyr, "2026-08-13", "Client call", 4, "Excelente presentación de hallazgos"),
 ]);
+
+    for (const ic of [lucia, nicolas, camila]) await recalculateICScore(ic.IC_id);
 
     console.log("✅ Database created and loaded:");
     console.log(`   ${await User.count()} users`);

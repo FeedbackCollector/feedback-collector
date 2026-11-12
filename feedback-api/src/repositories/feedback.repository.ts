@@ -1,5 +1,6 @@
 import { Feedback as FeedbackModel, ICs } from "../models/Index.ts";
 import { Feedback, FeedbackFilters, NewFeedback, UpdateFeedback } from "../types/feedback.ts";
+import { recalculateICScore } from './ic.repository.ts';
 import { Op, type WhereOptions, type Order } from 'sequelize';
 
 export async function getFeedbackByID(id: number): Promise<Feedback | null> {
@@ -51,10 +52,12 @@ export async function insertFeedback(feedbackData: NewFeedback): Promise<Feedbac
         screenshot_url: feedbackData.screenshot_url
     });
 
+    await recalculateICScore(row.ic_id);
     return [row.toJSON()];
 }
 
 export async function putFeedback(feedbackData: NewFeedback, feedbackId: number): Promise<Feedback[]> {
+    const previous = await FeedbackModel.findByPk(feedbackId);
     await FeedbackModel.update(
         {
             author_id: feedbackData.author_id,
@@ -70,10 +73,19 @@ export async function putFeedback(feedbackData: NewFeedback, feedbackId: number)
     );
 
     const row = await FeedbackModel.findByPk(feedbackId);
+    await syncScores(previous?.ic_id, row?.ic_id);
     return row ? [row.toJSON()] : [];
 }
 
+// Recomputes the average for every IC touched by a change (the old and the new one if the feedback moved).
+async function syncScores(...icIds: (number | undefined)[]) {
+    for (const id of new Set(icIds)) {
+        if (id !== undefined) await recalculateICScore(id);
+    }
+}
+
 export async function patchFeedback(feedbackData: UpdateFeedback, feedbackId: number): Promise<Feedback[]> {
+    const previous = await FeedbackModel.findByPk(feedbackId);
     const updates: Record<string, unknown> = {};
     if (feedbackData.author_id !== undefined) updates.author_id = feedbackData.author_id;
     if (feedbackData.ic_id !== undefined) updates.ic_id = feedbackData.ic_id;
@@ -91,13 +103,16 @@ export async function patchFeedback(feedbackData: UpdateFeedback, feedbackId: nu
     });
 
     const row = await FeedbackModel.findByPk(feedbackId);
+    await syncScores(previous?.ic_id, row?.ic_id);
     return row ? [row.toJSON()] : [];
 }
 
 export async function deleteFeedback(feedbackId: number): Promise<boolean> {
+    const previous = await FeedbackModel.findByPk(feedbackId);
     const deleted = await FeedbackModel.destroy({ 
         where: { id: feedbackId } 
     });
+    await syncScores(previous?.ic_id);
     return deleted > 0;
 }
 

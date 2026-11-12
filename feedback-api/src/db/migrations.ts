@@ -28,3 +28,19 @@ export async function ensureICAreaColumn(): Promise<void> {
         );
     }
 }
+
+// Adds ics.score (average feedback score) to existing databases and backfills it.
+export async function ensureICScoreColumn(): Promise<void> {
+    const queryInterface = sequelize.getQueryInterface();
+    const columns = await queryInterface.describeTable("ics");
+
+    if (!columns.score) {
+        await queryInterface.addColumn("ics", "score", {
+            type: DataTypes.FLOAT,
+            allowNull: true,
+        });
+        await sequelize.query(
+            `UPDATE ics SET score = (SELECT ROUND(AVG(score)::numeric, 2) FROM feedback WHERE feedback.ic_id = ics."IC_id")`
+        );
+    }
+}
