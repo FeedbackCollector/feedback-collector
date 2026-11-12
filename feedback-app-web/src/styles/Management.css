@@ -57,12 +57,13 @@
 
 .management-toolbar {
   display: flex;
-  min-height: 88px;
+  min-height: auto;
   flex-direction: column;
   align-items: flex-end;
   justify-content: flex-start;
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: 5px;
+  margin-top: 20px;
+  margin-bottom: 20px;
 }
 
 .management-add-button {
