@@ -30,6 +30,7 @@ function Login() {
     const createAccount = useAuthStore((state) => state.createAccount);
     
     const [areas, setAreas] = useState<Area[]>([]);
+    const [registrationMessage, setRegistrationMessage] = useState<string | null>(null);
 
 
     const navigate = useNavigate();
@@ -56,12 +57,14 @@ function Login() {
       })
     }, [])
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (activeForm === 'login') {
+            setRegistrationMessage(null);
             loginSubmit();
         } else {
-            createAccount();
+            const message = await createAccount();
+            setRegistrationMessage(message);
         }
     };
 
@@ -94,18 +97,30 @@ function Login() {
                     <button
                         type="button"
                         className={`tab-btn ${activeForm === 'login' ? 'active' : ''}`}
-                        onClick={() => switchForm('login')}
+                        onClick={() => {
+                            setRegistrationMessage(null);
+                            switchForm('login');
+                        }}
                     >
                         Login
                     </button>
                     <button
                         type="button"
                         className={`tab-btn ${activeForm === 'register' ? 'active' : ''}`}
-                        onClick={() => switchForm('register')}
+                        onClick={() => {
+                            setRegistrationMessage(null);
+                            switchForm('register');
+                        }}
                     >
                         Register
                     </button>
                 </div>
+
+                {registrationMessage && (
+                    <p className="auth-success" role="status">
+                        {registrationMessage}
+                    </p>
+                )}
 
                 <form onSubmit={handleSubmit} className="auth-form" noValidate>
 
