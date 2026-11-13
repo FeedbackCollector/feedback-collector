@@ -228,7 +228,11 @@ function ObtainICs() {
           ) : viewMode === 'cards' ? (
             <div className="team-metrics" ref={viewContainerRef}> 
               {visibleICs.map((item) => (
-                <article className="team-metric-card" key={item.IC_id} onClick={() => openICTimeline(item)}>
+                <article className="team-metric-card" key={item.IC_id} onClick={() => openICTimeline(item)}
+                          style={{ cursor: 'pointer', transition: 'background-color 0.2s' }}
+                          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f3f4f6')}
+                          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'white')}
+>
                   <UserAvatar
                     name={item.name}
                     id={item.IC_id}
@@ -266,8 +270,13 @@ function ObtainICs() {
                 </thead>
                 <tbody>
                   {visibleICs.map((item) => (
-                    <tr key={item.IC_id}>
-                      <td>{item.name}</td>
+<tr
+  key={item.IC_id}
+  onClick={() => openICTimeline(item)}
+  style={{ cursor: 'pointer', transition: 'background-color 0.2s' }}
+  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f3f4f6')}
+  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+>                      <td style = {{textDecoration: "underline"}}>{item.name}</td>
                       <td>{item.title}</td>
                       <td>{item.score?.toFixed(1) ?? 'No data'}</td>
                       <td>{item.entries}</td>
