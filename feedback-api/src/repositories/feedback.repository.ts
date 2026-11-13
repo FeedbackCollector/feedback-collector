@@ -21,8 +21,7 @@ export async function getAllFeedbacks(page: number, limit: number, filters: Feed
         if (filters[key] !== undefined) where[key] = filters[key];
     }
     const contains = (value: string) => `%${value.replace(/[\\%_]/g, '\\$&')}%`;
-    if (filters.text) where[Op.and] = [...((where[Op.and] as unknown[]) ?? []), unaccentIlike('Feedback.comment', contains(filters.text))];
-    const icWhere: WhereOptions = {};
+    if (filters.text) where[Op.and as unknown as string] = [unaccentIlike('Feedback.comment', contains(filters.text))];    const icWhere: WhereOptions = {};
     if (filters.ic_name) icWhere.name = { [Op.iLike]: contains(filters.ic_name) };
     if (filters.manager_id !== undefined) icWhere.manager_id = filters.manager_id;
     const order: Order = filters.sort
