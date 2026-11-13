@@ -14,6 +14,10 @@ export async function ensureAccountStatusColumn(): Promise<void> {
     }
 }
 
+export async function ensureUnaccentExtension(): Promise<void> {
+    await sequelize.query("CREATE EXTENSION IF NOT EXISTS unaccent;");
+}
+
 export async function ensureICAreaColumn(): Promise<void> {
     const queryInterface = sequelize.getQueryInterface();
     const columns = await queryInterface.describeTable("ics");
