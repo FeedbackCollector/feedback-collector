@@ -5,6 +5,9 @@ import { useAuthStore } from '../store/authStore';
 import '../styles/MyManagement.css';
 import { UserAvatar } from './UserAvatar';
 import LoadingOverlay from './LoadingOverlay';
+import AutocompleteSearch from './AutocompleteSearch';
+import type { SearchSuggestion } from '../types/autoComplete';
+import { normalizeSearchText } from '../utils/search';
 
 type ViewMode = 'cards' | 'list';
 
@@ -114,14 +117,28 @@ export default function MyManagementComp() {
     areaId === null ? 'No area assigned' : areaNamesById.get(areaId) ?? `Area ${areaId}`;
 
   const visibleManagers = useMemo(() => {
-    const query = search.trim().toLocaleLowerCase();
+    const query = normalizeSearchText(search.trim());
     if (!query) return managers;
     return managers.filter((manager) =>
-      `${manager.name} ${manager.email} ${getAreaName(manager.area_id)}`
-        .toLocaleLowerCase()
+      normalizeSearchText(`${manager.name} ${manager.email} ${getAreaName(manager.area_id)}`)
         .includes(query)
     );
   }, [areaNamesById, managers, search]);
+  const searchSuggestions = useMemo<SearchSuggestion[]>(
+    () => managers.map((manager) => {
+      const areaName = manager.area_id === null
+        ? 'No area assigned'
+        : areaNamesById.get(manager.area_id) ?? `Area ${manager.area_id}`;
+      return {
+        id: String(manager.id),
+        label: manager.name,
+        value: manager.name,
+        searchText: areaName,
+        detail: areaName,
+      };
+    }),
+    [areaNamesById, managers]
+  );
 
   const metrics = [
     { label: 'Managers', value: loading ? '…' : error ? '—' : String(managers.length) },
@@ -155,18 +172,15 @@ export default function MyManagementComp() {
       <section className="my-management-team" aria-label="All managers">
         <h2>All Managers</h2>
         <div className="my-management-toolbar">
-          <label className="my-management-search">
-            <svg aria-hidden="true" height="20" viewBox="0 -960 960 960" width="20" fill="currentColor">
-              <path d="M360-240h440v-107H360v107ZM160-613h120v-107H160v107Zm0 187h120v-107H160v107Zm0 186h120v-107H160v107Zm200-186h440v-107H360v107Zm0-187h440v-107H360v107ZM160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h640q33 0 56.5 23.5T880-720v480q0 33-23.5 56.5T800-160H160Z" />
-            </svg>
-            <input
-              type="search"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search Managers..."
-              aria-label="Search managers"
-            />
-          </label>
+          <AutocompleteSearch
+            id="my-managers-search"
+            className="my-management-search"
+            label="Search managers"
+            placeholder="Search Managers..."
+            value={search}
+            suggestions={searchSuggestions}
+            onChange={setSearch}
+          />
           <div className="my-management-view-toggle" role="group" aria-label="Manager view">
             <button
               type="button"

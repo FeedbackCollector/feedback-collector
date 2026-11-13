@@ -5,11 +5,14 @@ import { obtainProjects } from '../service/ObtainProjects';
 import '../styles/index.css'
 import { obtainFeedbackPage } from '../service/ObtainFeedback';
 import ICView from './IcView';
+import AutocompleteSearch from './AutocompleteSearch';
+import type { SearchSuggestion } from '../types/autoComplete';
 import '../styles/index.css'
 import { obtainAllICs } from '../service/ObtainICs';
 import { useAuthStore } from '../store/authStore';
 import LoadingOverlay from './LoadingOverlay';
 
+const SEARCH_DEBOUNCE_MS = 300;
 const PAGE_SIZE = 10;
 const SCORES = [1,2,3,4,5];
 
@@ -48,6 +51,7 @@ function FeedbackLogComp() {
     sortBy: 'newest',
     text: '',
   });
+  const [searchInputs, setSearchInputs] = useState({ icName: '', text: '' });
   const feedbackContainerRef = useRef<HTMLDivElement>(null);
 
   const shouldAnimateViewChange = useRef(false);
@@ -185,8 +189,22 @@ function FeedbackLogComp() {
     );
   }, [viewMode]);
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (filters.icName === searchInputs.icName && filters.text === searchInputs.text) return;
+      setLoading(true);
+      setPage(1);
+      setFilters((current) => ({ ...current, icName: searchInputs.icName, text: searchInputs.text }));
+    }, SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [searchInputs]);
+
   function handleChange(e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
     const { name, value } = e.target;
+    if (name === 'icName' || name === 'text') {
+      setSearchInputs((current) => ({ ...current, [name]: value }));
+      return;
+    }
     if (name === 'sortBy' && value !== 'newest' && value !== 'oldest') return;
     setLoading(true);
     setPage(1);
@@ -210,13 +228,11 @@ function FeedbackLogComp() {
     };
   });
 
-  const icNames = Array.from(
-    new Set(
-      enrichedFeedback
-        .map((item) => item.ic_name ?? '')
-        .filter((name) => name !== '')
-    )
-  );
+  const searchSuggestions = ics.map<SearchSuggestion>((ic) => ({
+    id: String(ic.IC_id),
+    label: ic.name,
+    value: ic.name,
+  }));
 
   const projectOptions = projects
     .filter((project) =>
@@ -293,23 +309,18 @@ function FeedbackLogComp() {
           <div className="filters-grid">
             <div className="filter-item">
               <span className="filter-label">IC</span>
-              <div className="search-wrapper">
-                {searchIcon}
-                <input
-                  type="text"
-                  name="icName"
-                  placeholder='Search ICs...'
-                  className="input-control"
-                  list="ics-list"
-                  value={filters.icName}
-                  onChange={handleChange}
-                />
-              </div>
-              <datalist id="ics-list">
-                {icNames.map((name) => (
-                  <option key={name} value={name} />
-                ))}
-              </datalist>
+              <AutocompleteSearch
+                id="feedback-ic-search"
+                className="search-wrapper"
+                inputClassName="input-control"
+                label="Search ICs"
+                placeholder="Search ICs..."
+                value={searchInputs.icName}
+                suggestions={searchSuggestions}
+                onChange={(value) =>
+                  setSearchInputs((current) => ({ ...current, icName: value }))
+                }
+              />
             </div>
 
             <div className="filter-item">
@@ -354,7 +365,7 @@ function FeedbackLogComp() {
                 name="text"
                 placeholder="Search feedback text..."
                 className="input-control"
-                value={filters.text}
+                value={searchInputs.text}
                 onChange={handleChange}
               />
             </div>
@@ -405,7 +416,7 @@ function FeedbackLogComp() {
                         <td className="text-caption-default" style={{ color: 'var(--text-muted)' }}>{item.date}</td>
                         <td>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                            <span style={{ fontWeight: 600 }}>{item.ic_name ?? 'â€”'}</span>
+                            <span style={{ fontWeight: 600 }}>{item.ic_name ?? '-'}</span>
                             {item.source_name.toLowerCase().includes('peer') && <span className="badge-shared" style={{ width: 'fit-content' }}>Shared</span>}
                           </div>
                         </td>
@@ -443,19 +454,19 @@ function FeedbackLogComp() {
 
                       <div className="feedback-card-meta">
                         <div className="feedback-card-name-row">
-                          <h4 className="feedback-card-name">{item.ic_name ?? 'â€”'}</h4>
+                          <h4 className="feedback-card-name">{item.ic_name ?? '-'}</h4>
                           {(item.source_name.toLowerCase().includes('peer') || item.id === 3) && (
                             <span className="badge-shared">Shared</span>
                           )}
                         </div>
                         <span className="feedback-card-subtext">
-                          {item.date} â€¢ {item.project_name ?? 'â€”'}
+                          {item.date} â€¢ {item.project_name ?? '-'}
                         </span>
                       </div>
                     </div>
 
                     <p className="feedback-card-body">
-                      {item.comment ?? 'â€”'}
+                      {item.comment ?? '-'}
                     </p>
 
                     <div className="feedback-card-footer">

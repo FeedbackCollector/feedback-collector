@@ -3,10 +3,13 @@ import { useAuthStore } from '../store/authStore';
 import { obtainAllICs } from '../service/ObtainICs';
 import { obtainAllFeedback } from '../service/ObtainFeedback';
 import FeedbackDashboard from './FeedbackDashboard';
-import './ShowICs.css';
 import { UserAvatar } from '../components/UserAvatar';
 import { useToastStore } from '../store/toastStore';
 import LoadingOverlay from './LoadingOverlay';
+import '../styles/ShowICs.css';
+import AutocompleteSearch from './AutocompleteSearch';
+import type { SearchSuggestion } from '../types/autoComplete';
+import { normalizeSearchText } from '../utils/search';
 
 type IC = {
   IC_id: number;
@@ -127,12 +130,20 @@ function ObtainICs() {
   };
 
   const visibleICs = useMemo(() => {
-    const query = search.trim().toLocaleLowerCase();
+    const query = normalizeSearchText(search.trim());
     if (!query) return ics;
     return ics.filter((ic) =>
-      `${ic.name} ${ic.title}`.toLocaleLowerCase().includes(query)
+      normalizeSearchText(`${ic.name} ${ic.title}`).includes(query)
     );
   }, [ics, search]);
+  const searchSuggestions = useMemo<SearchSuggestion[]>(
+    () => ics.map((ic) => ({
+      id: String(ic.IC_id),
+      label: ic.name,
+      value: ic.name,
+    })),
+    [ics]
+  );
 
   if (loading) {
     return <LoadingOverlay message="Loading ICs..." />;
@@ -169,18 +180,15 @@ function ObtainICs() {
         <section className="team-page">
           <h2>Your Team</h2>
           <div className="team-toolbar">
-            <label className="team-search">
-              <svg aria-hidden="true" height="20" viewBox="0 -960 960 960" width="20" fill="currentColor">
-                <path d="M360-240h440v-107H360v107ZM160-613h120v-107H160v107Zm0 187h120v-107H160v107Zm0 186h120v-107H160v107Zm200-186h440v-107H360v107Zm0-187h440v-107H360v107ZM160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h640q33 0 56.5 23.5T880-720v480q0 33-23.5 56.5T800-160H160Z" />
-              </svg>
-              <input
-                type="search"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search ICs..."
-                aria-label="Search individual contributors"
-              />
-            </label>
+            <AutocompleteSearch
+              id="my-ics-search"
+              className="team-search"
+              label="Search individual contributors"
+              placeholder="Search ICs..."
+              value={search}
+              suggestions={searchSuggestions}
+              onChange={setSearch}
+            />
             <div className="team-view-toggle" role="group" aria-label="IC view">
               <button
                 type="button"

@@ -104,24 +104,19 @@ export const useAuthStore = create<AuthState>()(
                             atob(payload.padEnd(Math.ceil(payload.length / 4) * 4, '='))
                         ) as User;
                         // esto es para decodificar el token
+                        let currentUser = decodedUser;
                         const usersResponse = await fetch(`${API_URL}/users`, {
                         headers: {
                             Authorization: `Bearer ${token}`
                         }
                     });
 
-                    if (!usersResponse.ok) {
-                        throw new Error('Could not load users');
-                    }
-
-                    const usersData = await usersResponse.json();
-
-                    const currentUser = usersData.data.find(
-                        (item: User) => item.email === decodedUser.email
-                    );
-
-                    if (!currentUser) {
-                        throw new Error('User not found');
+                    if (usersResponse.ok) {
+                        const usersData = await usersResponse.json();
+                        const userFromList = Array.isArray(usersData.data)
+                            ? usersData.data.find((item: User) => item.email === decodedUser.email)
+                            : undefined;
+                        if (userFromList) currentUser = { ...decodedUser, ...userFromList };
                     }
 
                     set({
@@ -140,7 +135,7 @@ export const useAuthStore = create<AuthState>()(
                         return true;
                     } else {
                         set({ 
-                            error: { field: 'loginPassword', message: datos.mensaje || 'Email or password are incorrect.' }, 
+                            error: { field: 'loginPassword', message: datos.message || datos.error || datos.mensaje || 'Email or password are incorrect.' },
                             isAuthenticated: false 
                         });
                         return false;
@@ -170,12 +165,11 @@ export const useAuthStore = create<AuthState>()(
                     set({ error: { field: 'regConfirmPassword', message: "Passwords don't match" } });
                     return false;
                 }
-
                 try {
                     const respuesta = await fetch(`${API_URL}/auth/register`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ name: regName, email: regEmail, password: regPassword, area_id: 1 }) 
+                        body: JSON.stringify({ name: regName, email: regEmail, password: regPassword, area_id: 1 })
                     });
 
                     const datos = await respuesta.json();
@@ -192,7 +186,7 @@ export const useAuthStore = create<AuthState>()(
                         useToastStore.getState().addToast('Account created successfully! Please log in.', 'success');
                         return true;
                     } else {
-                        set({ error: { field: 'regEmail', message: datos.mensaje || 'Error creating account.' } });
+                        set({ error: { field: 'regEmail', message: datos.message || datos.error || datos.mensaje || 'Error creating account.' } });
                         return false;
                     }
                 } catch (error) {
