@@ -4,6 +4,7 @@ import { obtainAreas, type Area } from '../service/ObtainAreas';
 import { useAuthStore } from '../store/authStore';
 import '../styles/MyManagement.css';
 import { UserAvatar } from './UserAvatar';
+import LoadingOverlay from './LoadingOverlay';
 import AutocompleteSearch from './AutocompleteSearch';
 import type { SearchSuggestion } from '../types/autoComplete';
 import { normalizeSearchText } from '../utils/search';
@@ -205,7 +206,7 @@ export default function MyManagementComp() {
         </div>
 
         {loading ? (
-          <p className="my-management-state" role="status">Loading managers...</p>
+          <LoadingOverlay message="Loading managers..." />
         ) : error ? (
           <p className="my-management-state" role="alert">
             Could not load managers: {error}

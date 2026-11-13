@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { API_URL } from '../service/api';
+import { useToastStore } from './toastStore';
 
 export interface User {
     id?: number;
@@ -130,6 +131,7 @@ export const useAuthStore = create<AuthState>()(
                         isAuthenticated: true,
                         error: null
                     });
+                        useToastStore.getState().addToast('Logged in successfully!', 'success');
                         return true;
                     } else {
                         set({ 
@@ -181,9 +183,7 @@ export const useAuthStore = create<AuthState>()(
                             regPassword: '',
                             regConfirmPassword: ''
                         }); 
-                        alert(datos.status === 'pending'
-                            ? 'Registration submitted. A director must approve your account before you can log in.'
-                            : 'Account created successfully! Please log in.');
+                        useToastStore.getState().addToast('Account created successfully! Please log in.', 'success');
                         return true;
                     } else {
                         set({ error: { field: 'regEmail', message: datos.message || datos.error || datos.mensaje || 'Error creating account.' } });

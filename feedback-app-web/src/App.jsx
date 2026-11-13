@@ -9,6 +9,7 @@ import Management from './pages/Management'
 import MyManagement from './pages/MyManagement'
 import FeedbackLogComp from './components/Feedback-log-comp'
 import Login from './pages/login'
+import { ToastContainer } from './components/ToastContainer'
 
 const VALID_ROLES = ['manager', 'director']
 
@@ -78,6 +79,7 @@ function AppRoutes() {
 function App() {
   return (
     <BrowserRouter>
+      <ToastContainer/>
       <AppRoutes />
     </BrowserRouter>
   )

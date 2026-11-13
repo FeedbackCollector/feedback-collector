@@ -10,6 +10,8 @@ import { authHeaders } from '../service/authHeaders';
 import '../styles/IcView.css';
 import { UserAvatar } from './UserAvatar';
 import { resolveScreenshotUrl } from '../service/screenshotUrl';
+import { useToastStore } from '../store/toastStore';
+import LoadingOverlay from './LoadingOverlay';
 
 type ICInfo = {
   IC_id: number;
@@ -324,7 +326,7 @@ function ICView({ ic, onBack }: ICViewProps) {
       }
 
       closeModal();
-      setSuccess(isEditing ? 'Entry updated successfully.' : 'Entry created successfully.');
+      useToastStore.getState().addToast(`Entry ${isEditing ? 'updated' : 'created'} successfully!`, 'success');
       await loadFeedbacks();
     } catch (err) {
       console.error('Error saving feedback:', err);
@@ -359,19 +361,20 @@ function ICView({ ic, onBack }: ICViewProps) {
       }
 
       setFeedbacks((current) => current.filter((item) => item.id !== id));
-      setSuccess('Entry deleted successfully.');
+      useToastStore.getState().addToast('Entry deleted successfully.', 'success');
 
       if (editingItem?.id === id) {
         closeModal();
       }
     } catch (err) {
-      console.error('Error deleting feedback:', err);
-      setError(
-        err instanceof Error
+        console.error('Error deleting feedback:', err);
+        
+        const errorMessage = err instanceof Error
           ? `Could not delete entry: ${err.message}`
-          : 'Could not delete entry.'
-      );
-    }
+          : 'Could not delete entry.';
+
+        useToastStore.getState().addToast(errorMessage, 'error');
+      }
   }
 
   return (
@@ -439,7 +442,7 @@ function ICView({ ic, onBack }: ICViewProps) {
       </section>
 
       <section className="icv-entries">
-        {loading && <p className="icv-muted">Loading feedback...</p>}
+        {loading && <LoadingOverlay message="Loading feedback..." />}
 
         {!loading && newestFirst.length === 0 && (
           <p className="icv-muted">No entries have been registered for this IC yet.</p>

@@ -9,6 +9,9 @@ import ScreenshotThumb from './ScreenshotThumb';
 import AutocompleteSearch from './AutocompleteSearch';
 import type { SearchSuggestion } from '../types/autoComplete';
 import '../styles/index.css'
+import { obtainAllICs } from '../service/ObtainICs';
+import { useAuthStore } from '../store/authStore';
+import LoadingOverlay from './LoadingOverlay';
 
 const SEARCH_DEBOUNCE_MS = 300;
 const PAGE_SIZE = 10;
@@ -25,6 +28,9 @@ function FeedbackLogComp() {
   const [feedback, setFeedback] = useState<Feedback[]>([]);
   const [ics, setIcs] = useState<IC[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [icsLoading, setIcsLoading] = useState(true);
+  const [icsLoadError, setIcsLoadError] = useState<string | null>(null);
+  const user = useAuthStore((state) => state.user);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -93,17 +99,48 @@ function FeedbackLogComp() {
   
 
   useEffect(() => {
+    let cancelled = false;
+    const managerId = user?.role.toLowerCase() === 'director' ? undefined : user?.id;
+
     async function loadReferences() {
-      try {
-        const [icsData, projectsData] = await Promise.all([obtainICs(), obtainProjects()]);
-        setIcs(icsData);
-        setProjects(projectsData);
-      } catch (error) {
-        console.error('Error loading data:', error);
+      setIcsLoading(true);
+      setIcsLoadError(null);
+
+      if (!user || (managerId === undefined && user.role.toLowerCase() !== 'director')) {
+        setIcsLoadError('Could not determine assigned ICs. Please log in again.');
+        setIcsLoading(false);
+        return;
       }
+
+      const [icsResult, projectsResult] = await Promise.allSettled([
+        obtainAllICs(managerId),
+        obtainProjects(),
+      ]);
+
+      if (cancelled) return;
+
+      if (icsResult.status === 'fulfilled') {
+        setIcs(icsResult.value);
+      } else {
+        console.error('Error retrieving ICs:', icsResult.reason);
+        setIcsLoadError('Could not load ICs. Please try again.');
+      }
+
+      if (projectsResult.status === 'fulfilled') {
+        setProjects(projectsResult.value);
+      } else {
+        console.error('Error loading projects:', projectsResult.reason);
+      }
+
+      setIcsLoading(false);
     }
-    loadReferences();
-  }, []);
+
+    void loadReferences();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id, user?.role]);
 
   useEffect(() => {
     let cancelled = false;
@@ -222,6 +259,22 @@ function FeedbackLogComp() {
     return <ICView ic={selectedIC} onBack={() => setSelectedIC(null)} />;
   }
 
+  if (icsLoading) {
+    return <LoadingOverlay message="Loading Feedback..." />;
+  }
+
+  if (ics.length === 0) {
+    return (
+      <div className="MyICs-containers">
+        <div className="show-ics-empty" role="status">
+          <i className="fa-solid fa-user-group" aria-hidden="true"></i>
+          <p>
+            You don't have any Individual Contributors assigned yet. The Director assigns ICs to each manager.
+          </p>
+        </div>
+      </div>
+    );
+  }
    const pagination = (
     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '16px', margin: '0 0 20px 0' }}>
       <button
@@ -337,9 +390,9 @@ function FeedbackLogComp() {
           </button>
         </div>
 
-        {loading && <p>Loading data...</p>}
-        {!loading && loadError && <p role="alert">{loadError}</p>}
-        {!loading && !loadError && enrichedFeedback.length === 0 && <p>No feedback entries match the applied filters.</p>}
+        {loading && <LoadingOverlay message="Loading feedback..." />}
+        {!loading && loadError && <LoadingOverlay message="Error loading feedback." />}
+        {!loading && !loadError && enrichedFeedback.length === 0 && <LoadingOverlay message="No feedback entries match the applied filters." />}
 
         {!loading && enrichedFeedback.length > 0 && (
           <div ref={feedbackContainerRef}>
