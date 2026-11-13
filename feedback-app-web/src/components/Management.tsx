@@ -5,12 +5,15 @@ import {
   loadManagementData,
   saveManagementRow,
   updateManagerArea,
-  type ManagementData,
-  type ManagementFormValues,
-  type PendingAccount,
-  type ManagementRow,
-  type ManagementTab,
+  updateICManager,
 } from '../service/ManagementApi';
+import type {
+  ManagementData,
+  ManagementFormValues,
+  PendingAccount,
+  ManagementRow,
+  ManagementTab,
+} from '../types/managementTypes';
 import { useAuthStore } from '../store/authStore';
 import '../styles/Management.css';
 import {useToastStore} from '../store/toastStore';
@@ -113,6 +116,9 @@ function ManagementComp() {
   const [rows, setRows] = useState<ManagementRow[]>([]);
   const [areas, setAreas] = useState<ManagementData['areas']>([]);
   const [managers, setManagers] = useState<ManagementData['managers']>([]);
+  const [individualContributors, setIndividualContributors] = useState<
+    NonNullable<ManagementData['individualContributors']>
+  >([]);
   const [pendingAccounts, setPendingAccounts] = useState<PendingAccount[]>([]);
   const [showPendingRequests, setShowPendingRequests] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -120,6 +126,8 @@ function ManagementComp() {
   const [error, setError] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingRow, setEditingRow] = useState<ManagementRow | null>(null);
+  const [assigningManager, setAssigningManager] = useState<ManagementRow | null>(null);
+  const [selectedICIds, setSelectedICIds] = useState<number[]>([]);
   const [feedbackManager, setFeedbackManager] = useState<ManagementRow | null>(null);
   const [formValues, setFormValues] = useState<ManagementFormValues>(EMPTY_FORM);
   const [closingPopup, setClosingPopup] = useState<'feedback' | 'form' | null>(null);
@@ -136,6 +144,7 @@ function ManagementComp() {
     if (!token) {
       setRows([]);
       setPendingAccounts([]);
+      setIndividualContributors([]);
       setError('You must be logged in to load management data.');
       setLoading(false);
       return () => {
@@ -150,6 +159,7 @@ function ManagementComp() {
           setAreas(data.areas);
           setManagers(data.managers);
           setPendingAccounts(data.pendingAccounts);
+          setIndividualContributors(data.individualContributors ?? []);
         }
       })
       .catch((reason: unknown) => {
@@ -228,6 +238,7 @@ function ManagementComp() {
     setAreas(data.areas);
     setManagers(data.managers);
     setPendingAccounts(data.pendingAccounts);
+    setIndividualContributors(data.individualContributors ?? []);
   };
 
   const saveRow = async (event: FormEvent<HTMLFormElement>) => {
@@ -342,11 +353,57 @@ function ManagementComp() {
     }
   };
 
+  const openAssignDialog = (manager: ManagementRow) => {
+    setAssigningManager(manager);
+    setSelectedICIds([]);
+    setError(null);
+  };
+
+  const closeAssignDialog = () => {
+    if (isMutating) return;
+    setAssigningManager(null);
+    setSelectedICIds([]);
+    setError(null);
+  };
+
+  const assignSelectedICs = async () => {
+    if (!token || !assigningManager || selectedICIds.length === 0) return;
+
+    setIsMutating(true);
+    setError(null);
+    try {
+      const results = await Promise.allSettled(
+        selectedICIds.map((icId) => updateICManager(icId, assigningManager.id, token))
+      );
+      await refreshRows();
+
+      const failures = results.filter((result) => result.status === 'rejected');
+      if (failures.length > 0) {
+        const firstFailure = failures[0];
+        setSelectedICIds([]);
+        setError(
+          firstFailure.status === 'rejected'
+            ? `Could not assign ${failures.length} IC${failures.length === 1 ? '' : 's'}: ${getErrorMessage(firstFailure.reason)}`
+            : 'Could not assign ICs.'
+        );
+        return;
+      }
+
+      setAssigningManager(null);
+      setSelectedICIds([]);
+    } catch (reason: unknown) {
+      console.error('Could not assign ICs to manager:', reason);
+      setError(getErrorMessage(reason));
+    } finally {
+      setIsMutating(false);
+    }
+  };
+
   const renderCell = (row: ManagementRow, key: keyof ManagementRow) => {
     const value = row[key];
     if (key === 'averageScore' && typeof value === 'number') {
       if (activeTab === 'Managers') {
-        const scoreClass = value >= 4 ? 'management-score-high' : 'management-score-low';
+        const scoreClass = Math.round(value) >= 4 ? 'management-score-high' : 'management-score-low';
         return <span className={`management-score ${scoreClass}`}>{Math.round(value)}</span>;
       }
       const scoreClass = value >= 4 ? 'management-score-high' : 'management-score-low';
@@ -355,6 +412,7 @@ function ManagementComp() {
     if (key === 'averageScore' && activeTab === 'Managers') {
       return <span className="management-no-score">No data</span>;
     }
+    if (Array.isArray(value)) return '—';
     return value ?? '—';
   };
 
@@ -453,14 +511,14 @@ function ManagementComp() {
           </div>
         </div>
 
-        {error && !isDialogOpen && (
+        {error && !isDialogOpen && !assigningManager && (
           <p className="management-error" role="alert">
             Could not complete the request: {error}
           </p>
         )}
         {loading ? (
           <LoadingOverlay message={`Loading ${activeTab.toLowerCase()}...`} />
-        ) : error && !isDialogOpen ? null : (
+        ) : error && !isDialogOpen && !assigningManager ? null : (
           <>
             {activeTab === 'Managers' && showPendingRequests ? (
               <section
@@ -560,6 +618,18 @@ function ManagementComp() {
                         <button
                           type="button"
                           className="management-row-action"
+                          aria-label={`Assign ICs to ${row.name}`}
+                          title="Assign ICs"
+                          onClick={() => openAssignDialog(row)}
+                          disabled={isMutating}
+                        >
+                          <i className="fa-solid fa-user-plus" aria-hidden="true" />
+                        </button>
+                      )}
+                      {activeTab === 'Managers' && (
+                        <button
+                          type="button"
+                          className="management-row-action"
                           aria-label={`View feedback for ${row.name}`}
                           title="View feedback"
                           onClick={() => setFeedbackManager(row)}
@@ -599,6 +669,18 @@ function ManagementComp() {
                 <div className="management-card-heading">
                   <h2>{row.name}</h2>
                   <div className="management-card-actions">
+                    {activeTab === 'Managers' && (
+                      <button
+                        type="button"
+                        className="management-row-action"
+                        aria-label={`Assign ICs to ${row.name}`}
+                        title="Assign ICs"
+                        onClick={() => openAssignDialog(row)}
+                        disabled={isMutating}
+                      >
+                        <i className="fa-solid fa-user-plus" aria-hidden="true" />
+                      </button>
+                    )}
                     <button
                       type="button"
                       className="management-row-action"
@@ -683,6 +765,82 @@ function ManagementComp() {
                   onClick={closeFeedbackDialog}
                 >
                   Close
+                </button>
+              </div>
+            </section>
+          </div>
+        )}
+        {assigningManager && (
+          <div
+            className="management-dialog-backdrop"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) closeAssignDialog();
+            }}
+          >
+            <section
+              className="management-dialog management-assignment-dialog"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="manager-assignment-title"
+            >
+              <h2 id="manager-assignment-title">Assign ICs to {assigningManager.name}</h2>
+              <p className="management-form-hint">
+                Select ICs to assign. Selecting an IC assigned to another manager will move it.
+              </p>
+              {individualContributors.length === 0 ? (
+                <p className="management-empty-state">There are no ICs to assign.</p>
+              ) : (
+                <div className="management-assignment-list">
+                  {individualContributors.map((ic) => {
+                    const isAssignedToManager = ic.managerId === assigningManager.id;
+                    const isSelected = isAssignedToManager || selectedICIds.includes(ic.id);
+                    return (
+                      <label
+                        className={`management-assignment-option${isSelected ? ' is-selected' : ''}`}
+                        key={ic.id}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          disabled={isMutating || isAssignedToManager}
+                          onChange={() => {
+                            setSelectedICIds((current) =>
+                              current.includes(ic.id)
+                                ? current.filter((id) => id !== ic.id)
+                                : [...current, ic.id]
+                            );
+                          }}
+                        />
+                        <span className="management-assignment-option-info">
+                          <strong>{ic.name}</strong>
+                          <small>
+                            {ic.title} - {isAssignedToManager
+                              ? 'Already assigned to this manager'
+                              : `Currently assigned to ${ic.managerName}`}
+                          </small>
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+              {error && <p className="management-error" role="alert">{error}</p>}
+              <div className="management-dialog-actions">
+                <button
+                  type="button"
+                  className="management-cancel-button"
+                  onClick={closeAssignDialog}
+                  disabled={isMutating}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="management-add-button"
+                  onClick={() => void assignSelectedICs()}
+                  disabled={isMutating || selectedICIds.length === 0}
+                >
+                  {isMutating ? 'Assigning...' : 'Assign ICs'}
                 </button>
               </div>
             </section>

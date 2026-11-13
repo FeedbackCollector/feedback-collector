@@ -71,7 +71,8 @@ function Login() {
             }
 
         } else {
-            createAccount();
+            const message = await createAccount();
+            setRegistrationMessage(message);
         }
     };
 
@@ -104,18 +105,30 @@ function Login() {
                     <button
                         type="button"
                         className={`tab-btn ${activeForm === 'login' ? 'active' : ''}`}
-                        onClick={() => switchForm('login')}
+                        onClick={() => {
+                            setRegistrationMessage(null);
+                            switchForm('login');
+                        }}
                     >
                         Login
                     </button>
                     <button
                         type="button"
                         className={`tab-btn ${activeForm === 'register' ? 'active' : ''}`}
-                        onClick={() => switchForm('register')}
+                        onClick={() => {
+                            setRegistrationMessage(null);
+                            switchForm('register');
+                        }}
                     >
                         Register
                     </button>
                 </div>
+
+                {registrationMessage && (
+                    <p className="auth-success" role="status">
+                        {registrationMessage}
+                    </p>
+                )}
 
                 <form onSubmit={handleSubmit} className="auth-form" noValidate>
 

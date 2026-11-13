@@ -228,7 +228,7 @@
 
 .management-managers-table th:last-child,
 .management-managers-table td:last-child {
-  width: 154px;
+  width: 194px;
 }
 
 .management-area-select {
@@ -438,6 +438,57 @@
 
 .management-feedback-dialog {
   max-height: min(80vh, 720px);
+}
+
+.management-assignment-dialog {
+  width: min(100%, 560px);
+  max-height: min(88vh, 760px);
+}
+
+.management-assignment-list {
+  display: flex;
+  max-height: 48vh;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+.management-assignment-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  cursor: pointer;
+}
+
+.management-assignment-option.is-selected {
+  border-color: var(--primary);
+  background: var(--primary-light);
+}
+
+.management-assignment-option input {
+  width: 18px;
+  min-height: 18px;
+  flex: 0 0 18px;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--primary);
+}
+
+.management-assignment-option-info {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.management-assignment-option-info small {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 400;
 }
 
 .management-feedback-list {
