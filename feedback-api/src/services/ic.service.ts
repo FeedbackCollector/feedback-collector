@@ -4,7 +4,6 @@ import { IC, NewIC, UpdateIC, ICFilters } from "../types/ic.ts";
 
 
 
-// manager_id must match a user with the manager role.
 async function checkReferences(data: UpdateIC): Promise<"MANAGER_NOT_FOUND" | null> {
     if (data.manager_id !== undefined && !(await ICRepository.managerExists(data.manager_id))) return "MANAGER_NOT_FOUND";
     return null;
@@ -37,7 +36,8 @@ export async function createICService(icData: NewIC): Promise<IC | "MANAGER_NOT_
     const invalid = await checkReferences(icData);
     if (invalid) return invalid;
 
-    return ICRepository.icCreate(icData);
+    const area_id = await ICRepository.managerAreaId(icData.manager_id);
+    return ICRepository.icCreate({ ...icData, area_id });
 }
 
 export async function updateICService(icData: UpdateIC, id: number): Promise<IC  | "IC_NOT_FOUND" | "MANAGER_NOT_FOUND"> {
@@ -47,7 +47,10 @@ export async function updateICService(icData: UpdateIC, id: number): Promise<IC 
     const invalid = await checkReferences(icData);
     if (invalid) return invalid;
 
-    const updated = await ICRepository.icUpdate(icData, id);
+    const data: UpdateIC & { area_id?: number | null } = { ...icData };
+    if (icData.manager_id !== undefined) data.area_id = await ICRepository.managerAreaId(icData.manager_id);
+
+    const updated = await ICRepository.icUpdate(data, id);
     return updated as IC;
 }
 
