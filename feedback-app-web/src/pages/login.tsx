@@ -31,6 +31,7 @@ function Login() {
     
     const [areas, setAreas] = useState<Area[]>([]);
     const [isLoggingIn, setIsLoggingIn] = useState(false);
+    const [registrationMessage, setRegistrationMessage] = useState<string | null>(null);
 
     const navigate = useNavigate();
 
