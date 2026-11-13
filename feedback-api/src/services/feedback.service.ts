@@ -1,4 +1,5 @@
 import * as FeedbackRepository from '../repositories/feedback.repository.ts';
+import { toCsv } from '../utils/csv.ts';
 import { getUserByID } from '../repositories/user.repositories.ts';
 import { icFindByID } from '../repositories/ic.repository.ts';
 import { getProjectByID } from '../repositories/project.repository.ts';
@@ -45,6 +46,16 @@ export async function getFeedbackByIdService(id: number, user: Caller): Promise<
     return feedback;
 }
 
+
+export async function exportFeedbackCsvService(ids: number[]): Promise<string | "FEEDBACK_NOT_FOUND"> {
+    const feedbacks = await FeedbackRepository.getFeedbacksForExport(ids);
+    if (feedbacks.length === 0) return "FEEDBACK_NOT_FOUND";
+
+    return toCsv(
+        ['Date', 'Subject', 'Project', 'Source', 'Score', 'Excerpt', 'Attachment'],
+        feedbacks.map(feedback => [feedback.date, feedback.ic_name, feedback.project_name, feedback.source_name, feedback.score, feedback.comment, feedback.screenshot_url]),
+    );
+}
 
 export async function createFeedbackService(feedbackData: NewFeedback, user: Caller): Promise<Feedback | ReferenceError> {
     if (user.role !== "director") {
