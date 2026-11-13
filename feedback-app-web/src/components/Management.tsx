@@ -13,6 +13,8 @@ import {
 } from '../service/ManagementApi';
 import { useAuthStore } from '../store/authStore';
 import '../styles/Management.css';
+import {useToastStore} from '../store/toastStore';
+import LoadingOverlay from './LoadingOverlay';
 
 type ViewMode = 'table' | 'cards';
 
@@ -241,6 +243,7 @@ function ManagementComp() {
       await saveManagementRow(activeTab, editingRow?.id ?? null, formValues, token);
       await refreshRows();
       closeDialog();
+      useToastStore.getState().addToast('Changes saved successfully!', 'success');
     } catch (reason: unknown) {
       console.error(`Could not save ${activeTab.toLowerCase()}:`, reason);
       setError(getErrorMessage(reason));
@@ -257,6 +260,7 @@ function ManagementComp() {
     try {
       await deleteManagementRow(activeTab, row.id, token);
       await refreshRows();
+      useToastStore.getState().addToast(`${TAB_SINGULAR[activeTab]} deleted successfully!`, 'success');
     } catch (reason: unknown) {
       console.error(`Could not delete ${activeTab.toLowerCase()}:`, reason);
       setError(getErrorMessage(reason));
@@ -329,6 +333,7 @@ function ManagementComp() {
     try {
       await updateManagerArea(row.id, areaId, token);
       await refreshRows();
+      useToastStore.getState().addToast('Manager area updated successfully!', 'success');
     } catch (reason: unknown) {
       console.error('Could not update manager area:', reason);
       setError(getErrorMessage(reason));
@@ -454,7 +459,7 @@ function ManagementComp() {
           </p>
         )}
         {loading ? (
-          <p className="management-loading" role="status">Loading {activeTab.toLowerCase()}...</p>
+          <LoadingOverlay message={`Loading ${activeTab.toLowerCase()}...`} />
         ) : error && !isDialogOpen ? null : (
           <>
             {activeTab === 'Managers' && showPendingRequests ? (

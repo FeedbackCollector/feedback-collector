@@ -30,7 +30,7 @@ function Login() {
     const createAccount = useAuthStore((state) => state.createAccount);
     
     const [areas, setAreas] = useState<Area[]>([]);
-
+    const [isLoggingIn, setIsLoggingIn] = useState(false);
 
     const navigate = useNavigate();
 
@@ -56,10 +56,20 @@ function Login() {
       })
     }, [])
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
         if (activeForm === 'login') {
-            loginSubmit();
+            if (isLoggingIn) return;
+
+            setIsLoggingIn(true);
+
+            try {
+                await loginSubmit();
+            } finally {
+                setIsLoggingIn(false);
+            }
+
         } else {
             createAccount();
         }
@@ -174,8 +184,10 @@ function Login() {
                         </select>
                     </div>
 
-                    <button className="btn-get-into" type="submit">
-                        {activeForm === 'login' ? 'Sign In' : 'Create Account'}
+                    <button className="btn-get-into" type="submit" disabled={activeForm === 'login' && isLoggingIn}>
+                        {activeForm === 'login' 
+                        ? isLoggingIn ? 'Signing In...' : 'Sign In'
+                        : 'Create Account'}
                     </button>
                 </form>
 
