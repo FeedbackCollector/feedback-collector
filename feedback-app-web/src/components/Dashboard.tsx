@@ -5,6 +5,7 @@ import {
   obtainDashboardData,
   type DashboardData,
 } from '../service/ObtainDashboard';
+import { DashboardStats } from './DashboardStats';
 import '../styles/Dashboard.css';
 
 interface SearchResultItem {
@@ -53,7 +54,6 @@ export default function DashboardComp() {
     };
   }, [token]);
 
-  
   const searchResults = useMemo<SearchResultItem[]>(() => {
     const query = searchQuery.trim().toLowerCase();
     if (!query || !data) return [];
@@ -114,7 +114,6 @@ export default function DashboardComp() {
   const handleSelectPerson = (person: SearchResultItem) => {
     setSearchQuery(person.name);
     setIsSearchOpen(false);
-
   };
 
   return (
@@ -213,6 +212,14 @@ export default function DashboardComp() {
           </article>
         ))}
       </div>
+
+      {!error && (
+        <DashboardStats
+          data={data}
+          selectedAreaId={selectedAreaId}
+          loading={loading}
+        />
+      )}
     </section>
   );
 }
