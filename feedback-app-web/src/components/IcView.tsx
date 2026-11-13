@@ -10,6 +10,7 @@ import { authHeaders } from '../service/authHeaders';
 import '../styles/IcView.css';
 import { UserAvatar } from './UserAvatar';
 import { useToastStore } from '../store/toastStore';
+import LoadingOverlay from './LoadingOverlay';
 
 type ICInfo = {
   IC_id: number;
@@ -376,7 +377,7 @@ function ICView({ ic, onBack }: ICViewProps) {
       </section>
 
       <section className="icv-entries">
-        {loading && <p className="icv-muted">Loading feedback...</p>}
+        {loading && <LoadingOverlay message="Loading feedback..." />}
 
         {!loading && newestFirst.length === 0 && (
           <p className="icv-muted">No entries have been registered for this IC yet.</p>

@@ -4,6 +4,7 @@ import { useAuthStore } from '../store/authStore';
 import { useNavigate } from "react-router-dom";
 import { API_URL } from '../service/api';
 import { UserAvatar } from './UserAvatar';
+import { useToastStore } from '../store/toastStore';
 
 export function User() {
   const user = useAuthStore((state) => state.user);
@@ -73,16 +74,16 @@ export function User() {
     const data = await response.json();
 
     if (!response.ok) {
-      setMessage(data.message || 'Could not update password.');
+      useToastStore.getState().addToast(data.message || 'Could not complete the request.', 'error');
       return;
     }
 
-    setMessage('Password updated successfully.');
+    useToastStore.getState().addToast('Password updated successfully!', 'success');
     setCurrentPassword('');
     setNewPassword('');
     setConfirmPassword('');
   } catch {
-    setMessage('Could not complete the request.');
+    useToastStore.getState().addToast('Could not complete the request.', 'error');
   } finally {
     setLoading(false);
   }
@@ -255,7 +256,6 @@ function clearPasswordFields() {
           >
             {loading ? 'Saving...' : 'Change Password'}
           </button>
-          <p role="status">{message}</p>
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '16px', marginTop: '8px', borderTop: '1px solid #f3f4f6' }}>

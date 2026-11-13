@@ -5,6 +5,8 @@ import { obtainAllFeedback } from '../service/ObtainFeedback';
 import FeedbackDashboard from './FeedbackDashboard';
 import './ShowICs.css';
 import { UserAvatar } from '../components/UserAvatar';
+import { useToastStore } from '../store/toastStore';
+import LoadingOverlay from './LoadingOverlay';
 
 type IC = {
   IC_id: number;
@@ -102,6 +104,7 @@ function ObtainICs() {
       })
       .catch((error) => {
         if (isCurrent) console.error('Error retrieving ICs:', error);
+        useToastStore.getState().addToast('Error retrieving ICs. Please try again later.', 'error');
       })
       .finally(() => {
         if (isCurrent) setLoading(false);
@@ -132,7 +135,7 @@ function ObtainICs() {
   }, [ics, search]);
 
   if (loading) {
-    return <p>Loading data...</p>;
+    return <LoadingOverlay message="Loading ICs..." />;
   }
 
   if (ics.length === 0) {
