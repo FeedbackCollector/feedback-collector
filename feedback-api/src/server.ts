@@ -1,7 +1,7 @@
 import "./env.ts";
 import app from "./app.ts";
 import { sequelize } from "./db/connection.ts";
-import { ensureAccountStatusColumn } from "./db/migrations.ts";
+import { ensureAccountStatusColumn, ensureSourceTitleColumn } from "./db/migrations.ts";
 
 const PORT = Number(process.env.PORT) || 3000;
 
@@ -9,6 +9,7 @@ async function start() {
   await sequelize.authenticate();
   await sequelize.sync();
   await ensureAccountStatusColumn();
+  await ensureSourceTitleColumn();
   app.listen(PORT, () => {
     console.log(`Server listening on http://localhost:${PORT}`);
     console.log(`Docs available at    http://localhost:${PORT}/docs`);

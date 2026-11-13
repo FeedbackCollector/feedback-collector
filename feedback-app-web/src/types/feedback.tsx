@@ -7,6 +7,7 @@ export type Feedback = {
   project_name: string | null;
   date: string;
   source_name: string;
+  source_title: string | null;
   score: number;
   comment: string | null;
   screenshot_url: string | null;
