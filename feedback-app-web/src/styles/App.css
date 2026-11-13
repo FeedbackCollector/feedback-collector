@@ -195,3 +195,48 @@ select.input-control {
   border-radius: 4px;
   text-transform: capitalize;
 }
+
+.shot-thumb-btn {
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  display: block;
+  flex-shrink: 0;
+}
+
+.shot-thumb {
+  object-fit: cover;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  display: block;
+}
+
+.shot-thumb-btn.is-md .shot-thumb {
+  width: 120px;
+  height: 80px;
+}
+
+.shot-thumb-btn.is-sm .shot-thumb {
+  width: 60px;
+  height: 40px;
+}
+
+.shot-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(23, 24, 26, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 100;
+}
+
+.shot-preview {
+  max-width: min(90vw, 900px);
+  max-height: 85vh;
+  border-radius: 8px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+  background: var(--surface);
+}

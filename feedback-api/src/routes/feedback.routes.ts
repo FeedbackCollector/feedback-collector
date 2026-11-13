@@ -57,8 +57,9 @@ router.post('/screenshot', authorizeRole("director","manager"), uploadScreenshot
         res.status(400).json({ error: 'A PNG, JPEG or WebP image is required (field "file")' });
         return;
     }
-    const base = process.env.PUBLIC_API_URL ?? `${req.protocol}://${req.get('host')}`;
-    res.status(201).json({ url: `${base.replace(/\/$/, '')}/uploads/${req.file.filename}` });
+
+    const base = (process.env.PUBLIC_API_URL ?? '').replace(/\/$/, '');
+    res.status(201).json({ url: `${base}/uploads/${req.file.filename}` });
 });
 
 router.get('/',  authorizeRole("director","manager"),getAll);

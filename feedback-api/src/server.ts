@@ -1,8 +1,7 @@
 import "./env.ts";
 import app from "./app.ts";
 import { sequelize } from "./db/connection.ts";
-import { ensureAccountStatusColumn, ensureSourceTitleColumn } from "./db/migrations.ts";
-import { ensureAccountStatusColumn, ensureUnaccentExtension } from "./db/migrations.ts";
+import { ensureAccountStatusColumn, ensureSourceTitleColumn, ensureUnaccentExtension } from "./db/migrations.ts";
 import { assertJwtSecret } from "./utils/token.ts";
 
 const PORT = Number(process.env.PORT) || 3000;

@@ -9,6 +9,7 @@ import { API_URL as BASE_URL } from '../service/api';
 import { authHeaders } from '../service/authHeaders';
 import '../styles/IcView.css';
 import { UserAvatar } from './UserAvatar';
+import { resolveScreenshotUrl } from '../service/screenshotUrl';
 
 type ICInfo = {
   IC_id: number;
@@ -488,7 +489,7 @@ function ICView({ ic, onBack }: ICViewProps) {
                 >
                   <img
                     className="icv-thumb"
-                    src={item.screenshot_url}
+                    src={resolveScreenshotUrl(item.screenshot_url)}
                     alt="Screenshot attached to this entry"
                   />
                 </button>
@@ -615,7 +616,7 @@ function ICView({ ic, onBack }: ICViewProps) {
                   <>
                     <img
                       className="icv-thumb"
-                      src={screenshotFilePreview ?? form.screenshot_url}
+                      src={screenshotFilePreview ?? resolveScreenshotUrl(form.screenshot_url)}
                       alt="Screenshot to attach"
                     />
                     <button
@@ -665,7 +666,7 @@ function ICView({ ic, onBack }: ICViewProps) {
         >
           <img
             className="icv-preview-img"
-            src={previewUrl}
+            src={resolveScreenshotUrl(previewUrl)}
             alt="Screenshot preview"
             role="dialog"
             aria-modal="true"

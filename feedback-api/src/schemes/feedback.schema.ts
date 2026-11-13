@@ -20,7 +20,12 @@ const sourceName = Joi.string().trim().min(1).max(200);
 const sourceTitle = Joi.string().trim().max(200).allow(null, "");
 const score = Joi.number().integer().min(1).max(5);
 const comment = Joi.string().trim().max(5000).allow(null);
-const screenshotUrl = Joi.string().trim().uri({ scheme: ["http", "https"] }).max(500).allow(null);
+const screenshotUrl = Joi.alternatives()
+    .try(
+        Joi.string().trim().uri({ scheme: ["http", "https"] }).max(500),
+        Joi.string().trim().pattern(/^\/uploads\/[\w.-]+$/).max(500),
+    )
+    .allow(null);
 
 export const createFeedbackScheme = Joi.object({
     author_id: id.required(),

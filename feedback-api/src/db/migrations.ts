@@ -24,6 +24,8 @@ export async function ensureSourceTitleColumn(): Promise<void> {
             allowNull: true,
         });
     }
+}
+
 export async function ensureUnaccentExtension(): Promise<void> {
     await sequelize.query("CREATE EXTENSION IF NOT EXISTS unaccent;");
 }
