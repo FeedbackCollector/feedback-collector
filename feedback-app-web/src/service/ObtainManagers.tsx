@@ -80,7 +80,7 @@ export async function obtainManagers(token: string | null): Promise<{
   }
 
   const [usersResponse, ics, feedbackResponse] = await Promise.all([
-    fetchJSON<UsersResponse>(`${API_URL}/users`),
+    fetchJSON<UsersResponse>(`${API_URL}/users`, { headers: authHeaders() }),
     obtainAllICs(token),
     fetchJSON<FeedbackResponse>(`${API_URL}/feedback?limit=100`, { headers: authHeaders() }),
   ]);

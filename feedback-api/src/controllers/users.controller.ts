@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { getAllUsersService, getUserByIdService, createUserService, updateUserService, deleteUserService, registerService, changePasswordService, loginService, approveUserService } from '../services/user.services.ts';
 
 export async function getAll(req: Request, res: Response) {
-    const result = await getAllUsersService(res.locals.query);
+    const result = await getAllUsersService(res.locals.query, res.locals.user);
     return res.json({ data: result });
 }
 
@@ -62,5 +62,5 @@ export async function login(req: Request, res: Response) {
 export async function changePassword(req: Request, res: Response) {
     const result = await changePasswordService(res.locals.user.id, req.body.currentPassword, req.body.newPassword);
     if (result === "INVALID_CREDENTIALS") return res.status(400).json({ message: "Invalid credentials" });
-    res.json({ message: "Password updated" });
+    res.json({ message: "Password updated", token: result.token });
 }

@@ -7,11 +7,16 @@ const PAGE_LIMIT = 100;
 
 export async function obtainFeedbackPage(page: number, limit: number = PAGE_LIMIT, filters: Partial<FeedbackFilters> = {}, signal?: AbortSignal): Promise<FeedbackPageResponse> {
   const params = new URLSearchParams({ page: String(page), limit: String(limit) });
-  if (filters.icName) params.set('ic_name', filters.icName);
+
+  const icName = filters.icName?.trim();
+  const text = filters.text?.trim();
+
+  if (icName) params.set('ic_name', icName);
   if (filters.projectId) params.set('project_id', filters.projectId);
   if (filters.score) params.set('score', filters.score);
-  if (filters.text) params.set('text', filters.text);
+  if (text) params.set('text', text);
   if (filters.sortBy) params.set('sort', filters.sortBy);
+
   const response = await fetch(`${URLEndpoint}?${params}`, { headers: authHeaders(), signal });
   if (!response.ok) {
     throw new Error(`Could not load feedback (${response.status}).`);
