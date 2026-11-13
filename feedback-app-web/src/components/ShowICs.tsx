@@ -5,6 +5,7 @@ import { obtainAllFeedback } from '../service/ObtainFeedback';
 import FeedbackDashboard from './FeedbackDashboard';
 import { UserAvatar } from '../components/UserAvatar';
 import '../styles/ShowICs.css';
+import ICView from './IcView';
 import AutocompleteSearch from './AutocompleteSearch';
 import type { SearchSuggestion } from '../types/autoComplete';
 import { normalizeSearchText } from '../utils/search';
@@ -33,7 +34,23 @@ function ObtainICs() {
     shouldAnimateViewChange.current = true;
     setViewMode(nextMode);
   };
+    const [selectedIC, setSelectedIC] = useState<{
+    IC_id: number;
+    name: string;
+    title: string;
+    entries: number;
+  } | null>(null);
 
+  function openICTimeline(item: IC) {
+      const ic = ics.find((entry) => entry.IC_id === item.IC_id);
+  
+      if (!ic) {
+        alert('Could not find the IC associated with this card.');
+        return;
+      }
+  
+      setSelectedIC(ic);
+    }
   useEffect(() => {
     const mediaQuery = window.matchMedia('(max-width: 768px)');
 
@@ -142,6 +159,10 @@ function ObtainICs() {
     [ics]
   );
 
+  if (selectedIC) {
+    return <ICView ic={selectedIC} onBack={() => setSelectedIC(null)} />;
+  }
+
   if (loading) {
     return <p>Loading data...</p>;
   }
@@ -215,7 +236,11 @@ function ObtainICs() {
           ) : viewMode === 'cards' ? (
             <div className="team-metrics" ref={viewContainerRef}> 
               {visibleICs.map((item) => (
-                <article className="team-metric-card" key={item.IC_id}>
+                <article className="team-metric-card" key={item.IC_id} onClick={() => openICTimeline(item)}
+                          style={{ cursor: 'pointer', transition: 'background-color 0.2s' }}
+                          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f3f4f6')}
+                          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'white')}
+>
                   <UserAvatar
                     name={item.name}
                     id={item.IC_id}
@@ -253,8 +278,13 @@ function ObtainICs() {
                 </thead>
                 <tbody>
                   {visibleICs.map((item) => (
-                    <tr key={item.IC_id}>
-                      <td>{item.name}</td>
+<tr
+  key={item.IC_id}
+  onClick={() => openICTimeline(item)}
+  style={{ cursor: 'pointer', transition: 'background-color 0.2s' }}
+  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f3f4f6')}
+  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+>                      <td style = {{textDecoration: "underline"}}>{item.name}</td>
                       <td>{item.title}</td>
                       <td>{item.score?.toFixed(1) ?? 'No data'}</td>
                       <td>{item.entries}</td>
