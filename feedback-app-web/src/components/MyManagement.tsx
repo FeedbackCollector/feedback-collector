@@ -275,7 +275,7 @@ export default function MyManagementComp() {
                         ) : (
                           <span
                             className="my-management-score-badge"
-                            style={{ backgroundColor: getBadgeColor(manager.averageScore) }}
+                            style={{ backgroundColor: getBadgeColor(Math.round(manager.averageScore)) }}
                           >
                             {Math.round(manager.averageScore)}
                           </span>
