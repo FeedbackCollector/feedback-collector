@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import type { FeedbackFilters } from '../types/feedback.ts';
-import { getAllFeedbacksService, createFeedbackService, deleteFeedbackService, getFeedbackByIdService, replaceFeedbackService, updateFeedbackService } from '../services/feedback.service.ts';
+import { exportFeedbackCsvService, getAllFeedbacksService, createFeedbackService, deleteFeedbackService, getFeedbackByIdService, replaceFeedbackService, updateFeedbackService } from '../services/feedback.service.ts';
+const MAX_EXPORT_IDS = 20;
 
 const positiveInt = (value: unknown): number | undefined => {
     if (typeof value !== 'string' || !/^[0-9]+$/.test(value)) return undefined;
@@ -46,6 +47,39 @@ export async function getAll(req: Request, res: Response) {
         res.status(200).json(result);
     } catch {
         res.status(500).json({ message: "Error retrieving feedback" });
+    }
+}
+
+
+function parseExportIds(value: unknown): number[] | null {
+    if (value === undefined) return null;
+
+    const parts = (Array.isArray(value) ? value : [value]).flatMap(item => typeof item === 'string' ? item.split(',') : [null]);
+    const ids = parts.map(part => (typeof part === 'string' && /^[0-9]+$/.test(part) ? Number(part) : NaN));
+    if (ids.length === 0 || ids.length > MAX_EXPORT_IDS || !ids.every(id => Number.isSafeInteger(id) && id > 0)) return null;
+    return [...new Set(ids)];
+}
+
+export async function exportCsv(req: Request, res: Response) {
+    const ids = parseExportIds(req.query.ids);
+    if (ids === null) {
+        res.status(400).json({ message: `ids is required: a comma-separated list of up to ${MAX_EXPORT_IDS} positive integers` });
+        return;
+    }
+
+    try {
+        const csv = await exportFeedbackCsvService(ids);
+        if (csv === "FEEDBACK_NOT_FOUND") {
+            res.status(404).json({ error: "Feedback not found" });
+            return;
+        }
+
+        res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+        res.setHeader('Content-Disposition', 'attachment; filename="feedback.csv"');
+        res.setHeader('Cache-Control', 'no-store');
+        res.status(200).send(csv);
+    } catch {
+        res.status(500).json({ message: "Error exporting feedback" });
     }
 }
 
