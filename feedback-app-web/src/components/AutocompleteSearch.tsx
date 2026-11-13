@@ -1,5 +1,5 @@
 import { useMemo, useState, type KeyboardEvent } from 'react';
-import './AutocompleteSearch.css';
+import '../styles/AutocompleteSearch.css';
 import type { AutocompleteSearchProps, SearchSuggestion } from '../types/autoComplete';
 import { normalizeSearchText } from '../utils/search';
 
