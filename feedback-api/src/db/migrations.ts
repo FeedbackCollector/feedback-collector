@@ -14,6 +14,18 @@ export async function ensureAccountStatusColumn(): Promise<void> {
     }
 }
 
+export async function ensureSourceTitleColumn(): Promise<void> {
+    const queryInterface = sequelize.getQueryInterface();
+    const columns = await queryInterface.describeTable("feedback");
+
+    if (!columns.source_title) {
+        await queryInterface.addColumn("feedback", "source_title", {
+            type: DataTypes.STRING(200),
+            allowNull: true,
+        });
+    }
+}
+
 export async function ensureUnaccentExtension(): Promise<void> {
     await sequelize.query("CREATE EXTENSION IF NOT EXISTS unaccent;");
 }

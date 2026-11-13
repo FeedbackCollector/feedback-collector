@@ -50,7 +50,7 @@ const [lucia, nicolas, camila] = await ICs.bulkCreate([
 ]);
     // The feedback author is the manager of the IC it is about.
     const fb = (ic: { IC_id: number; manager_id: number }, project: { id: number }, date: string, source_name: string, score: number, comment: string | null) =>
-      ({ author_id: ic.manager_id, ic_id: ic.IC_id, project_id: project.id, date, source_name, score, comment, screenshot_url: null });
+      ({ author_id: ic.manager_id, ic_id: ic.IC_id, project_id: project.id, date, source_name, score, comment, source_title: null, screenshot_url: null });
 
     // Scores/dates reproduce the "My ICs" Figma design: averages 2.7 / 3.6 / 4.0 (team 3.3),
     // 6 / 5 / 4 entries, last entries 08/07, 08/13 and 08/13 (2026), 7 entries in the 30 days before 08/13.

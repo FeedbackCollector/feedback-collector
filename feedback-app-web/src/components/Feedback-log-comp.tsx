@@ -5,6 +5,7 @@ import { obtainProjects } from '../service/ObtainProjects';
 import '../styles/index.css'
 import { obtainFeedbackPage } from '../service/ObtainFeedback';
 import ICView from './IcView';
+import ScreenshotThumb from './ScreenshotThumb';
 import AutocompleteSearch from './AutocompleteSearch';
 import type { SearchSuggestion } from '../types/autoComplete';
 import '../styles/index.css'
@@ -430,7 +431,7 @@ function FeedbackLogComp() {
                         </td>
                         <td>
                           {item.screenshot_url ? (
-                            <a href={item.screenshot_url} target="_blank" rel="noreferrer" style={{ color: 'var(--primary)', fontWeight: 600 }}>View</a>
+                            <ScreenshotThumb url={item.screenshot_url} size="sm" />
                           ) : '-'}
                         </td>
                         <td>
@@ -460,9 +461,14 @@ function FeedbackLogComp() {
                           )}
                         </div>
                         <span className="feedback-card-subtext">
-                          {item.date} â€¢ {item.project_name ?? '-'}
+                          {item.date} · {item.project_name ?? '-'}
                         </span>
                       </div>
+                      {item.screenshot_url && (
+                        <div style={{ marginLeft: 'auto' }}>
+                          <ScreenshotThumb url={item.screenshot_url} size="sm" />
+                        </div>
+                      )}
                     </div>
 
                     <p className="feedback-card-body">
