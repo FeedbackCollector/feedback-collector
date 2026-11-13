@@ -4,7 +4,9 @@ import { obtainAreas, type Area } from '../service/ObtainAreas';
 import { useAuthStore } from '../store/authStore';
 import '../styles/MyManagement.css';
 import { UserAvatar } from './UserAvatar';
-import AutocompleteSearch, { type SearchSuggestion } from './AutocompleteSearch';
+import AutocompleteSearch from './AutocompleteSearch';
+import type { SearchSuggestion } from '../types/autoComplete';
+import { normalizeSearchText } from '../utils/search';
 
 type ViewMode = 'cards' | 'list';
 
@@ -114,11 +116,10 @@ export default function MyManagementComp() {
     areaId === null ? 'No area assigned' : areaNamesById.get(areaId) ?? `Area ${areaId}`;
 
   const visibleManagers = useMemo(() => {
-    const query = search.trim().toLocaleLowerCase();
+    const query = normalizeSearchText(search.trim());
     if (!query) return managers;
     return managers.filter((manager) =>
-      `${manager.name} ${manager.email} ${getAreaName(manager.area_id)}`
-        .toLocaleLowerCase()
+      normalizeSearchText(`${manager.name} ${manager.email} ${getAreaName(manager.area_id)}`)
         .includes(query)
     );
   }, [areaNamesById, managers, search]);
@@ -131,8 +132,8 @@ export default function MyManagementComp() {
         id: String(manager.id),
         label: manager.name,
         value: manager.name,
-        searchText: `${manager.email} ${areaName}`,
-        detail: `${manager.email} - ${areaName}`,
+        searchText: areaName,
+        detail: areaName,
       };
     }),
     [areaNamesById, managers]

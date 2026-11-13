@@ -5,7 +5,9 @@ import { obtainAllFeedback } from '../service/ObtainFeedback';
 import FeedbackDashboard from './FeedbackDashboard';
 import { UserAvatar } from '../components/UserAvatar';
 import '../styles/ShowICs.css';
-import AutocompleteSearch, { type SearchSuggestion } from './AutocompleteSearch';
+import AutocompleteSearch from './AutocompleteSearch';
+import type { SearchSuggestion } from '../types/autoComplete';
+import { normalizeSearchText } from '../utils/search';
 
 type IC = {
   IC_id: number;
@@ -125,10 +127,10 @@ function ObtainICs() {
   };
 
   const visibleICs = useMemo(() => {
-    const query = search.trim().toLocaleLowerCase();
+    const query = normalizeSearchText(search.trim());
     if (!query) return ics;
     return ics.filter((ic) =>
-      `${ic.name} ${ic.title}`.toLocaleLowerCase().includes(query)
+      normalizeSearchText(`${ic.name} ${ic.title}`).includes(query)
     );
   }, [ics, search]);
   const searchSuggestions = useMemo<SearchSuggestion[]>(
@@ -136,8 +138,6 @@ function ObtainICs() {
       id: String(ic.IC_id),
       label: ic.name,
       value: ic.name,
-      searchText: ic.title,
-      detail: ic.title,
     })),
     [ics]
   );
