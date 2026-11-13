@@ -4,13 +4,15 @@ import { obtainAreas, type Area } from './ObtainAreas';
 import { obtainAllICs } from './ObtainICs';
 import { obtainAllFeedback } from './ObtainFeedback';
 
-interface DashboardManager {
+export interface DashboardManager {
   id: number;
+  name: string;
   area_id: number | null;
 }
 
-interface DashboardIC {
+export interface DashboardIC {
   IC_id: number;
+  name: string;
   manager_id: number;
 }
 
@@ -34,7 +36,13 @@ export interface DashboardMetrics {
 }
 
 interface UsersResponse {
-  data?: Array<DashboardManager & { role: string }>;
+  data?: Array<{
+    id: number;
+    name?: string;
+    full_name?: string;
+    area_id: number | null;
+    role: string;
+  }>;
 }
 
 async function obtainManagers(): Promise<DashboardManager[]> {
@@ -43,14 +51,18 @@ async function obtainManagers(): Promise<DashboardManager[]> {
     throw new Error(`Could not load managers (${response.status}).`);
   }
 
-  const result = await response.json() as UsersResponse;
+  const result = (await response.json()) as UsersResponse;
   if (!Array.isArray(result.data)) {
     throw new Error('The users response has an invalid format.');
   }
 
   return result.data
     .filter((user) => user.role.toLowerCase() === 'manager')
-    .map(({ id, area_id }) => ({ id, area_id }));
+    .map((user) => ({
+      id: user.id,
+      name: user.name ?? user.full_name ?? `Manager #${user.id}`,
+      area_id: user.area_id,
+    }));
 }
 
 export async function obtainDashboardData(): Promise<DashboardData> {
@@ -64,13 +76,17 @@ export async function obtainDashboardData(): Promise<DashboardData> {
   return {
     areas,
     managers,
-    // The API returns manager_id for every IC, but the shared IC type does not declare it.
-    ics: ics as unknown as DashboardIC[],
+
+    ics: (ics as unknown as Array<Record<string, unknown>>).map((ic) => ({
+      IC_id: Number(ic.IC_id ?? ic.id),
+      name: String(ic.name ?? ic.full_name ?? ic.IC_name ?? `IC #${ic.IC_id ?? ic.id}`),
+      manager_id: Number(ic.manager_id),
+    })),
     feedback,
   };
 }
 
-// areaId === null means "All Areas".
+
 export function calculateDashboardMetrics(data: DashboardData, areaId: number | null): DashboardMetrics {
   const managers = areaId === null
     ? data.managers
@@ -95,7 +111,7 @@ export function calculateDashboardMetrics(data: DashboardData, areaId: number | 
     scoresByManager.set(managerId, scores);
   }
 
-  // Same formula as My Managers: the average of each manager's rounded average score.
+  
   const managerAverages = [...scoresByManager.values()].map(
     (scores) => Math.round(scores.reduce((sum, score) => sum + score, 0) / scores.length)
   );

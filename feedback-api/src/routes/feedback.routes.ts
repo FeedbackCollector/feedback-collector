@@ -6,7 +6,6 @@ import { authenticateToken, authorizeRole } from '../middleware/auth.ts';
 
 const router = Router();
 
-// authorizeRole reads res.locals.user, which only authenticateToken fills in.
 router.use(authenticateToken);
 
 router.param('id', (req, res, next, value) => {
