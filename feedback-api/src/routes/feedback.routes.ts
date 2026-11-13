@@ -3,7 +3,7 @@ import multer from 'multer';
 import { randomUUID } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
-import { getAll, getById, create, replace, update, remove } from '../controllers/feedback.controller.ts';
+import { exportCsv, getAll, getById, create, replace, update, remove } from '../controllers/feedback.controller.ts';
 import { validate } from '../middleware/validate.ts';
 import { createFeedbackScheme, updateFeedbackScheme } from '../schemes/feedback.schema.ts';
 import { authenticateToken, authorizeRole } from '../middleware/auth.ts';
@@ -63,6 +63,8 @@ router.post('/screenshot', authorizeRole("director","manager"), uploadScreenshot
 });
 
 router.get('/',  authorizeRole("director","manager"),getAll);
+
+router.get('/export.csv', authorizeRole("director"), exportCsv);
 
 router.get('/:id',  authorizeRole("director","manager"),getById);
 

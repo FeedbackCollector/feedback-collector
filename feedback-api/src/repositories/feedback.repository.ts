@@ -1,4 +1,4 @@
-import { Feedback as FeedbackModel, ICs } from "../models/Index.ts";
+import { Feedback as FeedbackModel, ICs, Project } from "../models/Index.ts";
 import { Feedback, FeedbackFilters, NewFeedback, UpdateFeedback } from "../types/feedback.ts";
 import { Op, Sequelize, type WhereOptions, type Order } from 'sequelize';
 import { recalculateICScore } from './ic.repository.ts';
@@ -52,6 +52,26 @@ export async function getAllFeedbacks(page: number, limit: number, filters: Feed
             totalPages: Math.ceil(result.count / limit),
         },
     };
+}
+
+// Only the requested entries (ids that do not exist are left out), with the IC and project names, newest first.
+export async function getFeedbacksForExport(ids: number[]) {
+    const [rows, ics, projects] = await Promise.all([
+        FeedbackModel.findAll({ where: { id: { [Op.in]: ids } }, order: [['date', 'DESC'], ['id', 'DESC']] }),
+        ICs.findAll({ attributes: ['IC_id', 'name'], raw: true }),
+        Project.findAll({ attributes: ['id', 'name'], raw: true }),
+    ]);
+    const icNames = new Map(ics.map(ic => [ic.IC_id, ic.name]));
+    const projectNames = new Map(projects.map(project => [project.id, project.name]));
+
+    return rows.map(row => {
+        const feedback = row.toJSON();
+        return {
+            ...feedback,
+            ic_name: icNames.get(feedback.ic_id) ?? null,
+            project_name: projectNames.get(feedback.project_id) ?? null,
+        };
+    });
 }
 
 export async function insertFeedback(feedbackData: NewFeedback): Promise<Feedback[]> {
@@ -128,4 +148,3 @@ export async function deleteFeedback(feedbackId: number): Promise<boolean> {
     await syncScores(previous?.ic_id);
     return deleted > 0;
 }
-
