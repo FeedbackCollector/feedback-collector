@@ -5,7 +5,7 @@ import { normalizeSearchText } from '../utils/search';
 
 export default function AutocompleteSearch({
   id,
-  className,
+  className = '',
   label,
   placeholder,
   inputClassName,
@@ -19,38 +19,37 @@ export default function AutocompleteSearch({
 
   const matchingSuggestions = useMemo(() => {
     const query = normalizeSearchText(value.trim());
-    const matches = query
-      ? suggestions.filter((suggestion) =>
-        normalizeSearchText(`${suggestion.label} ${suggestion.searchText ?? ''}`)
-          .includes(query)
-      )
-      : suggestions;
-    return matches.slice(0, 6);
+    if (!query) return suggestions.slice(0, 6);
+
+    return suggestions
+      .filter((s) => normalizeSearchText(`${s.label} ${s.searchText ?? ''}`).includes(query))
+      .slice(0, 6);
   }, [suggestions, value]);
 
-  const selectSuggestion = (suggestion: SearchSuggestion) => {
-    onChange(suggestion.value);
+  const showDropdown = isOpen && matchingSuggestions.length > 0;
+
+  const closeMenu = () => {
     setIsOpen(false);
     setActiveIndex(-1);
   };
 
-  const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === 'Escape') {
-      setIsOpen(false);
-      setActiveIndex(-1);
-      return;
-    }
+  const selectSuggestion = (suggestion: SearchSuggestion) => {
+    onChange(suggestion.value);
+    closeMenu();
+  };
 
-    if (!isOpen || matchingSuggestions.length === 0) return;
+  const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Escape') return closeMenu();
+    if (!showDropdown) return;
+
+    const total = matchingSuggestions.length;
 
     if (event.key === 'ArrowDown') {
       event.preventDefault();
-      setActiveIndex((current) => (current + 1) % matchingSuggestions.length);
+      setActiveIndex((prev) => (prev + 1) % total);
     } else if (event.key === 'ArrowUp') {
       event.preventDefault();
-      setActiveIndex((current) =>
-        current <= 0 ? matchingSuggestions.length - 1 : current - 1
-      );
+      setActiveIndex((prev) => (prev <= 0 ? total - 1 : prev - 1));
     } else if (event.key === 'Enter' && activeIndex >= 0) {
       event.preventDefault();
       selectSuggestion(matchingSuggestions[activeIndex]);
@@ -58,10 +57,7 @@ export default function AutocompleteSearch({
   };
 
   return (
-    <div className={`autocomplete-search ${className}`}>
-      <svg aria-hidden="true" height="20" viewBox="0 -960 960 960" width="20" fill="currentColor">
-        <path d="M360-240h440v-107H360v107ZM160-613h120v-107H160v107Zm0 187h120v-107H160v107Zm0 186h120v-107H160v107Zm200-186h440v-107H360v107Zm0-187h440v-107H360v107ZM160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h640q33 0 56.5 23.5T880-720v480q0 33-23.5 56.5T800-160H160Z" />
-      </svg>
+    <div className={`autocomplete-search ${className}`.trim()}>
       <input
         id={id}
         type="search"
@@ -69,36 +65,35 @@ export default function AutocompleteSearch({
         role="combobox"
         autoComplete="off"
         value={value}
-        onChange={(event) => {
-          onChange(event.target.value);
-          setIsOpen(true);
-          setActiveIndex(-1);
-        }}
-        onFocus={() => setIsOpen(true)}
-        onBlur={() => setIsOpen(false)}
-        onKeyDown={handleKeyDown}
         placeholder={placeholder}
         aria-label={label}
         aria-autocomplete="list"
         aria-controls={listId}
-        aria-expanded={isOpen && matchingSuggestions.length > 0}
+        aria-expanded={showDropdown}
         aria-activedescendant={
-          isOpen && activeIndex >= 0
-            ? `${listId}-option-${activeIndex}`
-            : undefined
+          showDropdown && activeIndex >= 0 ? `${listId}-option-${activeIndex}` : undefined
         }
+        onFocus={() => setIsOpen(true)}
+        onBlur={() => setIsOpen(false)}
+        onKeyDown={handleKeyDown}
+        onChange={(e) => {
+          onChange(e.target.value);
+          setIsOpen(true);
+          setActiveIndex(-1);
+        }}
       />
-      {isOpen && matchingSuggestions.length > 0 && (
+
+      {showDropdown && (
         <ul className="autocomplete-suggestions" id={listId} role="listbox">
           {matchingSuggestions.map((suggestion, index) => (
             <li
+              key={suggestion.id}
+              id={`${listId}-option-${index}`}
+              role="option"
               aria-selected={index === activeIndex}
               className={index === activeIndex ? 'is-active' : ''}
-              id={`${listId}-option-${index}`}
-              key={suggestion.id}
-              onMouseDown={(event) => event.preventDefault()}
+              onMouseDown={(e) => e.preventDefault()}
               onClick={() => selectSuggestion(suggestion)}
-              role="option"
             >
               <span>{suggestion.label}</span>
               {suggestion.detail && <small>{suggestion.detail}</small>}
