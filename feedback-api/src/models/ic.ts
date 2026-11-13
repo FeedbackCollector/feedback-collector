@@ -25,7 +25,7 @@ ICs.init(
     manager_id: { type: DataTypes.INTEGER, allowNull: false },
     area_id: { type: DataTypes.INTEGER, allowNull: true },
     entries: { type: DataTypes.INTEGER, allowNull: false },
-    // Average of the IC's feedback scores; null until the first feedback. Maintained by recalculateICScore.
+    // entries (feedback count) and score (average feedback score; null until the first feedback) are maintained by recalculateICScore.
     score: { type: DataTypes.FLOAT, allowNull: true },
   },
   { sequelize, tableName: "ics", timestamps: false }
