@@ -6,6 +6,8 @@ import '../styles/index.css'
 import { obtainFeedbackPage } from '../service/ObtainFeedback';
 import ICView from './IcView';
 import ScreenshotThumb from './ScreenshotThumb';
+import AutocompleteSearch from './AutocompleteSearch';
+import type { SearchSuggestion } from '../types/autoComplete';
 import '../styles/index.css'
 
 const SEARCH_DEBOUNCE_MS = 300;
@@ -190,13 +192,11 @@ function FeedbackLogComp() {
     };
   });
 
-  const icNames = Array.from(
-    new Set(
-      enrichedFeedback
-        .map((item) => item.ic_name ?? '')
-        .filter((name) => name !== '')
-    )
-  );
+  const searchSuggestions = ics.map<SearchSuggestion>((ic) => ({
+    id: String(ic.IC_id),
+    label: ic.name,
+    value: ic.name,
+  }));
 
   const projectOptions = projects
     .filter((project) =>
@@ -257,23 +257,18 @@ function FeedbackLogComp() {
           <div className="filters-grid">
             <div className="filter-item">
               <span className="filter-label">IC</span>
-              <div className="search-wrapper">
-                {searchIcon}
-                <input
-                  type="text"
-                  name="icName"
-                  placeholder='Search ICs...'
-                  className="input-control"
-                  list="ics-list"
-                  value={searchInputs.icName}
-                  onChange={handleChange}
-                />
-              </div>
-              <datalist id="ics-list">
-                {icNames.map((name) => (
-                  <option key={name} value={name} />
-                ))}
-              </datalist>
+              <AutocompleteSearch
+                id="feedback-ic-search"
+                className="search-wrapper"
+                inputClassName="input-control"
+                label="Search ICs"
+                placeholder="Search ICs..."
+                value={searchInputs.icName}
+                suggestions={searchSuggestions}
+                onChange={(value) =>
+                  setSearchInputs((current) => ({ ...current, icName: value }))
+                }
+              />
             </div>
 
             <div className="filter-item">

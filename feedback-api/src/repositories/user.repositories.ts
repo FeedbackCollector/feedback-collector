@@ -1,5 +1,6 @@
 import { fn, col, where } from "sequelize";
 import { User as UserModel, ICs as ICModel, Feedback as FeedbackModel } from "../models/Index.ts";
+import { sequelize } from "../db/connection.ts";
 import { AccountStatus, User, UpdateUser, UserFilters } from "../types/user.ts";
 
 export async function getUserByEmail(email: string) {
@@ -60,7 +61,13 @@ export async function updateUser(id: number, data: UpdateUser): Promise<User | n
     if (data.name !== undefined) user.name = data.name;
     if (data.email !== undefined) user.email = data.email.trim().toLowerCase();
     if (data.area_id !== undefined) user.area_id = data.area_id;
-    await user.save();
+
+    await sequelize.transaction(async (transaction) => {
+        await user.save({ transaction });
+        if (data.area_id !== undefined) {
+            await ICModel.update({ area_id: data.area_id }, { where: { manager_id: id }, transaction });
+        }
+    });
 
     const { passwordHash, ...updated } = user.toJSON();
     return updated;
