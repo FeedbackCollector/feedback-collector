@@ -240,6 +240,9 @@ function ICView({ ic, onBack }: ICViewProps) {
     }, 300);
   }
 
+  const commentIsDirty =
+    form.comment.trim() !== '' && form.comment.trim() !== (editingItem?.comment ?? '').trim();
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setFormError('');
@@ -270,6 +273,10 @@ function ICView({ ic, onBack }: ICViewProps) {
     }
     if (form.source_name.trim().length > MAX_SOURCE_LEN) {
       setFormError(`Source must be at most ${MAX_SOURCE_LEN} characters.`);
+      return;
+    }
+    if (!form.source_title.trim()) {
+      setFormError('Source title is required.');
       return;
     }
     if (form.source_title.trim().length > MAX_SOURCE_TITLE_LEN) {
@@ -316,7 +323,7 @@ function ICView({ ic, onBack }: ICViewProps) {
         project_id: projectId,
         date: form.date,
         source_name: form.source_name.trim(),
-        source_title: form.source_title.trim() || null,
+        source_title: form.source_title.trim(),
         score,
         comment: form.comment.trim() || null,
         screenshot_url: screenshotUrl,
@@ -563,7 +570,7 @@ function ICView({ ic, onBack }: ICViewProps) {
               </label>
 
               <label className="icv-field">
-                <span className="icv-label">Source (who this feedback is from)</span>
+                <span className="icv-label">Source (who this feedback is from) *</span>
                 <input
                   className="input-control"
                   name="source_name"
@@ -577,7 +584,7 @@ function ICView({ ic, onBack }: ICViewProps) {
               </label>
 
               <label className="icv-field">
-                <span className="icv-label">Source title</span>
+                <span className="icv-label">Source title *</span>
                 <input
                   className="input-control"
                   name="source_title"
@@ -586,6 +593,7 @@ function ICView({ ic, onBack }: ICViewProps) {
                   value={form.source_title}
                   onChange={handleFieldChange}
                   placeholder="e.g. Product Manager, Client, Peer"
+                  required
                 />
           
               </label>
@@ -597,7 +605,7 @@ function ICView({ ic, onBack }: ICViewProps) {
                   className={
                     form.comment.length >= MAX_COMMENT_LEN
                       ? 'is-error'
-                      : form.comment.trim()
+                      : commentIsDirty
                         ? 'is-success'
                         : ''
                   }
@@ -611,14 +619,14 @@ function ICView({ ic, onBack }: ICViewProps) {
                   className={`icv-hint${
                     form.comment.length >= MAX_COMMENT_LEN
                       ? ' is-error'
-                      : form.comment.trim()
+                      : commentIsDirty
                         ? ' is-success'
                         : ''
                   }`}
                 >
                   {form.comment.length >= MAX_COMMENT_LEN
                     ? `Maximum of ${MAX_COMMENT_LEN} characters reached.`
-                    : form.comment.trim()
+                    : commentIsDirty
                       ? `Looks good. ${form.comment.length}/${MAX_COMMENT_LEN}`
                       : `Up to ${MAX_COMMENT_LEN} characters.`}
                 </span>

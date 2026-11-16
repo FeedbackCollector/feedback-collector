@@ -17,7 +17,7 @@ const dateOnly = Joi.string()
     });
 
 const sourceName = Joi.string().trim().min(1).max(40);
-const sourceTitle = Joi.string().trim().max(40).allow(null, "");
+const sourceTitle = Joi.string().trim().min(1).max(40);
 const score = Joi.number().integer().min(1).max(5);
 const comment = Joi.string().trim().max(300).allow(null);
 const screenshotUrl = Joi.alternatives()
@@ -33,7 +33,7 @@ export const createFeedbackScheme = Joi.object({
     project_id: id.required(),
     date: dateOnly.required(),
     source_name: sourceName.required(),
-    source_title: sourceTitle.default(null),
+    source_title: sourceTitle.required(),
     score: score.required(),
     comment: comment.default(null),
     screenshot_url: screenshotUrl.default(null),
