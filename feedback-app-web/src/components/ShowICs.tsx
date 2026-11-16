@@ -28,6 +28,17 @@ function ObtainICs() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('cards');
+    const [animateBars, setAnimateBars] = useState(false);
+
+  useEffect(() => {
+    if (!loading && ics.length > 0) {
+      setAnimateBars(false);
+      const frame = requestAnimationFrame(() => setAnimateBars(true));
+      return () => cancelAnimationFrame(frame);
+    }
+    setAnimateBars(false);
+  }, [loading, ics, search]);
+
   const viewContainerRef = useRef<HTMLDivElement>(null);
   const shouldAnimateViewChange = useRef(false);
 
@@ -41,6 +52,7 @@ function ObtainICs() {
   function openICTimeline(item: IC) {
     navigate(`/my-ics/${item.IC_id}`);
   }
+
   useEffect(() => {
     const mediaQuery = window.matchMedia('(max-width: 768px)');
 
@@ -227,56 +239,62 @@ function ObtainICs() {
         ) : viewMode === 'cards' ? (
           <div className="team-metrics" ref={viewContainerRef}>
             {visibleICs.map((item) => (
-              <article className="team-metric-card" key={item.IC_id} onClick={() => openICTimeline(item)}
-                          style={{ cursor: 'pointer', transition: 'background-color 0.2s' }}
-                          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f3f4f6')}
-                          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'white')}
->
+              <article
+                className="team-metric-card"
+                key={item.IC_id}
+                onClick={() => openICTimeline(item)}
+                style={{ cursor: 'pointer', transition: 'background-color 0.2s' }}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f3f4f6')}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'white')}
+              >
                 
                 <div className="team-metric-info">
                   <h3>{item.name}</h3>
                   <p className="team-metric-role">{item.title}</p>
 
-                    <div className="team-metric-badge-row">
-                      <span
-                        className="team-metric-badge"
-                        style={{ backgroundColor: getBadgeColor(item.score) }}
-                      >
-                        {item.score === null ? '—' : Math.round(item.score)}
-                      </span>
-                      <span className="team-metric-detail">{item.entries} entries</span>
-                    </div>
+                  <div className="team-metric-badge-row">
+                    <span
+                      className="team-metric-badge"
+                      style={{ backgroundColor: getBadgeColor(item.score) }}
+                    >
+                      {item.score === null ? '—' : Math.round(item.score)}
+                    </span>
+                    <span className="team-metric-detail">{item.entries} entries</span>
                   </div>
-                </article>
-              ))}
-            </div>
-          ) : (
-            <div className="team-table-wrap" ref={viewContainerRef}>
-              <table className="team-table">
-                <thead>
-                  <tr>
-                    <th>IC</th>
-                    <th>Title</th>
-                    <th>Score</th>
-                    <th>Entries</th>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="team-table-wrap" ref={viewContainerRef}>
+            <table className="team-table">
+              <thead>
+                <tr>
+                  <th>IC</th>
+                  <th>Title</th>
+                  <th>Score</th>
+                  <th>Entries</th>
+                </tr>
+              </thead>
+              <tbody>
+                {visibleICs.map((item) => (
+                  <tr
+                    key={item.IC_id}
+                    onClick={() => openICTimeline(item)}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    <td>{item.name}</td>
+                    <td>{item.title}</td>
+                    <td>{item.score === null ? '—' : item.score.toFixed(1)}</td>
+                    <td>{item.entries}</td>
                   </tr>
-                </thead>
-                <tbody>
-                  {visibleICs.map((item) => (
-                    <tr key={item.IC_id}>
-                      <td>{item.name}</td>
-                      <td>{item.title}</td>
-                      <td>{item.score?.toFixed(1) ?? 'No data'}</td>
-                      <td>{item.entries}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
-      </div>
-    </>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+    </div>
   );
 }
 
