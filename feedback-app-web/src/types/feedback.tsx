@@ -27,6 +27,7 @@ export type IC = {
   name: string;
   title: string;
   entries: number;
+  score: number | null;
 };
 
 export type Project = {
