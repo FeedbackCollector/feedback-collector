@@ -772,7 +772,7 @@ function ManagementComp() {
         )}
         {assigningManager && (
           <div
-            className="management-dialog-backdrop"
+            className="management-dialog-backdrop management-assignment-backdrop"
             onMouseDown={(event) => {
               if (event.target === event.currentTarget) closeAssignDialog();
             }}
@@ -795,31 +795,34 @@ function ManagementComp() {
                     const isAssignedToManager = ic.managerId === assigningManager.id;
                     const isSelected = isAssignedToManager || selectedICIds.includes(ic.id);
                     return (
-                      <label
+                      <button
+                        type="button"
                         className={`management-assignment-option${isSelected ? ' is-selected' : ''}`}
                         key={ic.id}
+                        aria-pressed={isSelected}
+                        disabled={isMutating || isAssignedToManager}
+                        onClick={() => {
+                          setSelectedICIds((current) =>
+                            current.includes(ic.id)
+                              ? current.filter((id) => id !== ic.id)
+                              : [...current, ic.id]
+                          );
+                        }}
                       >
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          disabled={isMutating || isAssignedToManager}
-                          onChange={() => {
-                            setSelectedICIds((current) =>
-                              current.includes(ic.id)
-                                ? current.filter((id) => id !== ic.id)
-                                : [...current, ic.id]
-                            );
-                          }}
-                        />
                         <span className="management-assignment-option-info">
                           <strong>{ic.name}</strong>
-                          <small>
-                            {ic.title} - {isAssignedToManager
-                              ? 'Already assigned to this manager'
-                              : `Currently assigned to ${ic.managerName}`}
-                          </small>
+                          <small>{ic.title}</small>
                         </span>
-                      </label>
+                        <span className="management-assignment-status">
+                          {isAssignedToManager
+                            ? 'Assigned'
+                            : isSelected
+                              ? 'Selected'
+                              : ic.managerName
+                                ? `Move from ${ic.managerName}`
+                                : 'Assign'}
+                        </span>
+                      </button>
                     );
                   })}
                 </div>
