@@ -69,9 +69,13 @@ function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-function ManagementComp() {
+type ManagementCompProps = {
+  activeTab: ManagementTab;
+  onTabChange: (tab: ManagementTab) => void;
+};
+
+function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
   const token = useAuthStore((state) => state.token);
-  const [activeTab, setActiveTab] = useState<ManagementTab>('Areas');
   const [viewMode, setViewMode] = useState<ViewMode>('table');
   const viewContainerRef = useRef<HTMLDivElement>(null);
   const shouldAnimateViewChange = useRef(false);
@@ -427,7 +431,7 @@ function ManagementComp() {
     else return;
 
     event.preventDefault();
-    setActiveTab(TABS[nextIndex]);
+    onTabChange(TABS[nextIndex]);
     event.currentTarget.parentElement
       ?.querySelectorAll<HTMLButtonElement>('[role="tab"]')[nextIndex]
       ?.focus();
@@ -446,7 +450,7 @@ function ManagementComp() {
             aria-controls="management-panel"
             tabIndex={activeTab === tab ? 0 : -1}
             className={`management-tab${activeTab === tab ? ' is-active' : ''}`}
-            onClick={() => setActiveTab(tab)}
+            onClick={() => onTabChange(tab)}
             onKeyDown={handleTabKeyDown}
             disabled={isMutating}
           >
