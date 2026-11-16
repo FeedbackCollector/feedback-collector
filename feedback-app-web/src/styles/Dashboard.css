@@ -160,6 +160,11 @@
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
+.dashboard-search-input::-webkit-search-cancel-button,
+.dashboard-search-input::-ms-clear {
+  display: none;
+}
+
 .dashboard-search-input::placeholder {
   color: #6b7280;
 }
