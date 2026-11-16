@@ -1,11 +1,10 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import type { Feedback, FeedbackFilters, IC, Project } from '../types/feedback';
 import { obtainICs } from '../service/ObtainICs';
 import { obtainProjects } from '../service/ObtainProjects';
 import '../styles/index.css'
 import { obtainFeedbackPage } from '../service/ObtainFeedback';
-import ICView from './IcView';
 import ScreenshotThumb from './ScreenshotThumb';
 import AutocompleteSearch from './AutocompleteSearch';
 import type { SearchSuggestion } from '../types/autoComplete';
@@ -35,14 +34,8 @@ function FeedbackLogComp() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  const [selectedIC, setSelectedIC] = useState<{
-    IC_id: number;
-    name: string;
-    title: string;
-    entries: number;
-  } | null>(null);
-
   const [viewMode, setViewMode] = useState<'table' | 'list'>('table');
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
@@ -262,18 +255,12 @@ function FeedbackLogComp() {
   }));
 
   function openICTimeline(item: Feedback) {
-    const ic = ics.find((entry) => entry.IC_id === item.ic_id);
-
-    if (!ic) {
+    if (item.ic_id === null) {
       alert('Could not find the IC associated with this feedback.');
       return;
     }
 
-    setSelectedIC(ic);
-  }
-
-  if (selectedIC) {
-    return <ICView ic={selectedIC} onBack={() => setSelectedIC(null)} />;
+    navigate(`/my-ics/${item.ic_id}`);
   }
 
   if (icsLoading) {
