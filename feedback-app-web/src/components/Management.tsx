@@ -15,6 +15,7 @@ import type {
   ManagementTab,
 } from '../types/managementTypes';
 import { useAuthStore } from '../store/authStore';
+import { normalizeSearchText } from '../utils/search';
 import '../styles/Management.css';
 import {useToastStore} from '../store/toastStore';
 import LoadingOverlay from './LoadingOverlay';
@@ -119,6 +120,7 @@ function ManagementComp() {
   const [individualContributors, setIndividualContributors] = useState<
     NonNullable<ManagementData['individualContributors']>
   >([]);
+  const [icSearch, setICSearch] = useState('');
   const [pendingAccounts, setPendingAccounts] = useState<PendingAccount[]>([]);
   const [showPendingRequests, setShowPendingRequests] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -356,6 +358,7 @@ function ManagementComp() {
   const openAssignDialog = (manager: ManagementRow) => {
     setAssigningManager(manager);
     setSelectedICIds([]);
+    setICSearch('');
     setError(null);
   };
 
@@ -363,6 +366,7 @@ function ManagementComp() {
     if (isMutating) return;
     setAssigningManager(null);
     setSelectedICIds([]);
+    setICSearch('');
     setError(null);
   };
 
@@ -432,6 +436,11 @@ function ManagementComp() {
       ?.querySelectorAll<HTMLButtonElement>('[role="tab"]')[nextIndex]
       ?.focus();
   };
+
+  const normalizedICSearch = normalizeSearchText(icSearch.trim());
+  const filteredICs = individualContributors.filter((ic) =>
+    normalizeSearchText(`${ic.name} ${ic.title}`).includes(normalizedICSearch)
+  );
 
   return (
     <section className="management-page" aria-label="Director management">
@@ -784,14 +793,21 @@ function ManagementComp() {
               aria-labelledby="manager-assignment-title"
             >
               <h2 id="manager-assignment-title">Assign ICs to {assigningManager.name}</h2>
-              <p className="management-form-hint">
-                Select ICs to assign. Selecting an IC assigned to another manager will move it.
-              </p>
+              <input
+                type="search"
+                className="management-assignment-search"
+                aria-label="Search ICs"
+                placeholder="Select ICs to assign."
+                value={icSearch}
+                onChange={(event) => setICSearch(event.target.value)}
+              />
               {individualContributors.length === 0 ? (
                 <p className="management-empty-state">There are no ICs to assign.</p>
+              ) : filteredICs.length === 0 ? (
+                <p className="management-empty-state">No ICs match your search.</p>
               ) : (
                 <div className="management-assignment-list">
-                  {individualContributors.map((ic) => {
+                  {filteredICs.map((ic) => {
                     const isAssignedToManager = ic.managerId === assigningManager.id;
                     const isSelected = isAssignedToManager || selectedICIds.includes(ic.id);
                     return (
