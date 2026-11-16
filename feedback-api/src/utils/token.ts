@@ -20,7 +20,7 @@ export function signToken(user: { id: number; email: string; role: string; passw
     return jwt.sign(
         { id: user.id, email: user.email, role: user.role, pv: passwordVersion(user.passwordHash) },
         assertJwtSecret(),
-        { algorithm: ALGORITHM, expiresIn: '1m' },
+        { algorithm: ALGORITHM, expiresIn: '1h' },
     );
 }
 
