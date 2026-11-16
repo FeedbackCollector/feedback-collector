@@ -71,12 +71,13 @@ export async function deleteUserService(id: number, requesterId: number): Promis
     return "DELETED";
 }
 
-export async function loginService(email: string, password: string): Promise<string | "INVALID_CREDENTIALS"> {
+export async function loginService(email: string, password: string): Promise<string | "INVALID_CREDENTIALS" | "ACCOUNT_NOT_APPROVED"> {
     const user = await UsersRepository.getUserByEmail(email);
     if (!user) return "INVALID_CREDENTIALS";
 
     const passwordOk = await bcrypt.compare(password, user.passwordHash);
-    if (!passwordOk || user.status !== "approved") return "INVALID_CREDENTIALS";
+    if (!passwordOk) return "INVALID_CREDENTIALS";
+    if (user.status !== "approved") return "ACCOUNT_NOT_APPROVED";
 
     return signToken(user);
 }
