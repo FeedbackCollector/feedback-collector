@@ -5,7 +5,7 @@ import chatIcon from '../images/chat.png';
 import { useAuthStore } from '../store/authStore';
 
 const LINKS = [
-  { label: 'MyICs', to: '/MyICs' },
+  { label: 'MyICs', to: '/my-ics' },
   { label: 'FeedBack Log', to: '/feedback-log' }
 ];
 
@@ -15,7 +15,7 @@ const closeSidebar = () => {
 
 export function NavBar({ links = LINKS }: { links?: { label: string; to: string; }[] }) {
   const role = useAuthStore((state) => state.user?.role);
-  const homePath = role === 'director' ? '/dashboard' : '/MyICs';
+  const homePath = role === 'director' ? '/dashboard' : '/my-ics';
   return (
     <div>
       <aside className="manager-sidebar">

@@ -240,6 +240,46 @@
   background: var(--surface);
 }
 
+.icv-file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.icv-file-input:focus-visible + * ,
+.icv-file-row:has(+ .icv-file-input:focus-visible) .icv-file-btn {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.icv-file-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.icv-file-btn {
+  gap: 8px;
+  flex-shrink: 0;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.icv-file-name {
+  font-size: 13px;
+  color: var(--text-muted);
+  text-transform: none;
+  letter-spacing: normal;
+  font-weight: 400;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .icv-muted {
   color: var(--text-muted);
 }

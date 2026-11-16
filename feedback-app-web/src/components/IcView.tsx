@@ -642,13 +642,25 @@ function ICView({ ic, onBack }: ICViewProps) {
               </label>
 
               <div className="icv-field">
-                <label className="icv-label" htmlFor="icv-screenshot">
-                  Screenshot (optional)
-                </label>
+                <span className="icv-label">Screenshot (optional)</span>
+                <div className="icv-file-row">
+                  <label
+                    htmlFor="icv-screenshot"
+                    className="btn btn-secondary icv-file-btn"
+                  >
+                    <i className="fa-solid fa-image" aria-hidden="true" />
+                    {screenshotFilePreview || form.screenshot_url
+                      ? 'Change screenshot'
+                      : 'Upload screenshot'}
+                  </label>
+                  <span className="icv-file-name">
+                    {screenshotFile?.name ?? 'PNG, JPEG or WebP'}
+                  </span>
+                </div>
                 <input
                   id="icv-screenshot"
                   ref={screenshotInputRef}
-                  className="input-control"
+                  className="icv-file-input"
                   type="file"
                   accept="image/png,image/jpeg,image/webp"
                   onChange={handleScreenshotChange}

@@ -15,6 +15,7 @@ import type {
   ManagementTab,
 } from '../types/managementTypes';
 import { useAuthStore } from '../store/authStore';
+import { normalizeSearchText } from '../utils/search';
 import '../styles/Management.css';
 import {useToastStore} from '../store/toastStore';
 import LoadingOverlay from './LoadingOverlay';
@@ -69,9 +70,13 @@ function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-function ManagementComp() {
+type ManagementCompProps = {
+  activeTab: ManagementTab;
+  onTabChange: (tab: ManagementTab) => void;
+};
+
+function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
   const token = useAuthStore((state) => state.token);
-  const [activeTab, setActiveTab] = useState<ManagementTab>('Areas');
   const [viewMode, setViewMode] = useState<ViewMode>('table');
   const viewContainerRef = useRef<HTMLDivElement>(null);
   const shouldAnimateViewChange = useRef(false);
@@ -119,6 +124,7 @@ function ManagementComp() {
   const [individualContributors, setIndividualContributors] = useState<
     NonNullable<ManagementData['individualContributors']>
   >([]);
+  const [icSearch, setICSearch] = useState('');
   const [pendingAccounts, setPendingAccounts] = useState<PendingAccount[]>([]);
   const [showPendingRequests, setShowPendingRequests] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -356,6 +362,7 @@ function ManagementComp() {
   const openAssignDialog = (manager: ManagementRow) => {
     setAssigningManager(manager);
     setSelectedICIds([]);
+    setICSearch('');
     setError(null);
   };
 
@@ -363,6 +370,7 @@ function ManagementComp() {
     if (isMutating) return;
     setAssigningManager(null);
     setSelectedICIds([]);
+    setICSearch('');
     setError(null);
   };
 
@@ -427,11 +435,16 @@ function ManagementComp() {
     else return;
 
     event.preventDefault();
-    setActiveTab(TABS[nextIndex]);
+    onTabChange(TABS[nextIndex]);
     event.currentTarget.parentElement
       ?.querySelectorAll<HTMLButtonElement>('[role="tab"]')[nextIndex]
       ?.focus();
   };
+
+  const normalizedICSearch = normalizeSearchText(icSearch.trim());
+  const filteredICs = individualContributors.filter((ic) =>
+    normalizeSearchText(`${ic.name} ${ic.title}`).includes(normalizedICSearch)
+  );
 
   return (
     <section className="management-page" aria-label="Director management">
@@ -446,7 +459,7 @@ function ManagementComp() {
             aria-controls="management-panel"
             tabIndex={activeTab === tab ? 0 : -1}
             className={`management-tab${activeTab === tab ? ' is-active' : ''}`}
-            onClick={() => setActiveTab(tab)}
+            onClick={() => onTabChange(tab)}
             onKeyDown={handleTabKeyDown}
             disabled={isMutating}
           >
@@ -772,7 +785,7 @@ function ManagementComp() {
         )}
         {assigningManager && (
           <div
-            className="management-dialog-backdrop"
+            className="management-dialog-backdrop management-assignment-backdrop"
             onMouseDown={(event) => {
               if (event.target === event.currentTarget) closeAssignDialog();
             }}
@@ -784,42 +797,52 @@ function ManagementComp() {
               aria-labelledby="manager-assignment-title"
             >
               <h2 id="manager-assignment-title">Assign ICs to {assigningManager.name}</h2>
-              <p className="management-form-hint">
-                Select ICs to assign. Selecting an IC assigned to another manager will move it.
-              </p>
+              <input
+                type="search"
+                className="management-assignment-search"
+                aria-label="Search ICs"
+                placeholder="Select ICs to assign."
+                value={icSearch}
+                onChange={(event) => setICSearch(event.target.value)}
+              />
               {individualContributors.length === 0 ? (
                 <p className="management-empty-state">There are no ICs to assign.</p>
+              ) : filteredICs.length === 0 ? (
+                <p className="management-empty-state">No ICs match your search.</p>
               ) : (
                 <div className="management-assignment-list">
-                  {individualContributors.map((ic) => {
+                  {filteredICs.map((ic) => {
                     const isAssignedToManager = ic.managerId === assigningManager.id;
                     const isSelected = isAssignedToManager || selectedICIds.includes(ic.id);
                     return (
-                      <label
+                      <button
+                        type="button"
                         className={`management-assignment-option${isSelected ? ' is-selected' : ''}`}
                         key={ic.id}
+                        aria-pressed={isSelected}
+                        disabled={isMutating || isAssignedToManager}
+                        onClick={() => {
+                          setSelectedICIds((current) =>
+                            current.includes(ic.id)
+                              ? current.filter((id) => id !== ic.id)
+                              : [...current, ic.id]
+                          );
+                        }}
                       >
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          disabled={isMutating || isAssignedToManager}
-                          onChange={() => {
-                            setSelectedICIds((current) =>
-                              current.includes(ic.id)
-                                ? current.filter((id) => id !== ic.id)
-                                : [...current, ic.id]
-                            );
-                          }}
-                        />
                         <span className="management-assignment-option-info">
                           <strong>{ic.name}</strong>
-                          <small>
-                            {ic.title} - {isAssignedToManager
-                              ? 'Already assigned to this manager'
-                              : `Currently assigned to ${ic.managerName}`}
-                          </small>
+                          <small>{ic.title}</small>
                         </span>
-                      </label>
+                        <span className="management-assignment-status">
+                          {isAssignedToManager
+                            ? 'Assigned'
+                            : isSelected
+                              ? 'Selected'
+                              : ic.managerName
+                                ? `Move from ${ic.managerName}`
+                                : 'Assign'}
+                        </span>
+                      </button>
                     );
                   })}
                 </div>
