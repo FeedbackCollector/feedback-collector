@@ -421,22 +421,22 @@ function FeedbackLogComp() {
                         <td className="text-caption-default" style={{ color: 'var(--text-muted)' }}>{item.date}</td>
                         <td>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                            <span style={{ fontWeight: 600 }}>{item.ic_name ?? '-'}</span>
+                            <span style={{ fontWeight: 600 }}>{item.ic_name ?? '' }</span>
                             {item.source_name.toLowerCase().includes('peer') && <span className="badge-shared" style={{ width: 'fit-content' }}>Shared</span>}
                           </div>
                         </td>
-                        <td>{item.project_name ?? '-'}</td>
+                        <td>{item.project_name ?? ''}</td>
                         <td style={{ color: 'var(--text-muted)' }}>{item.source_name}</td>
                         <td>
                           <span className="score-badge" data-score={item.score}>{item.score}</span>
                         </td>
                         <td style={{ maxWidth: '280px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {item.comment ?? '-'}
+                          {item.comment ?? ''}
                         </td>
                         <td>
                           {item.screenshot_url ? (
                             <ScreenshotThumb url={item.screenshot_url} size="sm" />
-                          ) : '-'}
+                          ) : ''}
                         </td>
                         <td>
                           <button type="button" className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '13px', borderRadius: '6px' }} onClick={() => openICTimeline(item)}>View in Timeline</button>
@@ -459,13 +459,13 @@ function FeedbackLogComp() {
 
                       <div className="feedback-card-meta">
                         <div className="feedback-card-name-row">
-                          <h4 className="feedback-card-name">{item.ic_name ?? '-'}</h4>
+                          <h4 className="feedback-card-name">{item.ic_name ?? ''}</h4>
                           {(item.source_name.toLowerCase().includes('peer') || item.id === 3) && (
                             <span className="badge-shared">Shared</span>
                           )}
                         </div>
                         <span className="feedback-card-subtext">
-                          {item.date} · {item.project_name ?? '-'}
+                          {item.date} · {item.project_name ?? ''}
                         </span>
                       </div>
                       {item.screenshot_url && (
@@ -476,7 +476,7 @@ function FeedbackLogComp() {
                     </div>
 
                     <p className="feedback-card-body">
-                      {item.comment ?? '-'}
+                      {item.comment ?? ''}
                     </p>
 
                     <div className="feedback-card-footer">
