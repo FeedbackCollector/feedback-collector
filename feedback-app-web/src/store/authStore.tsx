@@ -175,9 +175,7 @@ export const useAuthStore = create<AuthState>()(
                     const datos = await respuesta.json();
 
                     if (respuesta.ok) {
-                        const successMessage = datos.status === 'pending'
-                            ? 'Registration submitted. A director must approve your account before you can log in.'
-                            : 'Account created successfully! Please log in.';
+                        const successMessage = 'Account created, please wait to be approved';
                         set({ 
                             activeForm: 'login', 
                             error: null,
@@ -186,8 +184,8 @@ export const useAuthStore = create<AuthState>()(
                             regPassword: '',
                             regConfirmPassword: ''
                         }); 
-                        useToastStore.getState().addToast('Account created successfully! Please log in.', 'success');
-                        return true;
+                        useToastStore.getState().addToast(successMessage, 'success');
+                        return successMessage;
                     } else {
                         set({ error: { field: 'regEmail', message: datos.message || datos.error || datos.mensaje || 'Error creating account.' } });
                         return null;
