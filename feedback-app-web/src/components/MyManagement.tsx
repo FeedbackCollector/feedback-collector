@@ -302,7 +302,11 @@ export default function MyManagementComp() {
                       <tr key={manager.id}>
                         <td>{manager.name}</td>
                         <td>{getAreaName(manager.area_id)}</td>
-                        <td>{manager.averageScore?.toFixed(1) ?? 'No data'}</td>
+                        <td>
+                          {manager.averageScore === null
+                            ? <span className="my-management-no-data">No data</span>
+                            : Math.round(manager.averageScore)}
+                        </td>
                         <td>{manager.icCount}</td>
                       </tr>
                     ))}
