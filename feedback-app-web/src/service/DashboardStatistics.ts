@@ -79,7 +79,7 @@ export function useDashboardCharts(
       id: score,
       label: `Score ${score}`,
       value: counts[score],
-      percentage: (counts[score] / maxCount) * 95,
+      percentage: (counts[score] / maxCount) * 100,
       color: SCORE_COLORS[score],
     }));
 
