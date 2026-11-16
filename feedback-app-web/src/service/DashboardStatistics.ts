@@ -10,11 +10,11 @@ export interface ChartBarItem {
 }
 
 const SCORE_COLORS: Record<number, string> = {
-  1: '#d90429', 
-  2: '#e85d04', 
-  3: '#d97706', 
-  4: '#65a30d', 
-  5: '#3f7d20', 
+  1: '#E12339', 
+  2: '#EA580C', 
+  3: '#D97706', 
+  4: '#65A30D', 
+  5: '#2B8000', 
 };
 
 function getColorByAverage(avg: number): string {
