@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, type ChangeEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import type { Feedback, FeedbackFilters, IC, Project } from '../types/feedback';
 import { obtainICs } from '../service/ObtainICs';
 import { obtainProjects } from '../service/ObtainProjects';
@@ -42,17 +43,26 @@ function FeedbackLogComp() {
   } | null>(null);
 
   const [viewMode, setViewMode] = useState<'table' | 'list'>('table');
-  const [page, setPage] = useState(1);
+  const [searchParams, setSearchParams] = useSearchParams();
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
-  const [filters, setFilters] = useState<FeedbackFilters>({
-    icName: '',
-    projectId: '',
-    score: '',
-    sortBy: 'newest',
-    text: '',
-  });
-  const [searchInputs, setSearchInputs] = useState({ icName: '', text: '' });
+
+  const pageParam = Number(searchParams.get('page'));
+  const page = Number.isInteger(pageParam) && pageParam > 0 ? pageParam : 1;
+
+  const filters = useMemo<FeedbackFilters>(() => {
+    const projectId = searchParams.get('project') ?? '';
+    const score = searchParams.get('score') ?? '';
+    return {
+      icName: searchParams.get('ic') ?? '',
+      projectId: /^[1-9][0-9]*$/.test(projectId) ? projectId : '',
+      score: SCORES.map(String).includes(score) ? score : '',
+      sortBy: searchParams.get('sort') === 'oldest' ? 'oldest' : 'newest',
+      text: searchParams.get('text') ?? '',
+    };
+  }, [searchParams]);
+
+  const [searchInputs, setSearchInputs] = useState({ icName: filters.icName, text: filters.text });
   const feedbackContainerRef = useRef<HTMLDivElement>(null);
 
   const shouldAnimateViewChange = useRef(false);
@@ -153,8 +163,10 @@ function FeedbackLogComp() {
         const result = await obtainFeedbackPage(page, PAGE_SIZE, filters, controller.signal);
         if (cancelled) return;
         setFeedback(result.data ?? []);
-        setTotalPages(Math.max(result.pagination.totalPages, 1));
+        const lastPage = Math.max(result.pagination.totalPages, 1);
+        setTotalPages(lastPage);
         setTotalItems(result.pagination.total);
+        if (page > lastPage) updateParams({ page: lastPage > 1 ? String(lastPage) : '' }, true);
       } catch (error) {
         if (cancelled) return;
         console.error('Error retrieving feedback:', error);
@@ -194,28 +206,42 @@ function FeedbackLogComp() {
     const timer = setTimeout(() => {
       if (filters.icName === searchInputs.icName && filters.text === searchInputs.text) return;
       setLoading(true);
-      setPage(1);
-      setFilters((current) => ({ ...current, icName: searchInputs.icName, text: searchInputs.text }));
+      updateParams({ ic: searchInputs.icName, text: searchInputs.text });
     }, SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(timer);
   }, [searchInputs]);
 
+  useEffect(() => {
+    setSearchInputs({ icName: filters.icName, text: filters.text });
+  }, [filters.icName, filters.text]);
+
+  function updateParams(changes: Record<string, string>, replace = false) {
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      for (const [key, value] of Object.entries(changes)) {
+        if (value) next.set(key, value);
+        else next.delete(key);
+      }
+      if (!('page' in changes)) next.delete('page');
+      return next;
+    }, { replace });
+  }
+
   function handleChange(e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
     const { name, value } = e.target;
-    if (name === 'icName' || name === 'text') {
-      setSearchInputs((current) => ({ ...current, [name]: value }));
+    if (name === 'text') {
+      setSearchInputs((current) => ({ ...current, text: value }));
       return;
     }
-    if (name === 'sortBy' && value !== 'newest' && value !== 'oldest') return;
+    if (name === 'sort' && value !== 'newest' && value !== 'oldest') return;
     setLoading(true);
-    setPage(1);
-    setFilters((current) => ({ ...current, [name]: value }));
+    updateParams({ [name]: value });
   }
 
   function goToPage(next: number) {
     if (loading || next < 1 || next > totalPages || next === page) return;
     setLoading(true);
-    setPage(next);
+    updateParams({ page: next > 1 ? String(next) : '' });
   }
 
   const enrichedFeedback = feedback.map((item) => {
@@ -234,15 +260,6 @@ function FeedbackLogComp() {
     label: ic.name,
     value: ic.name,
   }));
-
-  const projectOptions = projects
-    .filter((project) =>
-      enrichedFeedback.some((item) => item.project_id === project.id)
-    )
-    .map((project) => ({
-      id: project.id,
-      name: project.name,
-    }));
 
   function openICTimeline(item: Feedback) {
     const ic = ics.find((entry) => entry.IC_id === item.ic_id);
@@ -326,9 +343,9 @@ function FeedbackLogComp() {
 
             <div className="filter-item">
               <span className="filter-label">Project</span>
-              <select name="projectId" className="input-control" value={filters.projectId} onChange={handleChange}>
+              <select name="project" className="input-control" value={filters.projectId} onChange={handleChange}>
                 <option value="">All</option>
-                {projectOptions.map((project) => (
+                {projects.map((project) => (
                   <option key={project.id} value={String(project.id)}>
                     {project.name}
                   </option>
@@ -350,7 +367,7 @@ function FeedbackLogComp() {
 
             <div className="filter-item">
               <span className="filter-label">Sort by date</span>
-              <select name="sortBy" className="input-control" value={filters.sortBy} onChange={handleChange}>
+              <select name="sort" className="input-control" value={filters.sortBy} onChange={handleChange}>
                 <option value="newest">Newest first</option>
                 <option value="oldest">Oldest first</option>
               </select>
