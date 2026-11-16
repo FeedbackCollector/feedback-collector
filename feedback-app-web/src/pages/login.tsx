@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 // @ts-ignore CSS files are handled by the bundler.
 import "../styles/login.css";
 import { obtainAreas, type Area } from "../service/ObtainAreas";
+import DropdownSelect from '../components/DropdownSelect';
 
 function Login() {
     const activeForm = useAuthStore((state) => state.activeForm);
@@ -30,6 +31,7 @@ function Login() {
     const createAccount = useAuthStore((state) => state.createAccount);
     
     const [areas, setAreas] = useState<Area[]>([]);
+    const [selectedArea, setSelectedArea] = useState('');
     const [isLoggingIn, setIsLoggingIn] = useState(false);
 
     const navigate = useNavigate();
@@ -46,6 +48,7 @@ function Login() {
 
         if (areaResult.status === 'fulfilled') {
           setAreas(areaResult.value);
+          setSelectedArea(areaResult.value[0]?.name ?? '');
         } else {
           const message = areaResult.reason instanceof Error
             ? areaResult.reason.message
@@ -173,15 +176,16 @@ function Login() {
 
                     <div className={`form-group ${activeForm === 'register' ? 'show' : ''}`}>
                         <label className="label-field">Area</label>
-                        <select className="select-area" defaultValue= "area">
-                            {areas.map((area) => (
-                                <option
-                                value={area.name}
-                                >
-                                {area.name}
-                                </option>
-                            ))}
-                        </select>
+                            <DropdownSelect
+                                id="register-area"
+                                label="Area"
+                                value={selectedArea}
+                                options={areas.map((area) => ({
+                                    value: area.name,
+                                    label: area.name,
+                                }))}
+                                onChange={setSelectedArea}
+                                />
                     </div>
 
                     <button className="btn-get-into" type="submit" disabled={activeForm === 'login' && isLoggingIn}>

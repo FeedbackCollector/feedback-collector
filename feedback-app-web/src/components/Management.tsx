@@ -15,6 +15,7 @@ import { useAuthStore } from '../store/authStore';
 import '../styles/Management.css';
 import {useToastStore} from '../store/toastStore';
 import LoadingOverlay from './LoadingOverlay';
+import DropdownSelect from './DropdownSelect';
 
 type ViewMode = 'table' | 'cards';
 
@@ -540,18 +541,23 @@ function ManagementComp() {
                     {COLUMNS[activeTab].map(({ key, label }) => (
                       <td key={key} data-label={label}>
                         {activeTab === 'Managers' && key === 'area' ? (
-                          <select
-                            className="management-area-select"
-                            aria-label={`Area for ${row.name}`}
-                            value={row.areaId ?? ''}
-                            disabled={isMutating || areas.length === 0}
-                            onChange={(event) => void changeManagerArea(row, Number(event.target.value))}
-                          >
-                            {row.areaId === undefined && <option value="">No area assigned</option>}
-                            {areas.map((area) => (
-                              <option key={area.id} value={area.id}>{area.name}</option>
-                            ))}
-                          </select>
+                          <DropdownSelect
+                            id={`management-area-${row.id}`}
+                            label={`Area for ${row.name}`}
+                            value={row.areaId === undefined ? '' : String(row.areaId)}
+                            options={[
+                              ...(row.areaId === undefined
+                                ? [{ value: '', label: 'No area assigned' }]
+                                : []),
+                              ...areas.map((area) => ({
+                                value: String(area.id),
+                                label: area.name,
+                              })),
+                            ]}
+                            onChange={(value) => {
+                              if (value) void changeManagerArea(row, Number(value));
+                            }}
+                          />
                         ) : renderCell(row, key)}
                       </td>
                     ))}
@@ -741,17 +747,19 @@ function ManagementComp() {
                   </>
                 )}
                 <label htmlFor="management-area">Area</label>
-                <select
+                <DropdownSelect
                   id="management-area"
-                  required
+                  label="Area"
                   value={formValues.areaId}
-                  onChange={(event) => updateFormValue('areaId', event.target.value)}
-                >
-                  <option value="" disabled>Select an area</option>
-                  {areas.map((area) => (
-                    <option key={area.id} value={area.id}>{area.name}</option>
-                  ))}
-                </select>
+                  options={[
+                    { value: '', label: 'Select an area' },
+                    ...areas.map((area) => ({
+                      value: String(area.id),
+                      label: area.name,
+                    })),
+                  ]}
+                  onChange={(value) => updateFormValue('areaId', value)}
+                />
                 {areas.length === 0 && <p className="management-form-hint">Create an area before adding a manager.</p>}
               </>
             )}
@@ -766,17 +774,19 @@ function ManagementComp() {
                   onChange={(event) => updateFormValue('title', event.target.value)}
                 />
                 <label htmlFor="management-manager">Manager</label>
-                <select
+                <DropdownSelect
                   id="management-manager"
-                  required
+                  label="Manager"
                   value={formValues.managerId}
-                  onChange={(event) => updateFormValue('managerId', event.target.value)}
-                >
-                  <option value="" disabled>Select a manager</option>
-                  {managers.map((manager) => (
-                    <option key={manager.id} value={manager.id}>{manager.name}</option>
-                  ))}
-                </select>
+                  options={[
+                    { value: '', label: 'Select a manager' },
+                    ...managers.map((manager) => ({
+                      value: String(manager.id),
+                      label: manager.name,
+                    })),
+                  ]}
+                  onChange={(value) => updateFormValue('managerId', value)}
+                />
                 {managers.length === 0 && <p className="management-form-hint">Create a manager before adding an IC.</p>}
               </>
             )}

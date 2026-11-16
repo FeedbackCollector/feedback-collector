@@ -6,6 +6,7 @@ import {
   type DashboardData,
 } from '../service/ObtainDashboard';
 import '../styles/Dashboard.css';
+import LoadingOverlay from './LoadingOverlay';
 
 interface SearchResultItem {
   id: number;
@@ -84,7 +85,7 @@ export default function DashboardComp() {
     [data, selectedArea?.id]
   );
 
-  const show = (value: string) => (loading ? '…' : error || !calculated ? '—' : value);
+  const show = (value: string) => (error || !calculated ? '—' : value);
   const metrics = [
     ...(selectedArea === null
       ? [{ label: 'Areas', value: show(String(areas.length)), detail: 'Total areas' }]
@@ -110,6 +111,10 @@ export default function DashboardComp() {
       detail: 'Feedback entries',
     },
   ];
+
+  if (loading) {
+    return <LoadingOverlay message="Loading dashboard..." />;
+  }
 
   const handleSelectPerson = (person: SearchResultItem) => {
     setSearchQuery(person.name);

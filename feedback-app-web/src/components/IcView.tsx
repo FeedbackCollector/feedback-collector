@@ -11,6 +11,7 @@ import '../styles/IcView.css';
 import { UserAvatar } from './UserAvatar';
 import { useToastStore } from '../store/toastStore';
 import LoadingOverlay from './LoadingOverlay';
+import DropdownSelect from './DropdownSelect';
 
 type ICInfo = {
   IC_id: number;
@@ -463,21 +464,21 @@ function ICView({ ic, onBack }: ICViewProps) {
 
               <label className="icv-field">
                 <span className="icv-label">Project</span>
-                <select
-                  className="input-control"
-                  name="project_id"
+                <DropdownSelect
+                  id="ic-view-project"
+                  label="Project"
                   value={form.project_id}
-                  onChange={handleFieldChange}
-                  required
-                >
-                  <option value="">Select a project</option>
-                  {projects.map((project) => (
-                    
-                    <option key={project.id} value={String(project.id)}>
-                      {project.name}
-                    </option>
-                  ))}
-                </select>
+                  options={[
+                    { value: '', label: 'Select a project' },
+                    ...projects.map((project) => ({
+                      value: String(project.id),
+                      label: project.name,
+                    })),
+                  ]}
+                  onChange={(value) =>
+                    setForm((current) => ({ ...current, project_id: value }))
+                  }
+                />
               </label>
 
               <label className="icv-field">
@@ -518,19 +519,18 @@ function ICView({ ic, onBack }: ICViewProps) {
 
               <label className="icv-field">
                 <span className="icv-label">Score</span>
-                <select
-                  className="input-control"
-                  name="score"
+                <DropdownSelect
+                  id="ic-view-score"
+                  label="Score"
                   value={form.score}
-                  onChange={handleFieldChange}
-                  required
-                >
-                  <option value="1">1</option>
-                  <option value="2">2</option>
-                  <option value="3">3</option>
-                  <option value="4">4</option>
-                  <option value="5">5</option>
-                </select>
+                  options={['1', '2', '3', '4', '5'].map((score) => ({
+                    value: score,
+                    label: score,
+                  }))}
+                  onChange={(value) =>
+                    setForm((current) => ({ ...current, score: value }))
+                  }
+                />
               </label>
 
               <label className="icv-field">

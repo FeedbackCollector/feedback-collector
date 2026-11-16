@@ -5,12 +5,14 @@ import { obtainProjects } from '../service/ObtainProjects';
 import '../styles/index.css'
 import { obtainFeedbackPage } from '../service/ObtainFeedback';
 import ICView from './IcView';
+// import ScreenshotThumb from './ScreenshotThumb';
 import AutocompleteSearch from './AutocompleteSearch';
 import type { SearchSuggestion } from '../types/autoComplete';
 import '../styles/index.css'
 import { obtainAllICs } from '../service/ObtainICs';
 import { useAuthStore } from '../store/authStore';
 import LoadingOverlay from './LoadingOverlay';
+import DropdownSelect from './DropdownSelect';
 
 const SEARCH_DEBOUNCE_MS = 300;
 const PAGE_SIZE = 10;
@@ -199,16 +201,23 @@ function FeedbackLogComp() {
     return () => clearTimeout(timer);
   }, [searchInputs]);
 
+  function updateFilter(name: string, value: string) {
+    if (name === 'sortBy' && value !== 'newest' && value !== 'oldest') return;
+
+    setLoading(true);
+    setPage(1);
+    setFilters((current) => ({ ...current, [name]: value }));
+  }
+
   function handleChange(e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
     const { name, value } = e.target;
+
     if (name === 'icName' || name === 'text') {
       setSearchInputs((current) => ({ ...current, [name]: value }));
       return;
     }
-    if (name === 'sortBy' && value !== 'newest' && value !== 'oldest') return;
-    setLoading(true);
-    setPage(1);
-    setFilters((current) => ({ ...current, [name]: value }));
+
+    updateFilter(name, value);
   }
 
   function goToPage(next: number) {
@@ -325,34 +334,50 @@ function FeedbackLogComp() {
 
             <div className="filter-item">
               <span className="filter-label">Project</span>
-              <select name="projectId" className="input-control" value={filters.projectId} onChange={handleChange}>
-                <option value="">All</option>
-                {projectOptions.map((project) => (
-                  <option key={project.id} value={String(project.id)}>
-                    {project.name}
-                  </option>
-                ))}
-              </select>
+              <DropdownSelect
+                id="feedback-project"
+                label="Project"
+                value={filters.projectId}
+                options={[
+                  { value: '', label: 'All' },
+                  ...projectOptions.map((project) => ({
+                    value: String(project.id),
+                    label: project.name,
+                  })),
+                ]}
+                onChange={(value) => updateFilter('projectId', value)}
+              />
             </div>
 
             <div className="filter-item">
               <span className="filter-label">Score</span>
-              <select name="score" className="input-control" value={filters.score} onChange={handleChange}>
-                <option value="">All</option>
-                {SCORES.map((score) => (
-                  <option key={score} value={String(score)}>
-                    {score}
-                  </option>
-                ))}
-              </select>
+              <DropdownSelect
+                id="feedback-score"
+                label="Score"
+                value={filters.score}
+                options={[
+                  { value: '', label: 'All' },
+                  ...SCORES.map((score) => ({
+                    value: String(score),
+                    label: String(score),
+                  })),
+                ]}
+                onChange={(value) => updateFilter('score', value)}
+              />
             </div>
 
             <div className="filter-item">
               <span className="filter-label">Sort by date</span>
-              <select name="sortBy" className="input-control" value={filters.sortBy} onChange={handleChange}>
-                <option value="newest">Newest first</option>
-                <option value="oldest">Oldest first</option>
-              </select>
+              <DropdownSelect
+                id="feedback-sort-by"
+                label="Sort by date"
+                value={filters.sortBy}
+                options={[
+                  { value: 'newest', label: 'Newest first' },
+                  { value: 'oldest', label: 'Oldest first' },
+                ]}
+                onChange={(value) => updateFilter('sortBy', value)}
+              />
             </div>
           </div>
 
@@ -391,7 +416,7 @@ function FeedbackLogComp() {
 
         {loading && <LoadingOverlay message="Loading feedback..." />}
         {!loading && loadError && <LoadingOverlay message="Error loading feedback." />}
-        {!loading && !loadError && enrichedFeedback.length === 0 && <LoadingOverlay message="No feedback entries match the applied filters." />}
+        {!loading && !loadError && enrichedFeedback.length === 0 && <p style={{ justifySelf:"center", fontSize:"20px"  }}>No feedback entries match the applied filters.</p>}
 
         {!loading && enrichedFeedback.length > 0 && (
           <div ref={feedbackContainerRef}>
@@ -430,7 +455,7 @@ function FeedbackLogComp() {
                         </td>
                         <td>
                           {item.screenshot_url ? (
-                            <a href={item.screenshot_url} target="_blank" rel="noreferrer" style={{ color: 'var(--primary)', fontWeight: 600 }}>View</a>
+                            <ScreenshotThumb url={item.screenshot_url} size="sm" />
                           ) : '-'}
                         </td>
                         <td>
@@ -460,9 +485,14 @@ function FeedbackLogComp() {
                           )}
                         </div>
                         <span className="feedback-card-subtext">
-                          {item.date} â€¢ {item.project_name ?? '-'}
+                          {item.date} · {item.project_name ?? '-'}
                         </span>
                       </div>
+                      {item.screenshot_url && (
+                        <div style={{ marginLeft: 'auto' }}>
+                          <ScreenshotThumb url={item.screenshot_url} size="sm" />
+                        </div>
+                      )}
                     </div>
 
                     <p className="feedback-card-body">
