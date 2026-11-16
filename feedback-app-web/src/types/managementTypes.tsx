@@ -30,6 +30,15 @@ export interface ManagementData {
   areas: Array<{ id: number; name: string }>;
   managers: Array<{ id: number; name: string }>;
   pendingAccounts: PendingAccount[];
+  individualContributors?: ManagementIC[];
+}
+
+export interface ManagementIC {
+  id: number;
+  name: string;
+  title: string;
+  managerId: number;
+  managerName: string;
 }
 
 export interface PendingAccount {

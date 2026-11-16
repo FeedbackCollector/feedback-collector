@@ -1,13 +1,17 @@
-import { useEffect, useRef, useState, type ChangeEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import type { Feedback, FeedbackFilters, IC, Project } from '../types/feedback';
 import { obtainICs } from '../service/ObtainICs';
 import { obtainProjects } from '../service/ObtainProjects';
 import '../styles/index.css'
 import { obtainFeedbackPage } from '../service/ObtainFeedback';
-import ICView from './IcView';
+import ScreenshotThumb from './ScreenshotThumb';
 import AutocompleteSearch from './AutocompleteSearch';
 import type { SearchSuggestion } from '../types/autoComplete';
 import '../styles/index.css'
+import { obtainAllICs } from '../service/ObtainICs';
+import { useAuthStore } from '../store/authStore';
+import LoadingOverlay from './LoadingOverlay';
 
 const SEARCH_DEBOUNCE_MS = 300;
 const PAGE_SIZE = 10;
@@ -24,28 +28,34 @@ function FeedbackLogComp() {
   const [feedback, setFeedback] = useState<Feedback[]>([]);
   const [ics, setIcs] = useState<IC[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [icsLoading, setIcsLoading] = useState(true);
+  const [icsLoadError, setIcsLoadError] = useState<string | null>(null);
+  const user = useAuthStore((state) => state.user);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  const [selectedIC, setSelectedIC] = useState<{
-    IC_id: number;
-    name: string;
-    title: string;
-    entries: number;
-  } | null>(null);
-
   const [viewMode, setViewMode] = useState<'table' | 'list'>('table');
-  const [page, setPage] = useState(1);
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
-  const [filters, setFilters] = useState<FeedbackFilters>({
-    icName: '',
-    projectId: '',
-    score: '',
-    sortBy: 'newest',
-    text: '',
-  });
-  const [searchInputs, setSearchInputs] = useState({ icName: '', text: '' });
+
+  const pageParam = Number(searchParams.get('page'));
+  const page = Number.isInteger(pageParam) && pageParam > 0 ? pageParam : 1;
+
+  const filters = useMemo<FeedbackFilters>(() => {
+    const projectId = searchParams.get('project') ?? '';
+    const score = searchParams.get('score') ?? '';
+    return {
+      icName: searchParams.get('ic') ?? '',
+      projectId: /^[1-9][0-9]*$/.test(projectId) ? projectId : '',
+      score: SCORES.map(String).includes(score) ? score : '',
+      sortBy: searchParams.get('sort') === 'oldest' ? 'oldest' : 'newest',
+      text: searchParams.get('text') ?? '',
+    };
+  }, [searchParams]);
+
+  const [searchInputs, setSearchInputs] = useState({ icName: filters.icName, text: filters.text });
   const feedbackContainerRef = useRef<HTMLDivElement>(null);
 
   const shouldAnimateViewChange = useRef(false);
@@ -92,17 +102,48 @@ function FeedbackLogComp() {
   
 
   useEffect(() => {
+    let cancelled = false;
+    const managerId = user?.role.toLowerCase() === 'director' ? undefined : user?.id;
+
     async function loadReferences() {
-      try {
-        const [icsData, projectsData] = await Promise.all([obtainICs(), obtainProjects()]);
-        setIcs(icsData);
-        setProjects(projectsData);
-      } catch (error) {
-        console.error('Error loading data:', error);
+      setIcsLoading(true);
+      setIcsLoadError(null);
+
+      if (!user || (managerId === undefined && user.role.toLowerCase() !== 'director')) {
+        setIcsLoadError('Could not determine assigned ICs. Please log in again.');
+        setIcsLoading(false);
+        return;
       }
+
+      const [icsResult, projectsResult] = await Promise.allSettled([
+        obtainAllICs(managerId),
+        obtainProjects(),
+      ]);
+
+      if (cancelled) return;
+
+      if (icsResult.status === 'fulfilled') {
+        setIcs(icsResult.value);
+      } else {
+        console.error('Error retrieving ICs:', icsResult.reason);
+        setIcsLoadError('Could not load ICs. Please try again.');
+      }
+
+      if (projectsResult.status === 'fulfilled') {
+        setProjects(projectsResult.value);
+      } else {
+        console.error('Error loading projects:', projectsResult.reason);
+      }
+
+      setIcsLoading(false);
     }
-    loadReferences();
-  }, []);
+
+    void loadReferences();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id, user?.role]);
 
   useEffect(() => {
     let cancelled = false;
@@ -115,8 +156,10 @@ function FeedbackLogComp() {
         const result = await obtainFeedbackPage(page, PAGE_SIZE, filters, controller.signal);
         if (cancelled) return;
         setFeedback(result.data ?? []);
-        setTotalPages(Math.max(result.pagination.totalPages, 1));
+        const lastPage = Math.max(result.pagination.totalPages, 1);
+        setTotalPages(lastPage);
         setTotalItems(result.pagination.total);
+        if (page > lastPage) updateParams({ page: lastPage > 1 ? String(lastPage) : '' }, true);
       } catch (error) {
         if (cancelled) return;
         console.error('Error retrieving feedback:', error);
@@ -156,28 +199,42 @@ function FeedbackLogComp() {
     const timer = setTimeout(() => {
       if (filters.icName === searchInputs.icName && filters.text === searchInputs.text) return;
       setLoading(true);
-      setPage(1);
-      setFilters((current) => ({ ...current, icName: searchInputs.icName, text: searchInputs.text }));
+      updateParams({ ic: searchInputs.icName, text: searchInputs.text });
     }, SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(timer);
   }, [searchInputs]);
 
+  useEffect(() => {
+    setSearchInputs({ icName: filters.icName, text: filters.text });
+  }, [filters.icName, filters.text]);
+
+  function updateParams(changes: Record<string, string>, replace = false) {
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      for (const [key, value] of Object.entries(changes)) {
+        if (value) next.set(key, value);
+        else next.delete(key);
+      }
+      if (!('page' in changes)) next.delete('page');
+      return next;
+    }, { replace });
+  }
+
   function handleChange(e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
     const { name, value } = e.target;
-    if (name === 'icName' || name === 'text') {
-      setSearchInputs((current) => ({ ...current, [name]: value }));
+    if (name === 'text') {
+      setSearchInputs((current) => ({ ...current, text: value }));
       return;
     }
-    if (name === 'sortBy' && value !== 'newest' && value !== 'oldest') return;
+    if (name === 'sort' && value !== 'newest' && value !== 'oldest') return;
     setLoading(true);
-    setPage(1);
-    setFilters((current) => ({ ...current, [name]: value }));
+    updateParams({ [name]: value });
   }
 
   function goToPage(next: number) {
     if (loading || next < 1 || next > totalPages || next === page) return;
     setLoading(true);
-    setPage(next);
+    updateParams({ page: next > 1 ? String(next) : '' });
   }
 
   const enrichedFeedback = feedback.map((item) => {
@@ -197,30 +254,31 @@ function FeedbackLogComp() {
     value: ic.name,
   }));
 
-  const projectOptions = projects
-    .filter((project) =>
-      enrichedFeedback.some((item) => item.project_id === project.id)
-    )
-    .map((project) => ({
-      id: project.id,
-      name: project.name,
-    }));
-
   function openICTimeline(item: Feedback) {
-    const ic = ics.find((entry) => entry.IC_id === item.ic_id);
-
-    if (!ic) {
+    if (item.ic_id === null) {
       alert('Could not find the IC associated with this feedback.');
       return;
     }
 
-    setSelectedIC(ic);
+    navigate(`/my-ics/${item.ic_id}`);
   }
 
-  if (selectedIC) {
-    return <ICView ic={selectedIC} onBack={() => setSelectedIC(null)} />;
+  if (icsLoading) {
+    return <LoadingOverlay message="Loading Feedback..." />;
   }
 
+  if (ics.length === 0) {
+    return (
+      <div className="MyICs-containers">
+        <div className="show-ics-empty" role="status">
+          <i className="fa-solid fa-user-group" aria-hidden="true"></i>
+          <p>
+            You don't have any Individual Contributors assigned yet. The Director assigns ICs to each manager.
+          </p>
+        </div>
+      </div>
+    );
+  }
    const pagination = (
     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '16px', margin: '0 0 20px 0' }}>
       <button
@@ -272,9 +330,9 @@ function FeedbackLogComp() {
 
             <div className="filter-item">
               <span className="filter-label">Project</span>
-              <select name="projectId" className="input-control" value={filters.projectId} onChange={handleChange}>
+              <select name="project" className="input-control" value={filters.projectId} onChange={handleChange}>
                 <option value="">All</option>
-                {projectOptions.map((project) => (
+                {projects.map((project) => (
                   <option key={project.id} value={String(project.id)}>
                     {project.name}
                   </option>
@@ -296,7 +354,7 @@ function FeedbackLogComp() {
 
             <div className="filter-item">
               <span className="filter-label">Sort by date</span>
-              <select name="sortBy" className="input-control" value={filters.sortBy} onChange={handleChange}>
+              <select name="sort" className="input-control" value={filters.sortBy} onChange={handleChange}>
                 <option value="newest">Newest first</option>
                 <option value="oldest">Oldest first</option>
               </select>
@@ -336,9 +394,9 @@ function FeedbackLogComp() {
           </button>
         </div>
 
-        {loading && <p>Loading data...</p>}
-        {!loading && loadError && <p role="alert">{loadError}</p>}
-        {!loading && !loadError && enrichedFeedback.length === 0 && <p>No feedback entries match the applied filters.</p>}
+        {loading && <LoadingOverlay message="Loading feedback..." />}
+        {!loading && loadError && <LoadingOverlay message="Error loading feedback." />}
+        {!loading && !loadError && enrichedFeedback.length === 0 && <LoadingOverlay message="No feedback entries match the applied filters." />}
 
         {!loading && enrichedFeedback.length > 0 && (
           <div ref={feedbackContainerRef}>
@@ -377,7 +435,7 @@ function FeedbackLogComp() {
                         </td>
                         <td>
                           {item.screenshot_url ? (
-                            <a href={item.screenshot_url} target="_blank" rel="noreferrer" style={{ color: 'var(--primary)', fontWeight: 600 }}>View</a>
+                            <ScreenshotThumb url={item.screenshot_url} size="sm" />
                           ) : '-'}
                         </td>
                         <td>
@@ -407,9 +465,14 @@ function FeedbackLogComp() {
                           )}
                         </div>
                         <span className="feedback-card-subtext">
-                          {item.date} â€¢ {item.project_name ?? '-'}
+                          {item.date} · {item.project_name ?? '-'}
                         </span>
                       </div>
+                      {item.screenshot_url && (
+                        <div style={{ marginLeft: 'auto' }}>
+                          <ScreenshotThumb url={item.screenshot_url} size="sm" />
+                        </div>
+                      )}
                     </div>
 
                     <p className="feedback-card-body">

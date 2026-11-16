@@ -34,6 +34,15 @@ export async function obtainAllICs(managerId?: number): Promise<IC[]> {
   return [firstPage, ...remainingPages].flatMap((page) => page.data ?? []);
 }
 
+export async function obtainICById(id: number): Promise<IC> {
+  const response = await fetch(`${URLEndpoint}/${id}`, { headers: authHeaders() });
+  if (!response.ok) {
+    throw new Error(`Could not load IC (${response.status}).`);
+  }
+  const result = await response.json() as { data: IC };
+  return result.data;
+}
+
 export async function obtainICs(): Promise<IC[]> {
   try {
     return await obtainAllICs();

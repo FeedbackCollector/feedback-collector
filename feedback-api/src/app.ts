@@ -2,7 +2,7 @@ import "./env.ts";
 import express, { Request, Response } from "express";
 import userRoutes from "./routes/user.routes.ts";
 import icRoutes from "./routes/ic.routes.ts";
-import feedbackRoutes from "./routes/feedback.routes.ts";
+import feedbackRoutes, { UPLOADS_DIR } from "./routes/feedback.routes.ts";
 import usersRoutes from "./routes/users.routes.ts";
 import areaRoutes from "./routes/area.routes.ts";
 import projectRoutes from "./routes/project.routes.ts";
@@ -29,6 +29,10 @@ app.use("/docs", swaggerUi.serve, swaggerUi.setup(openApiSpec));
 app.get("/", (req: Request, res: Response) => {
   res.json({ message: "FeedBack Controller API running", docs: `http://localhost:${PORT}/docs` });
 });
+
+app.use("/uploads", express.static(UPLOADS_DIR, {
+  setHeaders: (res) => res.set("X-Content-Type-Options", "nosniff"),
+}));
 
 app.use("/auth", userRoutes);
 app.use("/ics", icRoutes);

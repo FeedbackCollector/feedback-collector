@@ -4,6 +4,7 @@ import { sequelize } from "./connection.ts";
 import "../models/Index.ts"; 
 import { User } from "../models/User.ts"
 import { ICs } from "../models/ic.ts";
+import { recalculateICScore } from "../repositories/ic.repository.ts";
 import { Feedback } from "../models/feedback.ts";
 
 import { Project } from "../models/project.ts";
@@ -41,15 +42,15 @@ async function seed() {
     { name : "Méndez"  ,email: "Mendez@example.com", passwordHash: userPasswordHash, area_id: research.id },
 ]);
 const [lucia, nicolas, camila] = await ICs.bulkCreate([
-  { name: "Lucía Fernández", title: "UX Designer",     manager_id: carolina.id, entries: 6 },
-  { name: "Nicolás Herrera", title: "UX Designer Jr.", manager_id: carolina.id, entries: 5 },
-  { name: "Camila Rojas",    title: "UX Researcher",   manager_id: milito.id,   entries: 4 },
-  { name: "Tomás Ibarra",    title: "UI Designer",     manager_id: lautaro.id,  entries: 0 },
-  { name: "Sofía Paz",       title: "UX Researcher",   manager_id: mendez.id,   entries: 0 },
+  { name: "Lucía Fernández", title: "UX Designer",     manager_id: carolina.id, area_id: ux.id, entries: 6 },
+  { name: "Nicolás Herrera", title: "UX Designer Jr.", manager_id: carolina.id, area_id: ux.id, entries: 5 },
+  { name: "Camila Rojas",    title: "UX Researcher",   manager_id: milito.id, area_id: research.id,   entries: 4 },
+  { name: "Tomás Ibarra",    title: "UI Designer",     manager_id: lautaro.id, area_id: ui.id,  entries: 0 },
+  { name: "Sofía Paz",       title: "UX Researcher",   manager_id: mendez.id, area_id: research.id,   entries: 0 },
 ]);
     // The feedback author is the manager of the IC it is about.
     const fb = (ic: { IC_id: number; manager_id: number }, project: { id: number }, date: string, source_name: string, score: number, comment: string | null) =>
-      ({ author_id: ic.manager_id, ic_id: ic.IC_id, project_id: project.id, date, source_name, score, comment, screenshot_url: null });
+      ({ author_id: ic.manager_id, ic_id: ic.IC_id, project_id: project.id, date, source_name, score, comment, source_title: null, screenshot_url: null });
 
     // Scores/dates reproduce the "My ICs" Figma design: averages 2.7 / 3.6 / 4.0 (team 3.3),
     // 6 / 5 / 4 entries, last entries 08/07, 08/13 and 08/13 (2026), 7 entries in the 30 days before 08/13.
@@ -73,6 +74,8 @@ const [lucia, nicolas, camila] = await ICs.bulkCreate([
   fb(camila, apollo, "2026-07-25", "Demo",        4, "Síntesis de research muy útil para el equipo"),
   fb(camila, zephyr, "2026-08-13", "Client call", 4, "Excelente presentación de hallazgos"),
 ]);
+
+    for (const ic of [lucia, nicolas, camila]) await recalculateICScore(ic.IC_id);
 
     console.log("✅ Database created and loaded:");
     console.log(`   ${await User.count()} users`);

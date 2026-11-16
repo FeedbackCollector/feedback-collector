@@ -141,6 +141,7 @@ export async function loadManagementData(
         email: manager.email,
         areaId: manager.area_id,
       }));
+    const managersById = new Map(managers.map((manager) => [manager.id, manager]));
     const areasById = new Map(areas.map((area) => [area.id, area.name]));
     const projectsById = new Map(projects.map((project) => [project.id, project.name]));
     const icsById = new Map(ics.map((ic) => [ic.IC_id, ic]));
@@ -191,6 +192,13 @@ export async function loadManagementData(
       areas,
       managers: managers.map(({ id, name }) => ({ id, name })),
       pendingAccounts,
+      individualContributors: ics.map((ic) => ({
+        id: ic.IC_id,
+        name: ic.name,
+        title: ic.title,
+        managerId: ic.manager_id,
+        managerName: managersById.get(ic.manager_id)?.name ?? `Manager ${ic.manager_id}`,
+      })),
     };
   }
 
@@ -293,6 +301,17 @@ export async function updateManagerArea(
   await request(`/users/${id}`, token, {
     method: 'PATCH',
     body: JSON.stringify({ area_id: areaId }),
+  });
+}
+
+export async function updateICManager(
+  icId: number,
+  managerId: number,
+  token: string
+): Promise<void> {
+  await request(`/ics/${icId}`, token, {
+    method: 'PATCH',
+    body: JSON.stringify({ manager_id: managerId }),
   });
 }
 
