@@ -3,7 +3,7 @@ import type { Feedback, Project } from '../types/feedback';
 import { obtainAllFeedback } from '../service/ObtainFeedback';
 
 import { useAuthStore } from '../store/authStore';
-import { formatDate, getInitials } from '../utils/feedbackFormat';
+import { formatDate, getInitials, truncateText, MAX_NAME_LEN, MAX_SOURCE_LEN, MAX_BODY_LEN, MAX_SOURCE_TITLE_LEN, MAX_COMMENT_LEN } from '../utils/feedbackFormat';
 import { obtainProjects } from '../service/ObtainProjects';
 import { API_URL as BASE_URL } from '../service/api';
 import { authHeaders } from '../service/authHeaders';
@@ -268,6 +268,18 @@ function ICView({ ic, onBack }: ICViewProps) {
       setFormError('Source is required.');
       return;
     }
+    if (form.source_name.trim().length > MAX_SOURCE_LEN) {
+      setFormError(`Source must be at most ${MAX_SOURCE_LEN} characters.`);
+      return;
+    }
+    if (form.source_title.trim().length > MAX_SOURCE_TITLE_LEN) {
+      setFormError(`Source title must be at most ${MAX_SOURCE_TITLE_LEN} characters.`);
+      return;
+    }
+    if (form.comment.trim().length > MAX_COMMENT_LEN) {
+      setFormError(`Comment must be at most ${MAX_COMMENT_LEN} characters.`);
+      return;
+    }
     if (!Number.isInteger(score) || score < 1 || score > 5) {
       setFormError('Score must be between 1 and 5.');
       return;
@@ -456,8 +468,8 @@ function ICView({ ic, onBack }: ICViewProps) {
                   <span className="score-badge" data-score={item.score}>
                     {item.score}
                   </span>
-                  <span>
-                    {formatDate(item.date)} · {projectNameOf(item)} · {item.source_name}
+                  <span className="icv-entry-meta-text" title={`${formatDate(item.date)} · ${projectNameOf(item)} · ${item.source_name}`}>
+                    {formatDate(item.date)} · {truncateText(projectNameOf(item), MAX_NAME_LEN)} · {truncateText(item.source_name, MAX_SOURCE_LEN)}
                   </span>
                 </div>
 
@@ -481,7 +493,7 @@ function ICView({ ic, onBack }: ICViewProps) {
                 </div>
               </div>
 
-              {item.comment && <p className="icv-entry-body">{item.comment}</p>}
+              {item.comment && <p className="icv-entry-body">{truncateText(item.comment, MAX_BODY_LEN)}</p>}
 
               {item.screenshot_url && (
                 <button
@@ -556,6 +568,7 @@ function ICView({ ic, onBack }: ICViewProps) {
                   className="input-control"
                   name="source_name"
                   type="text"
+                  maxLength={MAX_SOURCE_LEN}
                   value={form.source_name}
                   onChange={handleFieldChange}
                   placeholder="e.g. Stakeholder Review, Peer Feedback"
@@ -569,6 +582,7 @@ function ICView({ ic, onBack }: ICViewProps) {
                   className="input-control"
                   name="source_title"
                   type="text"
+                  maxLength={MAX_SOURCE_TITLE_LEN}
                   value={form.source_title}
                   onChange={handleFieldChange}
                   placeholder="e.g. Product Manager, Client, Peer"
@@ -580,10 +594,34 @@ function ICView({ ic, onBack }: ICViewProps) {
                 <span className="icv-label">Comment</span>
                 <textarea
                   name="comment"
+                  className={
+                    form.comment.length >= MAX_COMMENT_LEN
+                      ? 'is-error'
+                      : form.comment.trim()
+                        ? 'is-success'
+                        : ''
+                  }
+                  maxLength={MAX_COMMENT_LEN}
                   value={form.comment}
                   onChange={handleFieldChange}
+                  placeholder="Add a short note..."
                   rows={4}
                 />
+                <span
+                  className={`icv-hint${
+                    form.comment.length >= MAX_COMMENT_LEN
+                      ? ' is-error'
+                      : form.comment.trim()
+                        ? ' is-success'
+                        : ''
+                  }`}
+                >
+                  {form.comment.length >= MAX_COMMENT_LEN
+                    ? `Maximum of ${MAX_COMMENT_LEN} characters reached.`
+                    : form.comment.trim()
+                      ? `Looks good. ${form.comment.length}/${MAX_COMMENT_LEN}`
+                      : `Up to ${MAX_COMMENT_LEN} characters.`}
+                </span>
               </label>
 
               <label className="icv-field">

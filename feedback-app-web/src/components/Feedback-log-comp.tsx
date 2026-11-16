@@ -1,3 +1,4 @@
+import { truncateText, MAX_NAME_LEN, MAX_SOURCE_LEN, MAX_EXCERPT_LEN, MAX_BODY_LEN } from '../utils/feedbackFormat';
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import type { Feedback, FeedbackFilters, IC, Project } from '../types/feedback';
@@ -434,17 +435,17 @@ function FeedbackLogComp() {
                         <td className="text-caption-default" style={{ color: 'var(--text-muted)' }}>{item.date}</td>
                         <td>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                            <span style={{ fontWeight: 600 }}>{item.ic_name ?? '-'}</span>
+                            <span className="fl-truncate" style={{ fontWeight: 600 }} title={item.ic_name ?? undefined}>{truncateText(item.ic_name, MAX_NAME_LEN) || '-'}</span>
                             {item.source_name.toLowerCase().includes('peer') && <span className="badge-shared" style={{ width: 'fit-content' }}>Shared</span>}
                           </div>
                         </td>
-                        <td>{item.project_name ?? '-'}</td>
-                        <td style={{ color: 'var(--text-muted)' }}>{item.source_name}</td>
+                        <td className="fl-truncate" title={item.project_name ?? undefined}>{truncateText(item.project_name, MAX_NAME_LEN) || '-'}</td>
+                        <td className="fl-truncate" style={{ color: 'var(--text-muted)' }} title={item.source_name}>{truncateText(item.source_name, MAX_SOURCE_LEN)}</td>
                         <td>
                           <span className="score-badge" data-score={item.score}>{item.score}</span>
                         </td>
-                        <td style={{ maxWidth: '280px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {item.comment ?? '-'}
+                        <td className="fl-truncate fl-truncate-wide" title={item.comment ?? undefined}>
+                          {truncateText(item.comment, MAX_EXCERPT_LEN) || '-'}
                         </td>
                         <td>
                           {item.screenshot_url ? (
@@ -472,13 +473,13 @@ function FeedbackLogComp() {
 
                       <div className="feedback-card-meta">
                         <div className="feedback-card-name-row">
-                          <h4 className="feedback-card-name">{item.ic_name ?? '-'}</h4>
+                          <h4 className="feedback-card-name feedback-card-clip" title={item.ic_name ?? undefined}>{truncateText(item.ic_name, MAX_NAME_LEN) || '-'}</h4>
                           {(item.source_name.toLowerCase().includes('peer') || item.id === 3) && (
                             <span className="badge-shared">Shared</span>
                           )}
                         </div>
-                        <span className="feedback-card-subtext">
-                          {item.date} · {item.project_name ?? '-'}
+                        <span className="feedback-card-subtext feedback-card-clip" title={`${item.date} · ${item.project_name ?? '-'}`}>
+                          {item.date} · {truncateText(item.project_name, MAX_NAME_LEN) || '-'}
                         </span>
                       </div>
                       {item.screenshot_url && (
@@ -489,12 +490,12 @@ function FeedbackLogComp() {
                     </div>
 
                     <p className="feedback-card-body">
-                      {item.comment ?? '-'}
+                      {truncateText(item.comment, MAX_BODY_LEN) || '-'}
                     </p>
 
                     <div className="feedback-card-footer">
-                      <span className="text-label-meta" style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
-                        {item.source_name}
+                      <span className="text-label-meta feedback-card-source" style={{ color: 'var(--text-muted)', fontSize: '12px' }} title={item.source_name}>
+                        {truncateText(item.source_name, MAX_SOURCE_LEN)}
                       </span>
                       <button type="button" className="btn btn-secondary" style={{ padding: '6px 14px', borderRadius: '6px', fontSize: '13px' }} onClick={() => openICTimeline(item)}>
                         View in Timeline

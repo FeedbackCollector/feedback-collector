@@ -240,3 +240,34 @@ select.input-control {
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
   background: var(--surface);
 }
+
+.feedback-card-meta {
+  min-width: 0;
+}
+
+.feedback-card-clip {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.feedback-card-name-row {
+  min-width: 0;
+}
+
+.feedback-card-body {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+.feedback-card-source {
+  min-width: 0;
+  max-width: 60%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

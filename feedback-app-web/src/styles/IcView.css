@@ -324,13 +324,45 @@
   color: var(--text);
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 8px;
   outline: none;
+}
+
+.icv-field textarea::placeholder {
+  color: var(--text-muted);
+}
+
+.icv-field textarea:hover:not(:focus) {
+  border-color: var(--text-muted);
 }
 
 .icv-field textarea:focus {
   border: 2px solid var(--primary);
   padding: 9px 11px;
+}
+
+.icv-field textarea.is-error {
+  border-color: var(--danger);
+}
+
+.icv-field textarea.is-success {
+  border-color: var(--success);
+}
+
+.icv-field textarea.is-error:focus {
+  border-color: var(--danger);
+}
+
+.icv-field textarea.is-success:focus {
+  border-color: var(--primary);
+}
+
+.icv-hint.is-error {
+  color: var(--danger);
+}
+
+.icv-hint.is-success {
+  color: var(--success);
 }
 
 .icv-hint {
@@ -390,4 +422,23 @@
 
 .icv-overlay.is-closing .icv-modal {
   animation: popup-out 300ms ease both;
+}
+.icv-entry-meta-text {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.icv-entry-meta {
+  min-width: 0;
+  flex-wrap: nowrap;
+}
+
+.icv-entry-body {
+  display: -webkit-box;
+  -webkit-line-clamp: 6;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
