@@ -162,6 +162,7 @@ function ObtainICs() {
   }
 
   return (
+    <>
     <div className="MyICs-containers">
       <section className="team-page">
         <ICsMetricsRow
@@ -265,13 +266,14 @@ function ObtainICs() {
                 </thead>
                 <tbody>
                   {visibleICs.map((item) => (
-<tr
-  key={item.IC_id}
-  onClick={() => openICTimeline(item)}
-  style={{ cursor: 'pointer', transition: 'background-color 0.2s' }}
-  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f3f4f6')}
-  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
->                      <td style = {{textDecoration: "underline"}}>{item.name}</td>
+                  <tr
+                    key={item.IC_id}
+                    onClick={() => openICTimeline(item)}
+                    style={{ cursor: 'pointer', transition: 'background-color 0.2s' }}
+                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f3f4f6')}
+                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                  >                      
+                      <td style = {{textDecoration: "underline"}}>{item.name}</td>
                       <td>{item.title}</td>
                       <td>
                         {item.score === null
@@ -279,7 +281,7 @@ function ObtainICs() {
                           : Math.round(item.score)}
                       </td>
                       <td>{item.entries}</td>
-                    </tr>
+                  </tr>
                   ))}
                 </tbody>
               </table>
