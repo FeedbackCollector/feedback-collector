@@ -1,4 +1,4 @@
-import FeedbackLogComp from "../components/Feedback-log-comp";
+import FeedbackLogComp from "../components/FeedbackLogComp";
 
 
 
