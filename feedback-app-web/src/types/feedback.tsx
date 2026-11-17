@@ -16,6 +16,7 @@ export type Feedback = {
 
 export type FeedbackFilters = {
   icName: string;
+  icId?: number;
   projectId: string;
   score: string;
   sortBy: 'newest' | 'oldest';
@@ -27,6 +28,7 @@ export type IC = {
   name: string;
   title: string;
   entries: number;
+  score: number | null;
 };
 
 export type Project = {

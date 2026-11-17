@@ -1,78 +1,103 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import '../styles/FeedbackDashboardMyIcs.css';
 
 interface MetricCardProps {
   title: string;
   value: string | number;
 }
 
-interface ICData {
+export interface ICData {
   id: number;
   name: string;
   score: number | null;
   entries: number;
 }
 
-interface FeedbackDashboardProps {
-  teamICs: ICData[];
-  icComparisonData: ICData[];
+const SCORE_COLORS: Record<number, string> = {
+  1: '#E12339',
+  2: '#EA580C',
+  3: '#D97706',
+  4: '#65A30D',
+  5: '#2B8000',
+};
+
+function getScoreColor(score: number | null): string {
+  if (score === null) return '#94a3b8';
+  if (score < 1.5) return SCORE_COLORS[1];
+  if (score < 2.5) return SCORE_COLORS[2];
+  if (score < 3.5) return SCORE_COLORS[3];
+  if (score < 4.5) return SCORE_COLORS[4];
+  return SCORE_COLORS[5];
 }
 
 const MetricCard: React.FC<MetricCardProps> = ({ title, value }) => (
-  <div style={{ border: '1px solid #e2e8f0', padding: '12px 16px', borderRadius: '8px', flex: 1, backgroundColor: '#ffffff', boxShadow: '0 1px 2px rgba(0,0,0,0.02)' }}>
-    <div style={{ fontSize: '10px', color: '#718096', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: '500' }}>{title}</div>
-    <div style={{ fontSize: '20px', fontWeight: 'bold', marginTop: '4px', color: '#1a202c' }}>{value}</div>
+  <div className="metricCard">
+    <div className="metricTitle">{title}</div>
+    <div className="metricValue">{value}</div>
   </div>
 );
 
-const ICComparisonRow: React.FC<ICData> = ({ name, score }) => {
+const ICComparisonRow: React.FC<ICData & { animate: boolean }> = ({
+  name,
+  score,
+  animate,
+}) => {
   const percentage = score === null ? 0 : (score / 5) * 100;
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px', gap: '16px' }}>
-      <div style={{ width: '120px', fontSize: '13px', color: '#2d3748' }}>{name}</div>
-      <div style={{ flex: 1, backgroundColor: '#edf2f7', borderRadius: '4px', height: '6px' }}>
-        <div style={{
-          width: `${percentage}%`,
-          backgroundColor: score === null || score < 3 ? '#dd6b20' : '#38a169',
-          height: '100%',
-          borderRadius: '4px'
-        }} />
+    <div className="comparisonRow">
+      <div className="icName">{name}</div>
+      <div className="progressTrack">
+        <div
+          className="progressBar"
+          style={{
+            backgroundColor: getScoreColor(score),
+            width: animate ? `${percentage}%` : '0%',
+          }}
+        />
       </div>
-      <div style={{ fontSize: '13px', fontWeight: '600', width: '24px', textAlign: 'right', color: '#2d3748' }}>
+      <div className="icScore">
         {score === null ? '—' : score.toFixed(1)}
       </div>
     </div>
   );
 };
 
-const FeedbackDashboard: React.FC<FeedbackDashboardProps> = ({ teamICs, icComparisonData }) => {
+export const ICsMetricsRow: React.FC<{ teamICs: ICData[] }> = ({ teamICs }) => {
   const scoredICs = teamICs.filter((ic): ic is ICData & { score: number } => ic.score !== null);
   const teamAverageScore = scoredICs.length > 0
     ? scoredICs.reduce((sum, ic) => sum + ic.score, 0) / scoredICs.length
     : null;
   const totalEntries = teamICs.reduce((sum, ic) => sum + ic.entries, 0);
 
+  return (
+    <div className="metricsGrid">
+      <MetricCard title="Team Average Score" value={teamAverageScore?.toFixed(1) ?? '—'} />
+      <MetricCard title="Individual Contributors" value={teamICs.length} />
+      <MetricCard title="Entries" value={totalEntries} />
+    </div>
+  );
+};
+
+export const ICsComparisonCard: React.FC<{ icComparisonData: ICData[] }> = ({ icComparisonData }) => {
+  const [animate, setAnimate] = useState(false);
+
+  useEffect(() => {
+    setAnimate(false);
+    const frame = requestAnimationFrame(() => setAnimate(true));
+    return () => cancelAnimationFrame(frame);
+  }, [icComparisonData]);
+
   const sortedICs = [...icComparisonData].sort(
     (first, second) => (second.score ?? -1) - (first.score ?? -1)
   );
 
   return (
-    <div style={{ fontFamily: 'Arial, sans-serif', padding: '24px', backgroundColor: '#f5f5f5' }}>
-      
-      <div style={{ display: 'flex', gap: '16px', marginBottom: '20px' }}>
-        <MetricCard title="Team Average Score" value={teamAverageScore?.toFixed(1) ?? '—'} />
-        <MetricCard title="Individual Contributors" value={teamICs.length} />
-        <MetricCard title="Entries" value={totalEntries} />
-      </div>
-
-      <div style={{ backgroundColor: '#ffffff', padding: '16px 20px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
-        <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '14px', color: '#1a202c', fontWeight: '600' }}>IC Comparison</h3>
-        {sortedICs.map((ic) => (
-          <ICComparisonRow key={ic.id} {...ic} />
-        ))}
-      </div>
+    <div className="comparisonSection">
+      <h3 className="sectionTitle">IC Comparison</h3>
+      {sortedICs.map((ic) => (
+        <ICComparisonRow key={ic.id} {...ic} animate={animate} />
+      ))}
     </div>
   );
 };
-
-export default FeedbackDashboard;

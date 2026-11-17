@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 import type { Feedback, Project } from '../types/feedback';
-import { obtainAllFeedback } from '../service/ObtainFeedback';
+import { obtainAllFeedback, obtainFeedbackPage } from '../service/ObtainFeedback';
 
 import { useAuthStore } from '../store/authStore';
 import { formatDate, getInitials, truncateText, MAX_NAME_LEN, MAX_SOURCE_LEN, MAX_BODY_LEN, MAX_SOURCE_TITLE_LEN, MAX_COMMENT_LEN } from '../utils/feedbackFormat';
@@ -38,6 +38,7 @@ type EntryForm = {
 const API_URL = `${BASE_URL}/feedback`;
 
 const MAX_SCREENSHOT_BYTES = 100 * 1024 * 1024;
+const TIMELINE_FEEDBACK_LIMIT = 20;
 const ALLOWED_SCREENSHOT_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
 
 const today = () => {
@@ -98,6 +99,7 @@ function ICView({ ic, onBack }: ICViewProps) {
   const currentUserId = useAuthStore((state) => state.user?.id);
 
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
+  const [timelineFeedbacks, setTimelineFeedbacks] = useState<Feedback[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -150,8 +152,13 @@ function ICView({ ic, onBack }: ICViewProps) {
     setError('');
 
     try {
-      const data = await obtainAllFeedback();
-      setFeedbacks(data.filter((item) => item.ic_id === ic.IC_id));
+      const filters = { icId: ic.IC_id, sortBy: 'newest' as const };
+      const [data, timeline] = await Promise.all([
+        obtainAllFeedback(filters),
+        obtainFeedbackPage(1, TIMELINE_FEEDBACK_LIMIT, filters),
+      ]);
+      setFeedbacks(data);
+      setTimelineFeedbacks(timeline.data);
     } catch (err) {
       console.error('Error loading feedback:', err);
       setError('Could not load feedbacks. Please try again.');
@@ -175,10 +182,10 @@ function ICView({ ic, onBack }: ICViewProps) {
 
   const oldestFirstScores = useMemo(
     () =>
-      [...feedbacks]
-        .sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''))
+      [...timelineFeedbacks]
+        .sort((a, b) => (a.date ?? '').localeCompare(b.date ?? '') || a.id - b.id)
         .map((item) => Number(item.score)),
-    [feedbacks]
+    [timelineFeedbacks]
   );
 
   const averageScore = useMemo(() => {
@@ -379,8 +386,8 @@ function ICView({ ic, onBack }: ICViewProps) {
         throw new Error(responseText || `Request failed with status ${response.status}`);
       }
 
-      setFeedbacks((current) => current.filter((item) => item.id !== id));
       useToastStore.getState().addToast('Entry deleted successfully.', 'success');
+      await loadFeedbacks();
 
       if (editingItem?.id === id) {
         closeModal();

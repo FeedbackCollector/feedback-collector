@@ -437,7 +437,7 @@ function FeedbackLogComp() {
                         <td>
                           {item.screenshot_url ? (
                             <ScreenshotThumb url={item.screenshot_url} size="sm" />
-                          ) : '-'}
+                          ) : ''}
                         </td>
                         <td>
                           <button type="button" className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '13px', borderRadius: '6px' }} onClick={() => openICTimeline(item)}>View in Timeline</button>

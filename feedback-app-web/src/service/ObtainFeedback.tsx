@@ -12,6 +12,7 @@ export async function obtainFeedbackPage(page: number, limit: number = PAGE_LIMI
   const text = filters.text?.trim();
 
   if (icName) params.set('ic_name', icName);
+  if (filters.icId !== undefined) params.set('ic_id', String(filters.icId));
   if (filters.projectId) params.set('project_id', filters.projectId);
   if (filters.score) params.set('score', filters.score);
   if (text) params.set('text', text);
@@ -24,11 +25,16 @@ export async function obtainFeedbackPage(page: number, limit: number = PAGE_LIMI
   return response.json() as Promise<FeedbackPageResponse>;
 }
 
-export async function obtainAllFeedback(): Promise<(Feedback & { ic_id: number })[]> {
-  const firstPage = await obtainFeedbackPage(1);
+export async function obtainAllFeedback(
+  filters: Partial<FeedbackFilters> = {}
+): Promise<(Feedback & { ic_id: number })[]> {
+  const firstPage = await obtainFeedbackPage(1, PAGE_LIMIT, filters);
   const totalPages = Math.max(firstPage.pagination.totalPages, 1);
   const remainingPages = await Promise.all(
-    Array.from({ length: totalPages - 1 }, (_, index) => obtainFeedbackPage(index + 2))
+    Array.from(
+      { length: totalPages - 1 },
+      (_, index) => obtainFeedbackPage(index + 2, PAGE_LIMIT, filters)
+    )
   );
   return [firstPage, ...remainingPages]
     .flatMap((page) => page.data ?? [])
