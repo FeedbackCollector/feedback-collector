@@ -6,6 +6,7 @@ import {
   type DashboardData,
 } from '../service/ObtainDashboard';
 import { DashboardStats } from './DashboardStats';
+import { formatPersonName } from './formatPersonName';
 import { SearchBar } from './SearchBar';
 import '../styles/Dashboard.css';
 
@@ -46,6 +47,29 @@ export default function DashboardComp() {
       isCurrent = false;
     };
   }, [token]);
+
+  const searchResults = useMemo<SearchResultItem[]>(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query || !data) return [];
+
+    const matchedManagers: SearchResultItem[] = data.managers
+      .filter((manager) => manager.name?.toLowerCase().includes(query))
+      .map((manager) => ({
+        id: manager.id,
+        name: formatPersonName(manager.name),
+        role: 'Manager',
+      }));
+
+    const matchedICs: SearchResultItem[] = data.ics
+      .filter((ic) => ic.name?.toLowerCase().includes(query))
+      .map((ic) => ({
+        id: ic.IC_id,
+        name: formatPersonName(ic.name),
+        role: 'IC',
+      }));
+
+    return [...matchedManagers, ...matchedICs];
+  }, [searchQuery, data]);
 
   const areas = data?.areas ?? [];
   const selectedArea = areas.find((area) => area.id === selectedAreaId) ?? null;

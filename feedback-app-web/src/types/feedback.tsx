@@ -45,3 +45,17 @@ export type FeedbackPageResponse = {
     totalPages: number 
   };
 };
+
+export type ManagerFeedback = Omit<Feedback, 'ic_id' | 'ic_name'> & {
+  manager_id: number;
+};
+
+export type ManagerFeedbackFilters = {
+  managerId: number;
+  sortBy?: 'newest' | 'oldest';
+};
+
+export type ManagerFeedbackPageResponse = {
+  data: ManagerFeedback[];
+  pagination: FeedbackPageResponse['pagination'];
+};

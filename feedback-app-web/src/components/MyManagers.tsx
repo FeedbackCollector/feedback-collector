@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { obtainManagers, type Manager } from '../service/ObtainManagers';
 import { obtainAreas, type Area } from '../service/ObtainAreas';
 import { useAuthStore } from '../store/authStore';
@@ -9,6 +9,7 @@ import LoadingOverlay from './LoadingOverlay';
 import AutocompleteSearch from './AutocompleteSearch';
 import type { SearchSuggestion } from '../types/autoComplete';
 import { normalizeSearchText } from '../utils/search';
+import { formatPersonName } from './formatPersonName';
 
 type ViewMode = 'cards' | 'list';
 
@@ -43,6 +44,7 @@ function getScoreColor(score: number | null): string {
 
 export default function MyManagementComp() {
   const token = useAuthStore((state) => state.token);
+  const navigate = useNavigate();
   const [managers, setManagers] = useState<Manager[]>([]);
   const [areas, setAreas] = useState<Area[]>([]);
   const [totalICs, setTotalICs] = useState<number | null>(null);
@@ -170,6 +172,10 @@ export default function MyManagementComp() {
     setSearchParams(next > 1 ? { page: String(next) } : {});
   }
 
+  function openManagerTimeline(manager: Manager) {
+    navigate(`/my-management/${manager.id}`);
+  }
+
   function handleSearchChange(value: string) {
     setSearch(value);
     if (searchParams.has('page')) setSearchParams({}, { replace: true });
@@ -185,10 +191,11 @@ export default function MyManagementComp() {
       const areaName = manager.area_id === null
         ? 'No area assigned'
         : areaNamesById.get(manager.area_id) ?? `Area ${manager.area_id}`;
+      const displayName = formatPersonName(manager.name);
       return {
         id: String(manager.id),
-        label: manager.name,
-        value: manager.name,
+        label: displayName,
+        value: displayName,
         searchText: areaName,
         detail: areaName,
       };
@@ -284,7 +291,7 @@ export default function MyManagementComp() {
 
                 return (
                   <div className="my-management-comparison-row" key={manager.id}>
-                    <span className="my-management-comparison-name">{manager.name}</span>
+                    <span className="my-management-comparison-name">{formatPersonName(manager.name)}</span>
                     <span className="my-management-score-track">
                       <span
                         className="my-management-score-bar"
@@ -306,7 +313,20 @@ export default function MyManagementComp() {
             {viewMode === 'cards' ? (
               <div className="my-management-manager-grid" ref={viewContainerRef}>
                 {pagedManagers.map((manager) => (
-                  <article className="my-management-manager-card" key={manager.id}>
+                  <article
+                    className="my-management-manager-card is-clickable"
+                    key={manager.id}
+                    role="link"
+                    tabIndex={0}
+                    aria-label={`Open feedback about ${manager.name}`}
+                    onClick={() => openManagerTimeline(manager)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        openManagerTimeline(manager);
+                      }
+                    }}
+                  >
                     <UserAvatar
                       name={manager.name}
                       id={manager.id}
@@ -315,7 +335,7 @@ export default function MyManagementComp() {
                       className="team-metric-avatar"
                     />
                     <div className="my-management-manager-info">
-                      <h3>{manager.name}</h3>
+                      <h3>{formatPersonName(manager.name)}</h3>
                       <p className="my-management-area">
                         {getAreaName(manager.area_id)}
                       </p>
@@ -349,8 +369,17 @@ export default function MyManagementComp() {
                   </thead>
                   <tbody>
                     {pagedManagers.map((manager) => (
-                      <tr key={manager.id}>
-                        <td>{manager.name}</td>
+                                           <tr
+                        key={manager.id}
+                        className="is-clickable"
+                        tabIndex={0}
+                        onClick={() => openManagerTimeline(manager)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter') openManagerTimeline(manager);
+                        }}
+                      >
+                        <td className="my-management-link-cell">{formatPersonName(manager.name)}</td>
+
                         <td>{getAreaName(manager.area_id)}</td>
                         <td>
                           {manager.averageScore === null
