@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { DashboardData } from '../service/ObtainDashboard';
+import { formatPersonName } from './formatPersonName';
 
 interface SearchResultItem {
   id: number;
@@ -25,7 +26,7 @@ export function SearchBar({ data }: SearchBarProps) {
       .filter((manager) => manager.name?.toLowerCase().includes(query))
       .map((manager) => ({
         id: manager.id,
-        name: manager.name,
+        name: formatPersonName(manager.name),
         role: 'Manager',
       }));
 
@@ -33,7 +34,7 @@ export function SearchBar({ data }: SearchBarProps) {
       .filter((ic) => ic.name?.toLowerCase().includes(query))
       .map((ic) => ({
         id: ic.IC_id,
-        name: ic.name,
+        name: formatPersonName(ic.name),
         role: 'IC',
       }));
 
