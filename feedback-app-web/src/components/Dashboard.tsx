@@ -84,7 +84,7 @@ export default function DashboardComp() {
     [data, selectedArea?.id]
   );
 
-  const show = (value: string) => (loading ? '…' : error || !calculated ? '—' : value);
+  const show = (value: string) => (loading ? '…' : error || !calculated ? '0' : value);
   const metrics = [
     ...(selectedArea === null
       ? [{ label: 'Areas', value: show(String(areas.length)), detail: 'Total areas' }]
@@ -101,7 +101,7 @@ export default function DashboardComp() {
     },
     {
       label: 'Average Score',
-      value: show(calculated?.averageScore == null ? '—' : calculated.averageScore.toFixed(1)),
+      value: show(calculated?.averageScore == null ? '0' : calculated.averageScore.toFixed(1)),
       detail: 'Out of 5',
     },
     {
