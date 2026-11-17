@@ -80,6 +80,7 @@ export async function insertFeedback(feedbackData: NewFeedback): Promise<Feedbac
         project_id: feedbackData.project_id,
         date: feedbackData.date,
         source_name: feedbackData.source_name,
+        source_title: feedbackData.source_title ?? null,
         score: feedbackData.score,
         comment: feedbackData.comment,
         screenshot_url: feedbackData.screenshot_url
@@ -98,6 +99,7 @@ export async function putFeedback(feedbackData: NewFeedback, feedbackId: number)
             project_id: feedbackData.project_id,
             date: feedbackData.date,
             source_name: feedbackData.source_name,
+            source_title: feedbackData.source_title ?? null,
             score: feedbackData.score,
             comment: feedbackData.comment,
             screenshot_url: feedbackData.screenshot_url
@@ -124,6 +126,7 @@ export async function patchFeedback(feedbackData: UpdateFeedback, feedbackId: nu
     if (feedbackData.project_id !== undefined) updates.project_id = feedbackData.project_id;
     if (feedbackData.date !== undefined) updates.date = feedbackData.date;
     if (feedbackData.source_name !== undefined) updates.source_name = feedbackData.source_name;
+    if (feedbackData.source_title !== undefined) updates.source_title = feedbackData.source_title;
     if (feedbackData.score !== undefined) updates.score = feedbackData.score;
     if (feedbackData.comment !== undefined) updates.comment = feedbackData.comment;
     if (feedbackData.screenshot_url !== undefined) updates.screenshot_url = feedbackData.screenshot_url;
