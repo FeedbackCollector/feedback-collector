@@ -55,6 +55,7 @@ export async function register(req: Request, res: Response) {
 export async function login(req: Request, res: Response) {
     const result = await loginService(req.body.email, req.body.password);
     if (result === "INVALID_CREDENTIALS") return res.status(400).json({ message: "Invalid credentials" });
+    if (result === "ACCOUNT_NOT_APPROVED") return res.status(403).json({ message: "you aren't approved" });
     res.json({ token: result });
 }
 
