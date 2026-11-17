@@ -1,7 +1,7 @@
 import { fn, col, where } from "sequelize";
 import { User as UserModel, ICs as ICModel, Feedback as FeedbackModel } from "../models/Index.ts";
 import { sequelize } from "../db/connection.ts";
-import { AccountStatus, User, UpdateUser, UserFilters } from "../types/user.ts";
+import { AccountStatus, User, UpdateUser, UserFilters, UsersPage } from "../types/user.ts";
 
 export async function getUserByEmail(email: string) {
     const row = await UserModel.findOne({ where: where(fn("lower", col("email")), email.trim().toLowerCase()) });
@@ -20,6 +20,21 @@ export async function getAllUsers(filters: UserFilters = {}): Promise<User[]> {
         order: [["id", "ASC"]],
     });
     return rows.map(row => row.toJSON());
+}
+
+export async function getUsersPage(filters: UserFilters, page: number, limit: number): Promise<UsersPage> {
+    const result = await UserModel.findAndCountAll({
+        where: filters.role ? { role: filters.role } : {},
+        attributes: { exclude: ["passwordHash"] },
+        order: [["id", "ASC"]],
+        limit,
+        offset: (page - 1) * limit,
+    });
+
+    return {
+        data: result.rows.map(row => row.toJSON()),
+        pagination: { page, limit, total: result.count, totalPages: Math.ceil(result.count / limit) },
+    };
 }
 
 export async function insertUser(

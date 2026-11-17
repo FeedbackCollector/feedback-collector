@@ -3,7 +3,7 @@ import { getAllUsersService, getUserByIdService, createUserService, updateUserSe
 
 export async function getAll(req: Request, res: Response) {
     const result = await getAllUsersService(res.locals.query, res.locals.user);
-    return res.json({ data: result });
+    return res.json(Array.isArray(result) ? { data: result } : result);
 }
 
 export async function getById(req: Request, res: Response) {

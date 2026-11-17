@@ -3,15 +3,28 @@ import { signToken } from '../utils/token.ts';
 import * as UsersRepository from '../repositories/user.repositories.ts';
 import { getAreaByID } from '../repositories/area.repository.ts';
 import { sendPendingApprovalEmail, sendAccountApprovedEmail } from './mail.service.ts';
-import { AccountStatus, User, CreateUser, UpdateUser, UserFilters } from '../types/user.ts';
+import { AccountStatus, User, CreateUser, UpdateUser, UserFilters, UsersPage } from '../types/user.ts';
 
 // Directors list every user; a manager only gets their own record.
-export async function getAllUsersService(filters: UserFilters, requester: { id: number; role: string }) {
-    if (requester.role === 'director') return UsersRepository.getAllUsers(filters);
+// Without `page`/`limit` the full list is returned (legacy behaviour); with either one the result is paginated.
+export async function getAllUsersService(filters: UserFilters, requester: { id: number; role: string }): Promise<User[] | UsersPage> {
+    const paginated = filters.page !== undefined || filters.limit !== undefined;
+    const page = filters.page ?? 1;
+    const limit = filters.limit ?? 10;
+
+    if (requester.role === 'director') {
+        return paginated ? UsersRepository.getUsersPage(filters, page, limit) : UsersRepository.getAllUsers(filters);
+    }
 
     const self = await UsersRepository.getPublicUserByID(requester.id);
-    if (!self || (filters.role && self.role !== filters.role)) return [];
-    return [self];
+    const visible = self && !(filters.role && self.role !== filters.role) ? [self] : [];
+    if (!paginated) return visible;
+
+    const total = visible.length;
+    return {
+        data: visible.slice((page - 1) * limit, page * limit),
+        pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+    };
 }
 
 export async function getUserByIdService(id: number): Promise<User | "USER_NOT_FOUND"> {
