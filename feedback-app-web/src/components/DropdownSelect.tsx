@@ -32,15 +32,37 @@ export default function DropdownSelect({
   const selectedOption = options.find((opt) => opt.value === value);
 
   useLayoutEffect(() => {
-    if (isOpen && triggerRef.current) {
-      const rect = triggerRef.current.getBoundingClientRect();
-      setMenuStyle({
-        top: `${rect.bottom + 6}px`,
-        left: `${rect.left}px`,
-        width: `${rect.width}px`,
-      });
-    }
-  }, [isOpen]);
+  if (!isOpen || !triggerRef.current || !menuRef.current) return;
+
+  const triggerRect = triggerRef.current.getBoundingClientRect();
+  const menu = menuRef.current;
+  const gap = 6;
+  const maxMenuHeight = 240;
+  const desiredHeight = Math.min(menu.scrollHeight, maxMenuHeight);
+
+  const spaceBelow = Math.max(
+    0,
+    window.innerHeight - triggerRect.bottom - gap
+  );
+  const spaceAbove = Math.max(0, triggerRect.top - gap);
+
+  const openAbove =
+    spaceBelow < desiredHeight && spaceAbove > spaceBelow;
+
+  const availableSpace = openAbove ? spaceAbove : spaceBelow;
+  const menuHeight = Math.min(desiredHeight, availableSpace);
+
+  setMenuStyle({
+    top: `${
+      openAbove
+        ? triggerRect.top - gap - menuHeight
+        : triggerRect.bottom + gap
+    }px`,
+    left: `${triggerRect.left}px`,
+    width: `${triggerRect.width}px`,
+    maxHeight: `${availableSpace}px`,
+  });
+}, [isOpen, options.length]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

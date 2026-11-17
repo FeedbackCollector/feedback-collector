@@ -6,7 +6,7 @@ import { UserAvatar } from '../components/UserAvatar';
 import { useToastStore } from '../store/toastStore';
 import LoadingOverlay from './LoadingOverlay';
 import '../styles/ShowICs.css';
-import { ICsMetricsRow, ICsComparisonCard } from './DashboardStats';
+import { ICsMetricsRow, ICsComparisonCard } from './FeedbackDashboard';
 import ICView from './IcView';
 import AutocompleteSearch from './AutocompleteSearch';
 import type { SearchSuggestion } from '../types/autoComplete';
