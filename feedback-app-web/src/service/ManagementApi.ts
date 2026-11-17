@@ -45,7 +45,8 @@ async function getList<T>(path: string, token: string): Promise<T[]> {
 }
 
 async function getAllPages<T>(path: string, token: string): Promise<T[]> {
-  const firstPage = await request<ListResponse<T>>(`${path}?page=1&limit=100`, token);
+  const separator = path.includes('?') ? '&' : '?';
+  const firstPage = await request<ListResponse<T>>(`${path}${separator}page=1&limit=100`, token);
   const totalPages = firstPage.pagination?.totalPages;
 
   if (
@@ -58,7 +59,7 @@ async function getAllPages<T>(path: string, token: string): Promise<T[]> {
 
   const pages = await Promise.all(
     Array.from({ length: Math.max(0, totalPages - 1) }, (_, index) =>
-      request<ListResponse<T>>(`${path}?page=${index + 2}&limit=100`, token)
+      request<ListResponse<T>>(`${path}${separator}page=${index + 2}&limit=100`, token)
     )
   )
 
@@ -80,7 +81,7 @@ export async function loadManagementData(
   if (tab === 'Areas') {
     const [areas, managerAccounts, ics] = await Promise.all([
       getList<APIArea>('/areas', token),
-      getList<APIUser>(withQuery('/users', 'role=manager'), token),
+      getAllPages<APIUser>(withQuery('/users', 'role=manager'), token),
       getAllPages<APIC>('/ics', token),
     ]);
     const managers = managerAccounts.filter((manager) => manager.status !== 'pending');
@@ -121,7 +122,7 @@ export async function loadManagementData(
   if (tab === 'Managers') {
     const [areas, managerAccounts, ics, feedback, projects] = await Promise.all([
       getList<APIArea>('/areas', token),
-      getList<APIUser>(withQuery('/users', 'role=manager'), token),
+      getAllPages<APIUser>(withQuery('/users', 'role=manager'), token),
       getAllPages<APIC>('/ics', token),
       getAllPages<APIFeedback>('/feedback', token),
       getList<APIProject>('/projects', token),
@@ -199,7 +200,7 @@ export async function loadManagementData(
   if (tab === 'ICs') {
     const [areas, managerAccounts, ics] = await Promise.all([
       getList<APIArea>('/areas', token),
-      getList<APIUser>(withQuery('/users', 'role=manager'), token),
+      getAllPages<APIUser>(withQuery('/users', 'role=manager'), token),
       getAllPages<APIC>('/ics', token),
     ]);
     const managers = managerAccounts.filter((manager) => manager.status !== 'pending');

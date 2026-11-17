@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { obtainManagers, type Manager } from '../service/ObtainManagers';
 import { obtainAreas, type Area } from '../service/ObtainAreas';
 import { useAuthStore } from '../store/authStore';
@@ -10,6 +11,10 @@ import type { SearchSuggestion } from '../types/autoComplete';
 import { normalizeSearchText } from '../utils/search';
 
 type ViewMode = 'cards' | 'list';
+
+const PAGE_SIZE = 10;
+const arrowForward = <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" height="10px" width="10px" fill="#1f1f1f"><path d="M8.03,22L6.25,20.23L14.48,12L6.25,3.77L8.03,2l10,10l-10,10Z"/></svg>;
+const arrowBack = <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" height="10px" width="10px" fill="#1f1f1f"><path d="M10,22L0,12L10,2l1.78,1.77L3.55,12l8.23,8.23L10,22Z"/></svg>;
 
 function getBadgeColor(score: number) {
   if (score < 2) return '#d31c37';
@@ -152,6 +157,29 @@ export default function MyManagementComp() {
         .includes(query)
     );
   }, [areaNamesById, managers, search]);
+
+  const [searchParams, setSearchParams] = useSearchParams();
+  const pageParam = Number(searchParams.get('page'));
+  const requestedPage = Number.isInteger(pageParam) && pageParam > 0 ? pageParam : 1;
+  const totalPages = Math.max(Math.ceil(visibleManagers.length / PAGE_SIZE), 1);
+  const page = Math.min(requestedPage, totalPages);
+  const pagedManagers = visibleManagers.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  function goToPage(next: number) {
+    if (loading || next < 1 || next > totalPages || next === page) return;
+    setSearchParams(next > 1 ? { page: String(next) } : {});
+  }
+
+  function handleSearchChange(value: string) {
+    setSearch(value);
+    if (searchParams.has('page')) setSearchParams({}, { replace: true });
+  }
+
+  useEffect(() => {
+    if (loading || requestedPage <= totalPages) return;
+    setSearchParams(totalPages > 1 ? { page: String(totalPages) } : {}, { replace: true });
+  }, [loading, requestedPage, totalPages, setSearchParams]);
+
   const searchSuggestions = useMemo<SearchSuggestion[]>(
     () => managers.map((manager) => {
       const areaName = manager.area_id === null
@@ -207,7 +235,7 @@ export default function MyManagementComp() {
             placeholder="Search Managers..."
             value={search}
             suggestions={searchSuggestions}
-            onChange={setSearch}
+            onChange={handleSearchChange}
           />
           <div className="my-management-view-toggle" role="group" aria-label="Manager view">
             <button
@@ -250,7 +278,7 @@ export default function MyManagementComp() {
             )}
                         <section className="my-management-comparison" aria-label="Manager comparison">
               <h3>Manager Comparison</h3>
-              {visibleManagers.map((manager) => {
+              {pagedManagers.map((manager) => {
                 const score = manager.averageScore ?? null;
                 const percentage = score === null ? 0 : (score / 5) * 100;
 
@@ -277,7 +305,7 @@ export default function MyManagementComp() {
 
             {viewMode === 'cards' ? (
               <div className="my-management-manager-grid" ref={viewContainerRef}>
-                {visibleManagers.map((manager) => (
+                {pagedManagers.map((manager) => (
                   <article className="my-management-manager-card" key={manager.id}>
                     <UserAvatar
                       name={manager.name}
@@ -320,7 +348,7 @@ export default function MyManagementComp() {
                     </tr>
                   </thead>
                   <tbody>
-                    {visibleManagers.map((manager) => (
+                    {pagedManagers.map((manager) => (
                       <tr key={manager.id}>
                         <td>{manager.name}</td>
                         <td>{getAreaName(manager.area_id)}</td>
@@ -334,6 +362,33 @@ export default function MyManagementComp() {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            )}
+            {visibleManagers.length > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '16px', margin: '16px 0 20px 0' }}>
+                <button
+                  type="button"
+                  className="btn btn-icon btn-secondary"
+                  onClick={() => goToPage(page - 1)}
+                  disabled={page <= 1}
+                  aria-label="Previous page"
+                  style={{ width: '32px', height: '32px', padding: 0, borderRadius: '6px', color: 'var(--text)', background: 'var(--surface)' }}
+                >
+                  {arrowBack}
+                </button>
+                <span style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
+                  Page {page} of {totalPages}
+                </span>
+                <button
+                  type="button"
+                  className="btn btn-icon btn-secondary"
+                  onClick={() => goToPage(page + 1)}
+                  disabled={page >= totalPages}
+                  aria-label="Next page"
+                  style={{ width: '32px', height: '32px', padding: 0, borderRadius: '6px', color: 'var(--text)', background: 'var(--surface)' }}
+                >
+                  {arrowForward}
+                </button>
               </div>
             )}
           </>

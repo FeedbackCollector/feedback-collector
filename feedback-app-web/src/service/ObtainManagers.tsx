@@ -23,6 +23,9 @@ interface Feedback {
 
 interface UsersResponse {
   data?: Omit<Manager, 'icCount' | 'averageScore'>[];
+  pagination?: {
+    totalPages?: number;
+  };
 }
 
 interface ICsResponse {
@@ -42,6 +45,26 @@ async function fetchJSON<T>(url: string, init?: RequestInit): Promise<T> {
     throw new Error(`Request failed (${response.status}): ${url}`);
   }
   return response.json() as Promise<T>;
+}
+
+async function obtainAllUsers(): Promise<NonNullable<UsersResponse['data']>> {
+  const limit = 100;
+  const firstPage = await fetchJSON<UsersResponse>(`${API_URL}/users?page=1&limit=${limit}`, { headers: authHeaders() });
+  const totalPages = firstPage.pagination?.totalPages;
+  if (!Array.isArray(firstPage.data) || totalPages === undefined || !Number.isInteger(totalPages)) {
+    throw new Error('The users response has an invalid format.');
+  }
+
+  const remainingPages = await Promise.all(
+    Array.from({ length: Math.max(0, totalPages - 1) }, (_, index) =>
+      fetchJSON<UsersResponse>(`${API_URL}/users?page=${index + 2}&limit=${limit}`, { headers: authHeaders() })
+    )
+  );
+  if (remainingPages.some((page) => !Array.isArray(page.data))) {
+    throw new Error('The users response has an invalid format.');
+  }
+
+  return [...firstPage.data, ...remainingPages.flatMap((page) => page.data ?? [])];
 }
 
 async function obtainAllICs(token: string): Promise<IC[]> {
@@ -79,13 +102,13 @@ export async function obtainManagers(token: string | null): Promise<{
     throw new Error('No hay una sesión activa. Iniciá sesión y volvé a abrir My Managers.');
   }
 
-  const [usersResponse, ics, feedbackResponse] = await Promise.all([
-    fetchJSON<UsersResponse>(`${API_URL}/users`, { headers: authHeaders() }),
+  const [users, ics, feedbackResponse] = await Promise.all([
+    obtainAllUsers(),
     obtainAllICs(token),
     fetchJSON<FeedbackResponse>(`${API_URL}/feedback?limit=100`, { headers: authHeaders() }),
   ]);
 
-  if (!Array.isArray(usersResponse.data) || !Array.isArray(feedbackResponse.data)) {
+  if (!Array.isArray(feedbackResponse.data)) {
     throw new Error('The users or feedback response has an invalid format.');
   }
 
@@ -108,7 +131,7 @@ export async function obtainManagers(token: string | null): Promise<{
     managerScores.set(ic.manager_id, scores);
   }
 
-  const managers = usersResponse.data
+  const managers = users
     .filter((user) => user.role.toLowerCase() === 'manager')
     .map((manager) => {
       const scores = managerScores.get(manager.id) ?? [];
