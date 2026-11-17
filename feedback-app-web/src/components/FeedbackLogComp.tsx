@@ -13,6 +13,7 @@ import '../styles/index.css'
 import { obtainAllICs } from '../service/ObtainICs';
 import { useAuthStore } from '../store/authStore';
 import LoadingOverlay from './LoadingOverlay';
+import { formatPersonName } from './formatPersonName';
 
 const SEARCH_DEBOUNCE_MS = 300;
 const PAGE_SIZE = 10;
@@ -251,8 +252,8 @@ function FeedbackLogComp() {
 
   const searchSuggestions = ics.map<SearchSuggestion>((ic) => ({
     id: String(ic.IC_id),
-    label: ic.name,
-    value: ic.name,
+    label: formatPersonName(ic.name),
+    value: formatPersonName(ic.name),
   }));
 
   function openICTimeline(item: Feedback) {
@@ -422,7 +423,7 @@ function FeedbackLogComp() {
                         <td className="text-caption-default" style={{ color: 'var(--text-muted)' }}>{item.date}</td>
                         <td>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                            <span className="fl-truncate" style={{ fontWeight: 600 }} title={item.ic_name ?? undefined}>{truncateText(item.ic_name, MAX_NAME_LEN) || '-'}</span>
+                            <span style={{ fontWeight: 600 }}>{formatPersonName(item.ic_name)}</span>
                             {item.source_name.toLowerCase().includes('peer') && <span className="badge-shared" style={{ width: 'fit-content' }}>Shared</span>}
                           </div>
                         </td>
@@ -460,7 +461,12 @@ function FeedbackLogComp() {
 
                       <div className="feedback-card-meta">
                         <div className="feedback-card-name-row">
-                          <h4 className="feedback-card-name feedback-card-clip" title={item.ic_name ?? undefined}>{truncateText(item.ic_name, MAX_NAME_LEN) || '-'}</h4>
+                          <h4
+                            className="feedback-card-name feedback-card-clip"
+                            title={item.ic_name ?? undefined}
+                          >
+                            {truncateText(formatPersonName(item.ic_name), MAX_NAME_LEN) || '-'}
+                          </h4>
                           {(item.source_name.toLowerCase().includes('peer') || item.id === 3) && (
                             <span className="badge-shared">Shared</span>
                           )}

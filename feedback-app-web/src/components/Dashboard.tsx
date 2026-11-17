@@ -6,6 +6,7 @@ import {
   type DashboardData,
 } from '../service/ObtainDashboard';
 import { DashboardStats } from './DashboardStats';
+import { formatPersonName } from './formatPersonName';
 import '../styles/Dashboard.css';
 
 interface SearchResultItem {
@@ -62,7 +63,7 @@ export default function DashboardComp() {
       .filter((manager) => manager.name?.toLowerCase().includes(query))
       .map((manager) => ({
         id: manager.id,
-        name: manager.name,
+        name: formatPersonName(manager.name),
         role: 'Manager',
       }));
 
@@ -70,7 +71,7 @@ export default function DashboardComp() {
       .filter((ic) => ic.name?.toLowerCase().includes(query))
       .map((ic) => ({
         id: ic.IC_id,
-        name: ic.name,
+        name: formatPersonName(ic.name),
         role: 'IC',
       }));
 

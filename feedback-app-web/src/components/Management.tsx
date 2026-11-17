@@ -20,10 +20,15 @@ import { normalizeSearchText } from '../utils/search';
 import '../styles/Management.css';
 import {useToastStore} from '../store/toastStore';
 import LoadingOverlay from './LoadingOverlay';
+import { formatPersonName } from './formatPersonName';
 
 type ViewMode = 'table' | 'cards';
 
 const TABS: ManagementTab[] = ['Areas', 'Managers', 'ICs', 'Projects'];
+
+function formatManagementName(name: string, tab: ManagementTab): string {
+  return tab === 'Managers' || tab === 'ICs' ? formatPersonName(name) : name;
+}
 
 const COLUMNS: Record<ManagementTab, { label: string; key: keyof ManagementRow }[]> = {
   Areas: [
@@ -292,7 +297,8 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
   };
 
   const deleteRow = async (row: ManagementRow) => {
-    if (!token || !window.confirm(`Delete ${row.name}?`)) return;
+    const displayName = formatManagementName(row.name, activeTab);
+    if (!token || !window.confirm(`Delete ${displayName}?`)) return;
 
     setIsMutating(true);
     setError(null);
@@ -328,7 +334,7 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
   };
 
   const deletePendingAccount = async (account: PendingAccount) => {
-    if (!token || !window.confirm(`Delete the account request for ${account.name}?`)) return;
+    if (!token || !window.confirm(`Delete the account request for ${formatPersonName(account.name)}?`)) return;
 
     setIsMutating(true);
     setError(null);
@@ -431,6 +437,9 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
 
   const renderCell = (row: ManagementRow, key: keyof ManagementRow) => {
     const value = row[key];
+    if (key === 'name' && typeof value === 'string') {
+      return formatManagementName(value, activeTab);
+    }
     if (key === 'averageScore' && typeof value === 'number') {
       const rounded = Math.round(value);
       const scoreClass = rounded >= 4 ? 'management-score-high' : 'management-score-low';
@@ -577,7 +586,7 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
                       <tbody>
                         {pendingAccounts.map((account) => (
                           <tr key={account.id}>
-                            <td data-label="Name">{account.name}</td>
+                            <td data-label="Name">{formatPersonName(account.name)}</td>
                             <td data-label="Email">{account.email}</td>
                             <td data-label="Area">
                               {areas.find((area) => area.id === account.areaId)?.name ?? '—'}
@@ -595,7 +604,7 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
                     {pendingAccounts.map((account) => (
                       <article className="management-card" key={account.id}>
                         <div className="management-card-heading">
-                          <h2>{account.name}</h2>
+                          <h2>{formatPersonName(account.name)}</h2>
                         </div>
                         <dl>
                           <div className="management-card-detail">
@@ -632,7 +641,7 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
                         {activeTab === 'Managers' && key === 'area' ? (
                           <select
                             className="management-area-select"
-                            aria-label={`Area for ${row.name}`}
+                            aria-label={`Area for ${formatManagementName(row.name, activeTab)}`}
                             value={row.areaId ?? ''}
                             disabled={isMutating || areas.length === 0}
                             onChange={(event) => void changeManagerArea(row, Number(event.target.value))}
@@ -650,7 +659,7 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
                         <button
                           type="button"
                           className="management-row-action"
-                          aria-label={`Assign ICs to ${row.name}`}
+                          aria-label={`Assign ICs to ${formatManagementName(row.name, activeTab)}`}
                           title="Assign ICs"
                           onClick={() => openAssignDialog(row)}
                           disabled={isMutating}
@@ -662,7 +671,7 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
                         <button
                           type="button"
                           className="management-row-action"
-                          aria-label={`View feedback for ${row.name}`}
+                          aria-label={`View feedback for ${formatManagementName(row.name, activeTab)}`}
                           title="View feedback"
                           onClick={() => setFeedbackManager(row)}
                           disabled={isMutating}
@@ -673,7 +682,7 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
                       <button
                         type="button"
                         className="management-row-action"
-                        aria-label={`Edit ${row.name}`}
+                        aria-label={`Edit ${formatManagementName(row.name, activeTab)}`}
                         onClick={() => openEditDialog(row)}
                         disabled={isMutating}
                       >
@@ -682,7 +691,7 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
                       <button
                         type="button"
                         className="management-row-action"
-                        aria-label={`Delete ${row.name}`}
+                        aria-label={`Delete ${formatManagementName(row.name, activeTab)}`}
                         onClick={() => void deleteRow(row)}
                         disabled={isMutating}
                       >
@@ -699,13 +708,13 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
             {visibleRows.map((row) => (
               <article className="management-card" key={row.id}>
                 <div className="management-card-heading">
-                  <h2>{row.name}</h2>
+                  <h2>{formatManagementName(row.name, activeTab)}</h2>
                   <div className="management-card-actions">
                     {activeTab === 'Managers' && (
                       <button
                         type="button"
                         className="management-row-action"
-                        aria-label={`Assign ICs to ${row.name}`}
+                        aria-label={`Assign ICs to ${formatManagementName(row.name, activeTab)}`}
                         title="Assign ICs"
                         onClick={() => openAssignDialog(row)}
                         disabled={isMutating}
@@ -716,7 +725,7 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
                     <button
                       type="button"
                       className="management-row-action"
-                      aria-label={`Edit ${row.name}`}
+                      aria-label={`Edit ${formatManagementName(row.name, activeTab)}`}
                       onClick={() => openEditDialog(row)}
                       disabled={isMutating}
                     >
@@ -725,7 +734,7 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
                     <button
                       type="button"
                       className="management-row-action"
-                      aria-label={`Delete ${row.name}`}
+                      aria-label={`Delete ${formatManagementName(row.name, activeTab)}`}
                       onClick={() => void deleteRow(row)}
                       disabled={isMutating}
                     >
@@ -798,13 +807,13 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
               aria-modal="true"
               aria-labelledby="manager-feedback-title"
             >
-              <h2 id="manager-feedback-title">{feedbackManager.name} — Feedback</h2>
+              <h2 id="manager-feedback-title">{formatPersonName(feedbackManager.name)} — Feedback</h2>
               {feedbackManager.feedbackEntries?.length ? (
                 <div className="management-feedback-list">
                   {feedbackManager.feedbackEntries.map((entry) => (
                     <article className="management-feedback-entry" key={entry.id}>
                       <div className="management-feedback-entry-heading">
-                        <strong>{entry.icName}</strong>
+                        <strong>{formatPersonName(entry.icName)}</strong>
                         <span className={`management-score ${entry.score >= 4 ? 'management-score-high' : 'management-score-low'}`}>
                           {entry.score}
                         </span>
@@ -842,7 +851,7 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
               aria-modal="true"
               aria-labelledby="manager-assignment-title"
             >
-              <h2 id="manager-assignment-title">Assign ICs to {assigningManager.name}</h2>
+              <h2 id="manager-assignment-title">Assign ICs to {formatPersonName(assigningManager.name)}</h2>
               <input
                 type="search"
                 className="management-assignment-search"
@@ -876,7 +885,7 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
                         }}
                       >
                         <span className="management-assignment-option-info">
-                          <strong>{ic.name}</strong>
+                          <strong>{formatPersonName(ic.name)}</strong>
                           <small>{ic.title}</small>
                         </span>
                         <span className="management-assignment-status">
@@ -885,7 +894,7 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
                             : isSelected
                               ? 'Selected'
                               : ic.managerName
-                                ? `Move from ${ic.managerName}`
+                                ? `Move from ${formatPersonName(ic.managerName)}`
                                 : 'Assign'}
                         </span>
                       </button>
@@ -1001,7 +1010,7 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
                 >
                   <option value="" disabled>Select a manager</option>
                   {managers.map((manager) => (
-                    <option key={manager.id} value={manager.id}>{manager.name}</option>
+                    <option key={manager.id} value={manager.id}>{formatPersonName(manager.name)}</option>
                   ))}
                 </select>
                 {managers.length === 0 && <p className="management-form-hint">Create a manager before adding an IC.</p>}

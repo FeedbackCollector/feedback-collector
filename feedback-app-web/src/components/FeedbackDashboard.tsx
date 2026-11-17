@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import '../styles/FeedbackDashboardMyIcs.css';
+import { formatPersonName } from './formatPersonName';
 
 interface MetricCardProps {
   title: string;
@@ -46,7 +47,7 @@ const ICComparisonRow: React.FC<ICData & { animate: boolean }> = ({
 
   return (
     <div className="comparisonRow">
-      <div className="icName">{name}</div>
+      <div className="icName">{formatPersonName(name)}</div>
       <div className="progressTrack">
         <div
           className="progressBar"

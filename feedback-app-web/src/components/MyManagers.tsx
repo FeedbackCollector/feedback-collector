@@ -9,6 +9,7 @@ import LoadingOverlay from './LoadingOverlay';
 import AutocompleteSearch from './AutocompleteSearch';
 import type { SearchSuggestion } from '../types/autoComplete';
 import { normalizeSearchText } from '../utils/search';
+import { formatPersonName } from './formatPersonName';
 
 type ViewMode = 'cards' | 'list';
 
@@ -185,10 +186,11 @@ export default function MyManagementComp() {
       const areaName = manager.area_id === null
         ? 'No area assigned'
         : areaNamesById.get(manager.area_id) ?? `Area ${manager.area_id}`;
+      const displayName = formatPersonName(manager.name);
       return {
         id: String(manager.id),
-        label: manager.name,
-        value: manager.name,
+        label: displayName,
+        value: displayName,
         searchText: areaName,
         detail: areaName,
       };
@@ -284,7 +286,7 @@ export default function MyManagementComp() {
 
                 return (
                   <div className="my-management-comparison-row" key={manager.id}>
-                    <span className="my-management-comparison-name">{manager.name}</span>
+                    <span className="my-management-comparison-name">{formatPersonName(manager.name)}</span>
                     <span className="my-management-score-track">
                       <span
                         className="my-management-score-bar"
@@ -315,7 +317,7 @@ export default function MyManagementComp() {
                       className="team-metric-avatar"
                     />
                     <div className="my-management-manager-info">
-                      <h3>{manager.name}</h3>
+                      <h3>{formatPersonName(manager.name)}</h3>
                       <p className="my-management-area">
                         {getAreaName(manager.area_id)}
                       </p>
@@ -350,7 +352,7 @@ export default function MyManagementComp() {
                   <tbody>
                     {pagedManagers.map((manager) => (
                       <tr key={manager.id}>
-                        <td>{manager.name}</td>
+                        <td>{formatPersonName(manager.name)}</td>
                         <td>{getAreaName(manager.area_id)}</td>
                         <td>
                           {manager.averageScore === null
