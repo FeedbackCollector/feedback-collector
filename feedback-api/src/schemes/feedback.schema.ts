@@ -16,10 +16,10 @@ const dateOnly = Joi.string()
         "any.invalid": '"date" is not a valid date',
     });
 
-const sourceName = Joi.string().trim().min(1).max(200);
-const sourceTitle = Joi.string().trim().max(200).allow(null, "");
+const sourceName = Joi.string().trim().min(1).max(40);
+const sourceTitle = Joi.string().trim().min(1).max(40);
 const score = Joi.number().integer().min(1).max(5);
-const comment = Joi.string().trim().max(5000).allow(null);
+const comment = Joi.string().trim().max(300).allow(null);
 const screenshotUrl = Joi.alternatives()
     .try(
         Joi.string().trim().uri({ scheme: ["http", "https"] }).max(500),
@@ -33,7 +33,7 @@ export const createFeedbackScheme = Joi.object({
     project_id: id.required(),
     date: dateOnly.required(),
     source_name: sourceName.required(),
-    source_title: sourceTitle.default(null),
+    source_title: sourceTitle.required(),
     score: score.required(),
     comment: comment.default(null),
     screenshot_url: screenshotUrl.default(null),

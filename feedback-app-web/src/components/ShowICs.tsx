@@ -2,9 +2,7 @@ import { useMemo, useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { obtainAllICs } from '../service/ObtainICs';
-import { obtainAllFeedback } from '../service/ObtainFeedback';
 import { ICsMetricsRow, ICsComparisonCard } from './FeedbackDashboard';
-import { UserAvatar } from '../components/UserAvatar';
 import { useToastStore } from '../store/toastStore';
 import LoadingOverlay from './LoadingOverlay';
 import '../styles/ShowICs.css';
@@ -28,7 +26,7 @@ function ObtainICs() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('cards');
-    const [animateBars, setAnimateBars] = useState(false);
+  const [animateBars, setAnimateBars] = useState(false);
 
   useEffect(() => {
     if (!loading && ics.length > 0) {
@@ -231,7 +229,7 @@ function ObtainICs() {
                 onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f3f4f6')}
                 onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'white')}
               >
-                
+
                 <div className="team-metric-info">
                   <h3>{item.name}</h3>
                   <p className="team-metric-role">{item.title}</p>
