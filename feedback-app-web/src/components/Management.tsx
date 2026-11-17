@@ -67,7 +67,7 @@ const EMPTY_FORM: ManagementFormValues = {
   entries: '0',
 };
 
-const MANAGERS_PAGE_SIZE = 10;
+const PAGE_SIZE = 10;
 const arrowForward = <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" height="10px" width="10px" fill="#1f1f1f"><path d="M8.03,22L6.25,20.23L14.48,12L6.25,3.77L8.03,2l10,10l-10,10Z"/></svg>;
 const arrowBack = <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" height="10px" width="10px" fill="#1f1f1f"><path d="M10,22L0,12L10,2l1.78,1.77L3.55,12l8.23,8.23L10,22Z"/></svg>;
 
@@ -146,12 +146,9 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const pageParam = Number(searchParams.get('page'));
   const requestedPage = Number.isInteger(pageParam) && pageParam > 0 ? pageParam : 1;
-  const isPaginated = activeTab === 'Managers';
-  const totalPages = isPaginated ? Math.max(Math.ceil(rows.length / MANAGERS_PAGE_SIZE), 1) : 1;
+  const totalPages = Math.max(Math.ceil(rows.length / PAGE_SIZE), 1);
   const page = Math.min(requestedPage, totalPages);
-  const visibleRows = isPaginated
-    ? rows.slice((page - 1) * MANAGERS_PAGE_SIZE, page * MANAGERS_PAGE_SIZE)
-    : rows;
+  const visibleRows = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   function goToPage(next: number) {
     if (loading || next < 1 || next > totalPages || next === page) return;
@@ -159,9 +156,9 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
   }
 
   useEffect(() => {
-    if (loading || !isPaginated || requestedPage <= totalPages) return;
+    if (loading || requestedPage <= totalPages) return;
     setSearchParams(totalPages > 1 ? { page: String(totalPages) } : {}, { replace: true });
-  }, [loading, isPaginated, requestedPage, totalPages, setSearchParams]);
+  }, [loading, requestedPage, totalPages, setSearchParams]);
 
   useEffect(() => {
     setShowPendingRequests(false);
@@ -762,7 +759,7 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
             ))}
           </div>
             )}
-            {isPaginated && !showPendingRequests && rows.length > 0 && (
+            {!showPendingRequests && rows.length > 0 && (
               <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '16px', margin: '16px 0 20px 0' }}>
                 <button
                   type="button"
