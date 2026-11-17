@@ -70,6 +70,14 @@ function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+type DeleteTarget = {
+  id: number;
+  name: string;
+  kind: string;
+  tab: ManagementTab;
+  isPendingRequest: boolean;
+};
+
 type ManagementCompProps = {
   activeTab: ManagementTab;
   onTabChange: (tab: ManagementTab) => void;
@@ -136,7 +144,8 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
   const [selectedICIds, setSelectedICIds] = useState<number[]>([]);
   const [feedbackManager, setFeedbackManager] = useState<ManagementRow | null>(null);
   const [formValues, setFormValues] = useState<ManagementFormValues>(EMPTY_FORM);
-  const [closingPopup, setClosingPopup] = useState<'feedback' | 'form' | null>(null);
+  const [closingPopup, setClosingPopup] = useState<'feedback' | 'form' | 'delete' | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
 
   useEffect(() => {
     setShowPendingRequests(false);
@@ -220,7 +229,7 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
       setFormValues(EMPTY_FORM);
       setError(null);
       setClosingPopup(null);
-    }, 300);
+    }, 150);
   };
 
   const closeFeedbackDialog = () => {
@@ -230,7 +239,7 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
     window.setTimeout(() => {
       setFeedbackManager(null);
       setClosingPopup(null);
-    }, 300);
+    }, 150);
   };
 
   const updateFormValue = (key: keyof ManagementFormValues, value: string) => {
@@ -269,17 +278,43 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
     }
   };
 
-  const deleteRow = async (row: ManagementRow) => {
-    if (!token || !window.confirm(`Delete ${row.name}?`)) return;
+  const requestDeleteRow = (row: ManagementRow) => {
+    setError(null);
+    setClosingPopup(null);
+    setDeleteTarget({
+      id: row.id,
+      name: row.name,
+      kind: TAB_SINGULAR[activeTab],
+      tab: activeTab,
+      isPendingRequest: false,
+    });
+  };
+
+  const closeDeleteDialog = () => {
+    if (closingPopup || isMutating) return;
+
+    setClosingPopup('delete');
+    window.setTimeout(() => {
+      setDeleteTarget(null);
+      setError(null);
+      setClosingPopup(null);
+    }, 150);
+  };
+
+  const confirmDelete = async () => {
+    if (!token || !deleteTarget) return;
 
     setIsMutating(true);
     setError(null);
     try {
-      await deleteManagementRow(activeTab, row.id, token);
+      await deleteManagementRow(deleteTarget.tab, deleteTarget.id, token);
       await refreshRows();
-      useToastStore.getState().addToast(`${TAB_SINGULAR[activeTab]} deleted successfully!`, 'success');
+      setDeleteTarget(null);
+      if (!deleteTarget.isPendingRequest) {
+        useToastStore.getState().addToast(`${deleteTarget.kind} deleted successfully!`, 'success');
+      }
     } catch (reason: unknown) {
-      console.error(`Could not delete ${activeTab.toLowerCase()}:`, reason);
+      console.error(`Could not delete ${deleteTarget.kind.toLowerCase()}:`, reason);
       setError(getErrorMessage(reason));
     } finally {
       setIsMutating(false);
@@ -305,20 +340,16 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
     }
   };
 
-  const deletePendingAccount = async (account: PendingAccount) => {
-    if (!token || !window.confirm(`Delete the account request for ${account.name}?`)) return;
-
-    setIsMutating(true);
+  const deletePendingAccount = (account: PendingAccount) => {
     setError(null);
-    try {
-      await deleteManagementRow('Managers', account.id, token);
-      await refreshRows();
-    } catch (reason: unknown) {
-      console.error('Could not delete pending account:', reason);
-      setError(getErrorMessage(reason));
-    } finally {
-      setIsMutating(false);
-    }
+    setClosingPopup(null);
+    setDeleteTarget({
+      id: account.id,
+      name: account.name,
+      kind: 'Account request',
+      tab: 'Managers',
+      isPendingRequest: true,
+    });
   };
 
   const renderPendingActions = (account: PendingAccount) => (
@@ -334,7 +365,7 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
       <button
         type="button"
         className="management-request-delete"
-        onClick={() => void deletePendingAccount(account)}
+        onClick={() => deletePendingAccount(account)}
         disabled={isMutating}
       >
         Delete
@@ -521,14 +552,14 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
           </div>
         </div>
 
-        {error && !isDialogOpen && !assigningManager && (
+        {error && !isDialogOpen && !assigningManager && !deleteTarget && (
           <p className="management-error" role="alert">
             Could not complete the request: {error}
           </p>
         )}
         {loading ? (
           <LoadingOverlay message={`Loading ${activeTab.toLowerCase()}...`} />
-        ) : error && !isDialogOpen && !assigningManager ? null : (
+        ) : error && !isDialogOpen && !assigningManager && !deleteTarget ? null : (
           <>
             {activeTab === 'Managers' && showPendingRequests ? (
               <section
@@ -661,7 +692,7 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
                         type="button"
                         className="management-row-action"
                         aria-label={`Delete ${row.name}`}
-                        onClick={() => void deleteRow(row)}
+                        onClick={() => requestDeleteRow(row)}
                         disabled={isMutating}
                       >
                         <i className="fa-regular fa-trash-can" aria-hidden="true" />
@@ -704,7 +735,7 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
                       type="button"
                       className="management-row-action"
                       aria-label={`Delete ${row.name}`}
-                      onClick={() => void deleteRow(row)}
+                      onClick={() => requestDeleteRow(row)}
                       disabled={isMutating}
                     >
                       <i className="fa-regular fa-trash-can" aria-hidden="true" />
@@ -973,6 +1004,48 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {deleteTarget && (
+        <div
+          className={`management-dialog-backdrop${closingPopup === 'delete' ? ' is-closing' : ''}`}
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) closeDeleteDialog();
+          }}
+        >
+          <section
+            className="management-dialog management-delete-dialog"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="management-delete-title"
+            aria-describedby="management-delete-description"
+          >
+            <h2 id="management-delete-title">Delete {deleteTarget.kind}</h2>
+            <p id="management-delete-description" className="management-delete-message">
+              Are you sure you want to delete <strong>{deleteTarget.name}</strong>? This action cannot be undone.
+            </p>
+            {error && <p className="management-error" role="alert">{error}</p>}
+            <div className="management-dialog-actions">
+              <button
+                type="button"
+                className="management-cancel-button"
+                onClick={closeDeleteDialog}
+                disabled={isMutating}
+                autoFocus
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="management-delete-button"
+                onClick={() => void confirmDelete()}
+                disabled={isMutating}
+              >
+                {isMutating ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </section>
         </div>
       )}
     </section>
