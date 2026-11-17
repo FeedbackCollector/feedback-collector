@@ -236,3 +236,14 @@
     display: none !important;
   }
 }
+.team-no-score {
+  display: inline-flex;
+  min-width: 82px;
+  justify-content: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #f1eafa;
+  color: #51316e;
+  font-size: 13px;
+  font-weight: 600;
+}
