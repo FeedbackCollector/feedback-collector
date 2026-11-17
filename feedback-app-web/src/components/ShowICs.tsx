@@ -28,7 +28,7 @@ function ObtainICs() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('cards');
-    const [animateBars, setAnimateBars] = useState(false);
+  const [animateBars, setAnimateBars] = useState(false);
 
   useEffect(() => {
     if (!loading && ics.length > 0) {
@@ -230,64 +230,66 @@ function ObtainICs() {
                 onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f3f4f6')}
                 onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'white')}
               >
-                
+
                 <div className="team-metric-info">
                   <h3>{item.name}</h3>
                   <p className="team-metric-role">{item.title}</p>
 
-                    <div className="team-metric-badge-row">
+                  <div className="team-metric-badge-row">
+                    {item.score === null ? (
+                      <span className="team-no-score">No data</span>
+                    ) : (
+                      <span
+                        className="team-metric-badge"
+                        style={{ backgroundColor: getBadgeColor(item.score) }}
+                      >
+                        {Math.round(item.score)}
+                      </span>
+                    )}
+                    <span className="team-metric-detail">{item.entries} entries</span>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="team-table-wrap" ref={viewContainerRef}>
+            <table className="team-table">
+              <thead>
+                <tr>
+                  <th>IC</th>
+                  <th>Title</th>
+                  <th>Score</th>
+                  <th>Entries</th>
+                </tr>
+              </thead>
+              <tbody>
+                {visibleICs.map((item) => (
+                  <tr
+                    key={item.IC_id}
+                    onClick={() => openICTimeline(item)}
+                    style={{ cursor: 'pointer', transition: 'background-color 0.2s' }}
+                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f3f4f6')}
+                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                  >
+                    <td style={{ textDecoration: 'underline' }}>{item.name}</td>
+                    <td>{item.title}</td>
+                    <td>
                       {item.score === null ? (
                         <span className="team-no-score">No data</span>
                       ) : (
-                        <span
-                          className="team-metric-badge"
-                          style={{ backgroundColor: getBadgeColor(item.score) }}
-                        >
-                          {Math.round(item.score)}
-                        </span>
+                        Math.round(item.score)
                       )}
-                      <span className="team-metric-detail">{item.entries} entries</span>
-                    </div>
-                  </div>
-                </article>
-              ))}
-            </div>
-          ) : (
-            <div className="team-table-wrap" ref={viewContainerRef}>
-              <table className="team-table">
-                <thead>
-                  <tr>
-                    <th>IC</th>
-                    <th>Title</th>
-                    <th>Score</th>
-                    <th>Entries</th>
+                    </td>
+                    <td>{item.entries}</td>
                   </tr>
-                </thead>
-                <tbody>
-                  {visibleICs.map((item) => (
-<tr
-  key={item.IC_id}
-  onClick={() => openICTimeline(item)}
-  style={{ cursor: 'pointer', transition: 'background-color 0.2s' }}
-  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f3f4f6')}
-  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
->                      <td style = {{textDecoration: "underline"}}>{item.name}</td>
-                      <td>{item.title}</td>
-                      <td>
-                        {item.score === null
-                          ? <span className="team-no-score">No data</span>
-                          : Math.round(item.score)}
-                      </td>
-                      <td>{item.entries}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
-      </div>
-    </>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+    </div>
   );
 }
 
