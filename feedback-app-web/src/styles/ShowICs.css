@@ -80,6 +80,44 @@
   gap: 16px;
 }
 
+.team-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.team-pagination button {
+  display: inline-grid;
+  width: 36px;
+  height: 34px;
+  padding: 0;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+}
+
+.team-pagination button svg {
+  display: block;
+}
+
+.team-pagination button:hover:not(:disabled) {
+  background: #f3f4f6;
+}
+
+.team-pagination button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .team-empty {
   margin: 0;
   color: var(--text-muted);

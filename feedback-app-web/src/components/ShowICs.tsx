@@ -22,11 +22,16 @@ type IC = {
 
 type ViewMode = 'cards' | 'list';
 
+const PAGE_SIZE = 15;
+const arrowForward = <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" height="10px" width="10px" fill="#1f1f1f"><path d="M8.03,22L6.25,20.23L14.48,12L6.25,3.77L8.03,2l10,10l-10,10Z"/></svg>
+const arrowBack = <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" height="10px" width="10px" fill="#1f1f1f"><path d="M15.97,22L17.75,20.23L9.52,12L17.75,3.77L15.97,2l-10,10l10,10Z"/></svg>
+
 function ObtainICs() {
   const navigate = useNavigate();
   const [ics, setIcs] = useState<IC[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
   const [viewMode, setViewMode] = useState<ViewMode>('cards');
     const [animateBars, setAnimateBars] = useState(false);
 
@@ -163,6 +168,18 @@ function ObtainICs() {
     [ics]
   );
 
+  const totalPages = Math.max(1, Math.ceil(visibleICs.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+
+  const pagedICs = useMemo(
+    () => visibleICs.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
+    [visibleICs, currentPage]
+  );
+
+  useEffect(() => {
+    setPage(1);
+  }, [search]);
+
   if (loading) {
     return <LoadingOverlay message="Loading ICs..." />;
   }
@@ -226,7 +243,7 @@ function ObtainICs() {
         </div>
 
         <ICsComparisonCard
-          icComparisonData={visibleICs.map(({ IC_id, name, score, entries }) => ({
+          icComparisonData={pagedICs.map(({ IC_id, name, score, entries }) => ({
             id: IC_id,
             name,
             score,
@@ -238,7 +255,7 @@ function ObtainICs() {
           <p className="team-empty">No ICs match your search.</p>
         ) : viewMode === 'cards' ? (
           <div className="team-metrics" ref={viewContainerRef}>
-            {visibleICs.map((item) => (
+            {pagedICs.map((item) => (
               <article
                 className="team-metric-card"
                 key={item.IC_id}
@@ -277,7 +294,7 @@ function ObtainICs() {
                 </tr>
               </thead>
               <tbody>
-                {visibleICs.map((item) => (
+                {pagedICs.map((item) => (
                   <tr
                     key={item.IC_id}
                     onClick={() => openICTimeline(item)}
@@ -292,6 +309,28 @@ function ObtainICs() {
               </tbody>
             </table>
           </div>
+        )}
+
+        {visibleICs.length > PAGE_SIZE && (
+          <nav className="team-pagination" aria-label="ICs pagination">
+            <button
+              type="button"
+              onClick={() => setPage(currentPage - 1)}
+              disabled={currentPage === 1}
+            >
+              {arrowBack}
+            </button>
+            <span>
+              Page {currentPage} of {totalPages}
+            </span>
+            <button
+              type="button"
+              onClick={() => setPage(currentPage + 1)}
+              disabled={currentPage === totalPages}
+            >
+              {arrowForward}
+            </button>
+          </nav>
         )}
       </section>
     </div>
