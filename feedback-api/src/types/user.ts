@@ -33,4 +33,11 @@ export interface UpdateUser {
 
 export interface UserFilters {
     role?: UserRole;
+    page?: number;
+    limit?: number;
+}
+
+export interface UsersPage {
+    data: User[];
+    pagination: { page: number; limit: number; total: number; totalPages: number };
 }

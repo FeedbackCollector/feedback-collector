@@ -37,4 +37,6 @@ export const updateUserScheme = Joi.object({
 
 export const listUsersQueryScheme = Joi.object({
     role: Joi.string().valid("manager", "director"),
+    page: Joi.number().integer().min(1),
+    limit: Joi.number().integer().min(1).max(100),
 });

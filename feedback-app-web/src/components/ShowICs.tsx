@@ -21,11 +21,22 @@ type IC = {
 
 type ViewMode = 'cards' | 'list';
 
+const PAGE_SIZE_DESKTOP = 15;
+const PAGE_SIZE_MOBILE = 8;
+const MOBILE_QUERY = '(max-width: 768px)';
+const arrowForward = <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" height="10px" width="10px" fill="#1f1f1f"><path d="M8.03,22L6.25,20.23L14.48,12L6.25,3.77L8.03,2l10,10l-10,10Z"/></svg>
+const arrowBack = <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" height="10px" width="10px" fill="#1f1f1f"><path d="M15.97,22L17.75,20.23L9.52,12L17.75,3.77L15.97,2l-10,10l10,10Z"/></svg>
+
 function ObtainICs() {
   const navigate = useNavigate();
   const [ics, setIcs] = useState<IC[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(() =>
+    window.matchMedia(MOBILE_QUERY).matches ? PAGE_SIZE_MOBILE : PAGE_SIZE_DESKTOP
+  );
+  const [gridCols, setGridCols] = useState(0);
   const [viewMode, setViewMode] = useState<ViewMode>('cards');
   const [animateBars, setAnimateBars] = useState(false);
 
@@ -145,6 +156,46 @@ function ObtainICs() {
     [ics]
   );
 
+  const gridColumns = viewMode === 'cards' ? gridCols : 0;
+  const effectivePageSize = gridColumns > 0
+    ? Math.max(gridColumns, Math.floor(pageSize / gridColumns) * gridColumns)
+    : pageSize;
+
+  const totalPages = Math.max(1, Math.ceil(visibleICs.length / effectivePageSize));
+  const currentPage = Math.min(page, totalPages);
+
+  const pagedICs = useMemo(
+    () => visibleICs.slice((currentPage - 1) * effectivePageSize, currentPage * effectivePageSize),
+    [visibleICs, currentPage, effectivePageSize]
+  );
+
+  useEffect(() => {
+    const container = viewContainerRef.current;
+    if (!container) return;
+    const updateColumns = () => {
+      const columns = getComputedStyle(container).gridTemplateColumns.split(' ').filter(Boolean).length;
+      setGridCols(columns);
+    };
+    updateColumns();
+    const observer = new ResizeObserver(updateColumns);
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [loading, viewMode, visibleICs.length]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search]);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia(MOBILE_QUERY);
+    const handleChange = (event: MediaQueryListEvent) => {
+      setPageSize(event.matches ? PAGE_SIZE_MOBILE : PAGE_SIZE_DESKTOP);
+      setPage(1);
+    };
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, []);
+
   if (loading) {
     return <LoadingOverlay message="Loading ICs..." />;
   }
@@ -161,7 +212,6 @@ function ObtainICs() {
   }
 
   return (
-    <>
     <div className="MyICs-containers">
       <section className="team-page">
         <ICsMetricsRow
@@ -209,7 +259,7 @@ function ObtainICs() {
         </div>
 
         <ICsComparisonCard
-          icComparisonData={visibleICs.map(({ IC_id, name, score, entries }) => ({
+          icComparisonData={pagedICs.map(({ IC_id, name, score, entries }) => ({
             id: IC_id,
             name,
             score,
@@ -221,7 +271,7 @@ function ObtainICs() {
           <p className="team-empty">No ICs match your search.</p>
         ) : viewMode === 'cards' ? (
           <div className="team-metrics" ref={viewContainerRef}>
-            {visibleICs.map((item) => (
+            {pagedICs.map((item) => (
               <article
                 className="team-metric-card"
                 key={item.IC_id}
@@ -235,36 +285,36 @@ function ObtainICs() {
                   <h3>{formatPersonName(item.name)}</h3>
                   <p className="team-metric-role">{item.title}</p>
 
-                    <div className="team-metric-badge-row">
-                      {item.score === null ? (
-                        <span className="team-no-score">No data</span>
-                      ) : (
-                        <span
-                          className="team-metric-badge"
-                          style={{ backgroundColor: getBadgeColor(item.score) }}
-                        >
-                          {Math.round(item.score)}
-                        </span>
-                      )}
-                      <span className="team-metric-detail">{item.entries} entries</span>
-                    </div>
+                  <div className="team-metric-badge-row">
+                    {item.score === null ? (
+                      <span className="team-no-score">No data</span>
+                    ) : (
+                      <span
+                        className="team-metric-badge"
+                        style={{ backgroundColor: getBadgeColor(item.score) }}
+                      >
+                        {Math.round(item.score)}
+                      </span>
+                    )}
+                    <span className="team-metric-detail">{item.entries} entries</span>
                   </div>
-                </article>
-              ))}
-            </div>
-          ) : (
-            <div className="team-table-wrap" ref={viewContainerRef}>
-              <table className="team-table">
-                <thead>
-                  <tr>
-                    <th>IC</th>
-                    <th>Title</th>
-                    <th>Score</th>
-                    <th>Entries</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {visibleICs.map((item) => (
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="team-table-wrap" ref={viewContainerRef}>
+            <table className="team-table">
+              <thead>
+                <tr>
+                  <th>IC</th>
+                  <th>Title</th>
+                  <th>Score</th>
+                  <th>Entries</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pagedICs.map((item) => (
                   <tr
                     key={item.IC_id}
                     onClick={() => openICTimeline(item)}
@@ -272,25 +322,44 @@ function ObtainICs() {
                     onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f3f4f6')}
                     onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                   >
-                    <td>{formatPersonName(item.name)}</td>
+                    <td style={{ textDecoration: 'underline' }}>{formatPersonName(item.name)}</td>
                     <td>{item.title}</td>
                     <td>
-                      {item.score === null ? (
-                        <span className="team-no-score">No data</span>
-                      ) : (
-                        Math.round(item.score)
-                      )}
+                      {item.score === null
+                        ? <span className="team-no-score">No data</span>
+                        : Math.round(item.score)}
                     </td>
                     <td>{item.entries}</td>
                   </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
-      </div>
-    </>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {visibleICs.length > pageSize && (
+          <nav className="team-pagination" aria-label="ICs pagination">
+            <button
+              type="button"
+              onClick={() => setPage(currentPage - 1)}
+              disabled={currentPage === 1}
+            >
+              {arrowBack}
+            </button>
+            <span>
+              Page {currentPage} of {totalPages}
+            </span>
+            <button
+              type="button"
+              onClick={() => setPage(currentPage + 1)}
+              disabled={currentPage === totalPages}
+            >
+              {arrowForward}
+            </button>
+          </nav>
+        )}
+      </section>
+    </div>
   );
 }
 
