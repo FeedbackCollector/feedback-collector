@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { obtainManagers, type Manager } from '../service/ObtainManagers';
 import { obtainAreas, type Area } from '../service/ObtainAreas';
 import { useAuthStore } from '../store/authStore';
@@ -44,6 +44,7 @@ function getScoreColor(score: number | null): string {
 
 export default function MyManagementComp() {
   const token = useAuthStore((state) => state.token);
+  const navigate = useNavigate();
   const [managers, setManagers] = useState<Manager[]>([]);
   const [areas, setAreas] = useState<Area[]>([]);
   const [totalICs, setTotalICs] = useState<number | null>(null);
@@ -169,6 +170,10 @@ export default function MyManagementComp() {
   function goToPage(next: number) {
     if (loading || next < 1 || next > totalPages || next === page) return;
     setSearchParams(next > 1 ? { page: String(next) } : {});
+  }
+
+  function openManagerTimeline(manager: Manager) {
+    navigate(`/my-management/${manager.id}`);
   }
 
   function handleSearchChange(value: string) {
@@ -308,7 +313,20 @@ export default function MyManagementComp() {
             {viewMode === 'cards' ? (
               <div className="my-management-manager-grid" ref={viewContainerRef}>
                 {pagedManagers.map((manager) => (
-                  <article className="my-management-manager-card" key={manager.id}>
+                  <article
+                    className="my-management-manager-card is-clickable"
+                    key={manager.id}
+                    role="link"
+                    tabIndex={0}
+                    aria-label={`Open feedback about ${manager.name}`}
+                    onClick={() => openManagerTimeline(manager)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        openManagerTimeline(manager);
+                      }
+                    }}
+                  >
                     <UserAvatar
                       name={manager.name}
                       id={manager.id}
@@ -351,8 +369,17 @@ export default function MyManagementComp() {
                   </thead>
                   <tbody>
                     {pagedManagers.map((manager) => (
-                      <tr key={manager.id}>
-                        <td>{formatPersonName(manager.name)}</td>
+                                           <tr
+                        key={manager.id}
+                        className="is-clickable"
+                        tabIndex={0}
+                        onClick={() => openManagerTimeline(manager)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter') openManagerTimeline(manager);
+                        }}
+                      >
+                        <td className="my-management-link-cell">{formatPersonName(manager.name)}</td>
+
                         <td>{getAreaName(manager.area_id)}</td>
                         <td>
                           {manager.averageScore === null

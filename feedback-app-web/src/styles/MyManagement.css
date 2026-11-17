@@ -339,3 +339,20 @@
     padding: 12px 14px;
   }
 }
+
+.my-management-manager-card.is-clickable,
+.my-management-table tr.is-clickable {
+  cursor: pointer;
+}
+
+.my-management-manager-card.is-clickable:hover,
+.my-management-manager-card.is-clickable:focus-visible,
+.my-management-table tr.is-clickable:hover,
+.my-management-table tr.is-clickable:focus-visible {
+  background-color: var(--surface-hover, #f3f4f6);
+  outline: none;
+}
+
+.my-management-link-cell {
+  text-decoration: underline;
+}

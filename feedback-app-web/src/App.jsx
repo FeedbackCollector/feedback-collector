@@ -9,6 +9,7 @@ import Management from './pages/Management'
 import MyManagement from './pages/MyManagement'
 import FeedbackLog from './pages/FeedbackLogPage.tsx'
 import ICTimeline from './pages/ICTimeline'
+import ManagerTimeline from './pages/ManagerTimeline'
 import Login from './pages/login'
 import { ToastContainer } from './components/ToastContainer'
 
@@ -56,7 +57,10 @@ function AppRoutes() {
         const links = visibleRoutes.map(({ path, title }) => ({ to: path, label: title }))
         const detailRoutes = [
           { path: '/my-ics/:icId', element: <ICTimeline /> },
-          ...(isDirector ? [{ path: '/management/:tab', element: <Management /> }] : []),
+          ...(isDirector ? [
+            { path: '/management/:tab', element: <Management /> },
+            { path: '/my-management/:managerId', element: <ManagerTimeline /> },
+          ] : []),
         ]
 
         return [

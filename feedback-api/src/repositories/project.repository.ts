@@ -1,5 +1,5 @@
 import { fn, col, where } from "sequelize";
-import { Project as ProjectModel, Feedback as FeedbackModel } from "../models/Index.ts";
+import { Project as ProjectModel, Feedback as FeedbackModel, ManagerFeedback as ManagerFeedbackModel } from "../models/Index.ts";
 import { NewProject, UpdateProject } from "../types/project.ts";
 
 export async function getProjectByID(id: number) {
@@ -32,7 +32,8 @@ export async function updateProject(id: number, data: UpdateProject) {
 }
 
 export async function projectHasFeedback(id: number): Promise<boolean> {
-    return (await FeedbackModel.count({ where: { project_id: id } })) > 0;
+    return (await FeedbackModel.count({ where: { project_id: id } })) > 0
+        || (await ManagerFeedbackModel.count({ where: { project_id: id } })) > 0;
 }
 
 export async function deleteProject(id: number): Promise<boolean> {
