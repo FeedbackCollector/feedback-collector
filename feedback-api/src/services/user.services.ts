@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import { signToken } from '../utils/token.ts';
 import * as UsersRepository from '../repositories/user.repositories.ts';
 import { getAreaByID } from '../repositories/area.repository.ts';
+import { sendPendingApprovalEmail, sendAccountApprovedEmail } from './mail.service.ts';
 import { AccountStatus, User, CreateUser, UpdateUser, UserFilters } from '../types/user.ts';
 
 // Directors list every user; a manager only gets their own record.
@@ -47,6 +48,10 @@ export async function registerService(email: string, password: string , name: st
 
     const passwordHash = await bcrypt.hash(password, 10);
     await UsersRepository.insertUser(email, passwordHash, "manager", area_id, name, "pending");
+
+    sendPendingApprovalEmail(email, name).catch((err: unknown) =>
+        console.error('Could not send pending approval email:', err instanceof Error ? err.message : err),
+    );
     return "REGISTERED";
 }
 
@@ -71,12 +76,13 @@ export async function deleteUserService(id: number, requesterId: number): Promis
     return "DELETED";
 }
 
-export async function loginService(email: string, password: string): Promise<string | "INVALID_CREDENTIALS"> {
+export async function loginService(email: string, password: string): Promise<string | "INVALID_CREDENTIALS" | "ACCOUNT_NOT_APPROVED"> {
     const user = await UsersRepository.getUserByEmail(email);
     if (!user) return "INVALID_CREDENTIALS";
 
     const passwordOk = await bcrypt.compare(password, user.passwordHash);
-    if (!passwordOk || user.status !== "approved") return "INVALID_CREDENTIALS";
+    if (!passwordOk) return "INVALID_CREDENTIALS";
+    if (user.status !== "approved") return "ACCOUNT_NOT_APPROVED";
 
     return signToken(user);
 }
@@ -94,7 +100,12 @@ export async function approveUserService(id: number): Promise<User | "USER_NOT_F
     }
 
     const approvedUser = await UsersRepository.getPublicUserByID(id);
-    return approvedUser ?? "USER_NOT_FOUND";
+    if (!approvedUser) return "USER_NOT_FOUND";
+
+    sendAccountApprovedEmail(approvedUser.email, approvedUser.name).catch((err: unknown) =>
+        console.error('Could not send account approved email:', err instanceof Error ? err.message : err),
+    );
+    return approvedUser;
 }
 
 export async function changePasswordService(userId: number, currentPassword: string, newPassword: string): Promise<"INVALID_CREDENTIALS" | { token: string }> {

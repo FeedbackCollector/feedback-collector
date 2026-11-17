@@ -1,12 +1,13 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { obtainAllICs } from '../service/ObtainICs';
-import FeedbackDashboard from './FeedbackDashboard';
+import { obtainAllFeedback } from '../service/ObtainFeedback';
+import { ICsMetricsRow, ICsComparisonCard } from './FeedbackDashboard';
 import { UserAvatar } from '../components/UserAvatar';
 import { useToastStore } from '../store/toastStore';
 import LoadingOverlay from './LoadingOverlay';
 import '../styles/ShowICs.css';
-import ICView from './IcView';
 import AutocompleteSearch from './AutocompleteSearch';
 import type { SearchSuggestion } from '../types/autoComplete';
 import { normalizeSearchText } from '../utils/search';
@@ -22,10 +23,22 @@ type IC = {
 type ViewMode = 'cards' | 'list';
 
 function ObtainICs() {
+  const navigate = useNavigate();
   const [ics, setIcs] = useState<IC[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('cards');
+    const [animateBars, setAnimateBars] = useState(false);
+
+  useEffect(() => {
+    if (!loading && ics.length > 0) {
+      setAnimateBars(false);
+      const frame = requestAnimationFrame(() => setAnimateBars(true));
+      return () => cancelAnimationFrame(frame);
+    }
+    setAnimateBars(false);
+  }, [loading, ics, search]);
+
   const viewContainerRef = useRef<HTMLDivElement>(null);
   const shouldAnimateViewChange = useRef(false);
 
@@ -35,23 +48,11 @@ function ObtainICs() {
     shouldAnimateViewChange.current = true;
     setViewMode(nextMode);
   };
-    const [selectedIC, setSelectedIC] = useState<{
-    IC_id: number;
-    name: string;
-    title: string;
-    entries: number;
-  } | null>(null);
 
   function openICTimeline(item: IC) {
-      const ic = ics.find((entry) => entry.IC_id === item.IC_id);
-  
-      if (!ic) {
-        alert('Could not find the IC associated with this card.');
-        return;
-      }
-  
-      setSelectedIC(ic);
-    }
+    navigate(`/my-ics/${item.IC_id}`);
+  }
+
   useEffect(() => {
     const mediaQuery = window.matchMedia('(max-width: 768px)');
 
@@ -135,6 +136,7 @@ function ObtainICs() {
       normalizeSearchText(`${ic.name} ${ic.title}`).includes(query)
     );
   }, [ics, search]);
+
   const searchSuggestions = useMemo<SearchSuggestion[]>(
     () => ics.map((ic) => ({
       id: String(ic.IC_id),
@@ -143,10 +145,6 @@ function ObtainICs() {
     })),
     [ics]
   );
-
-  if (selectedIC) {
-    return <ICView ic={selectedIC} onBack={() => setSelectedIC(null)} />;
-  }
 
   if (loading) {
     return <LoadingOverlay message="Loading ICs..." />;
@@ -164,78 +162,78 @@ function ObtainICs() {
   }
 
   return (
-    <>
-      <FeedbackDashboard
-        teamICs={ics.map(({ IC_id, name, score, entries }) => ({
-          id: IC_id,
-          name,
-          score,
-          entries,
-        }))}
-        icComparisonData={visibleICs.map(({ IC_id, name, score, entries }) => ({
-          id: IC_id,
-          name,
-          score,
-          entries,
-        }))}
-      />
-      <div className="MyICs-containers">
-        <section className="team-page">
-          <h2>Your Team</h2>
-          <div className="team-toolbar">
-            <AutocompleteSearch
-              id="my-ics-search"
-              className="team-search"
-              label="Search individual contributors"
-              placeholder="Search ICs..."
-              value={search}
-              suggestions={searchSuggestions}
-              onChange={setSearch}
-            />
-            <div className="team-view-toggle" role="group" aria-label="IC view">
-              <button
-                type="button"
-                className={viewMode === 'cards' ? 'is-active' : ''}
-                aria-label="Card view"
-                aria-pressed={viewMode === 'cards'}
-                onClick={() => changeViewMode('cards')}
-              >
-                <svg aria-hidden="true" height="20" viewBox="0 -960 960 960" width="20" fill="currentColor">
-                  <path d="M760-120H200q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120ZM200-640h560v-120H200v120Zm100 80H200v360h100v-360Zm360 0v360h100v-360H660Zm-80 0H380v360h200v-360Z" />
-                </svg>
-              </button>
-              <button
-                type="button"
-                className={viewMode === 'list' ? 'is-active' : ''}
-                aria-label="List view"
-                aria-pressed={viewMode === 'list'}
-                onClick={() => changeViewMode('list')}
-              >
-                <i className="fa-solid fa-table-list" aria-hidden="true" />
-              </button>
-            </div>
-          </div>
+    <div className="MyICs-containers">
+      <section className="team-page">
+        <ICsMetricsRow
+          teamICs={ics.map(({ IC_id, name, score, entries }) => ({
+            id: IC_id,
+            name,
+            score,
+            entries,
+          }))}
+        />
 
-          {visibleICs.length === 0 ? (
-            <p className="team-empty">No ICs match your search.</p>
-          ) : viewMode === 'cards' ? (
-            <div className="team-metrics" ref={viewContainerRef}> 
-              {visibleICs.map((item) => (
-                <article className="team-metric-card" key={item.IC_id} onClick={() => openICTimeline(item)}
-                          style={{ cursor: 'pointer', transition: 'background-color 0.2s' }}
-                          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f3f4f6')}
-                          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'white')}
->
-                  <UserAvatar
-                    name={item.name}
-                    id={item.IC_id}
-                    entityType="ic"
-                    size={48}
-                    className="team-metric-avatar"
-                  />
-                  <div className="team-metric-info">
-                    <h3>{item.name}</h3>
-                    <p className="team-metric-role">{item.title}</p>
+        <h2>Your Team</h2>
+        <div className="team-toolbar">
+          <AutocompleteSearch
+            id="my-ics-search"
+            className="team-search"
+            label="Search individual contributors"
+            placeholder="Search ICs..."
+            value={search}
+            suggestions={searchSuggestions}
+            onChange={setSearch}
+          />
+          <div className="team-view-toggle" role="group" aria-label="IC view">
+            <button
+              type="button"
+              className={viewMode === 'cards' ? 'is-active' : ''}
+              aria-label="Card view"
+              aria-pressed={viewMode === 'cards'}
+              onClick={() => changeViewMode('cards')}
+            >
+              <svg aria-hidden="true" height="20" viewBox="0 -960 960 960" width="20" fill="currentColor">
+                <path d="M760-120H200q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120ZM200-640h560v-120H200v120Zm100 80H200v360h100v-360Zm360 0v360h100v-360H660Zm-80 0H380v360h200v-360Z" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              className={viewMode === 'list' ? 'is-active' : ''}
+              aria-label="List view"
+              aria-pressed={viewMode === 'list'}
+              onClick={() => changeViewMode('list')}
+            >
+              <i className="fa-solid fa-table-list" aria-hidden="true" />
+            </button>
+          </div>
+        </div>
+
+        <ICsComparisonCard
+          icComparisonData={visibleICs.map(({ IC_id, name, score, entries }) => ({
+            id: IC_id,
+            name,
+            score,
+            entries,
+          }))}
+        />
+
+        {visibleICs.length === 0 ? (
+          <p className="team-empty">No ICs match your search.</p>
+        ) : viewMode === 'cards' ? (
+          <div className="team-metrics" ref={viewContainerRef}>
+            {visibleICs.map((item) => (
+              <article
+                className="team-metric-card"
+                key={item.IC_id}
+                onClick={() => openICTimeline(item)}
+                style={{ cursor: 'pointer', transition: 'background-color 0.2s' }}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f3f4f6')}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'white')}
+              >
+                
+                <div className="team-metric-info">
+                  <h3>{item.name}</h3>
+                  <p className="team-metric-role">{item.title}</p>
 
                     <div className="team-metric-badge-row">
                       {item.score === null ? (

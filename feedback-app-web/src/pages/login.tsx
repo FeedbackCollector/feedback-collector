@@ -31,7 +31,6 @@ function Login() {
     
     const [areas, setAreas] = useState<Area[]>([]);
     const [isLoggingIn, setIsLoggingIn] = useState(false);
-    const [registrationMessage, setRegistrationMessage] = useState<string | null>(null);
 
     const navigate = useNavigate();
 
@@ -72,8 +71,7 @@ function Login() {
             }
 
         } else {
-            const message = await createAccount();
-            setRegistrationMessage(message);
+            await createAccount();
         }
     };
 
@@ -107,7 +105,6 @@ function Login() {
                         type="button"
                         className={`tab-btn ${activeForm === 'login' ? 'active' : ''}`}
                         onClick={() => {
-                            setRegistrationMessage(null);
                             switchForm('login');
                         }}
                     >
@@ -117,19 +114,12 @@ function Login() {
                         type="button"
                         className={`tab-btn ${activeForm === 'register' ? 'active' : ''}`}
                         onClick={() => {
-                            setRegistrationMessage(null);
                             switchForm('register');
                         }}
                     >
                         Register
                     </button>
                 </div>
-
-                {registrationMessage && (
-                    <p className="auth-success" role="status">
-                        {registrationMessage}
-                    </p>
-                )}
 
                 <form onSubmit={handleSubmit} className="auth-form" noValidate>
 

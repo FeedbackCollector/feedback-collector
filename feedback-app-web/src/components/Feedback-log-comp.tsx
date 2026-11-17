@@ -1,11 +1,10 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import type { Feedback, FeedbackFilters, IC, Project } from '../types/feedback';
 import { obtainICs } from '../service/ObtainICs';
 import { obtainProjects } from '../service/ObtainProjects';
 import '../styles/index.css'
 import { obtainFeedbackPage } from '../service/ObtainFeedback';
-import ICView from './IcView';
 import ScreenshotThumb from './ScreenshotThumb';
 import AutocompleteSearch from './AutocompleteSearch';
 import type { SearchSuggestion } from '../types/autoComplete';
@@ -35,14 +34,8 @@ function FeedbackLogComp() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  const [selectedIC, setSelectedIC] = useState<{
-    IC_id: number;
-    name: string;
-    title: string;
-    entries: number;
-  } | null>(null);
-
   const [viewMode, setViewMode] = useState<'table' | 'list'>('table');
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
@@ -262,18 +255,12 @@ function FeedbackLogComp() {
   }));
 
   function openICTimeline(item: Feedback) {
-    const ic = ics.find((entry) => entry.IC_id === item.ic_id);
-
-    if (!ic) {
+    if (item.ic_id === null) {
       alert('Could not find the IC associated with this feedback.');
       return;
     }
 
-    setSelectedIC(ic);
-  }
-
-  if (selectedIC) {
-    return <ICView ic={selectedIC} onBack={() => setSelectedIC(null)} />;
+    navigate(`/my-ics/${item.ic_id}`);
   }
 
   if (icsLoading) {
@@ -434,22 +421,22 @@ function FeedbackLogComp() {
                         <td className="text-caption-default" style={{ color: 'var(--text-muted)' }}>{item.date}</td>
                         <td>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                            <span style={{ fontWeight: 600 }}>{item.ic_name ?? '-'}</span>
+                            <span style={{ fontWeight: 600 }}>{item.ic_name ?? '' }</span>
                             {item.source_name.toLowerCase().includes('peer') && <span className="badge-shared" style={{ width: 'fit-content' }}>Shared</span>}
                           </div>
                         </td>
-                        <td>{item.project_name ?? '-'}</td>
+                        <td>{item.project_name ?? ''}</td>
                         <td style={{ color: 'var(--text-muted)' }}>{item.source_name}</td>
                         <td>
                           <span className="score-badge" data-score={item.score}>{item.score}</span>
                         </td>
                         <td style={{ maxWidth: '280px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {item.comment ?? '-'}
+                          {item.comment ?? ''}
                         </td>
                         <td>
                           {item.screenshot_url ? (
                             <ScreenshotThumb url={item.screenshot_url} size="sm" />
-                          ) : '-'}
+                          ) : ''}
                         </td>
                         <td>
                           <button type="button" className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '13px', borderRadius: '6px' }} onClick={() => openICTimeline(item)}>View in Timeline</button>
@@ -472,13 +459,13 @@ function FeedbackLogComp() {
 
                       <div className="feedback-card-meta">
                         <div className="feedback-card-name-row">
-                          <h4 className="feedback-card-name">{item.ic_name ?? '-'}</h4>
+                          <h4 className="feedback-card-name">{item.ic_name ?? ''}</h4>
                           {(item.source_name.toLowerCase().includes('peer') || item.id === 3) && (
                             <span className="badge-shared">Shared</span>
                           )}
                         </div>
                         <span className="feedback-card-subtext">
-                          {item.date} · {item.project_name ?? '-'}
+                          {item.date} · {item.project_name ?? ''}
                         </span>
                       </div>
                       {item.screenshot_url && (
@@ -489,7 +476,7 @@ function FeedbackLogComp() {
                     </div>
 
                     <p className="feedback-card-body">
-                      {item.comment ?? '-'}
+                      {item.comment ?? ''}
                     </p>
 
                     <div className="feedback-card-footer">

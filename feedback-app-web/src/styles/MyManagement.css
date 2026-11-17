@@ -17,7 +17,7 @@
 
 .my-management-metric-card {
   min-height: 110px;
-  padding: 20px;
+  padding: 24px;
   border: 1px solid var(--border);
   border-radius: 12px;
   background: #fff;
@@ -44,7 +44,7 @@
   display: flex;
   flex-direction: column;
   gap: 24px;
-  padding: 20px 32px 0;
+  padding: 24px 32px 0;
 }
 
 .my-management-team > h2 {
@@ -116,78 +116,97 @@
   color: #fff;
 }
 
+.my-management-comparison,
+.my-management-comparison *,
+.my-management-manager-grid,
+.my-management-manager-grid *,
+.my-management-table-wrap,
+.my-management-table-wrap * {
+  box-sizing: border-box;
+}
+
 .my-management-comparison {
+  width: 100%;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 16px 20px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: #fff;
-  box-shadow: 0 1px 3px rgb(23 24 26 / 4%);
+  gap: 0.9rem;
+  padding: 1.75rem 2rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  background-color: #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
 }
 
 .my-management-comparison h3 {
-  margin: 0 0 4px;
-  color: var(--text);
-  font-size: 14px;
+  margin: 0 0 0.6rem 0;
+  color: #111827;
+  font-size: 1.05rem;
   font-weight: 600;
 }
 
 .my-management-comparison-row {
   display: grid;
-  grid-template-columns: minmax(110px, 118px) minmax(40px, 1fr) 30px;
+  grid-template-columns: 140px minmax(0, 1fr) 45px;
   align-items: center;
-  gap: 10px;
-  min-height: 16px;
-  color: #303438;
-  font-size: 13px;
+  gap: 1rem;
+  width: 100%;
 }
 
 .my-management-comparison-name {
+  font-size: 0.9rem;
+  color: #374151;
+  font-weight: 500;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .my-management-score-track {
-  height: 9px;
-  overflow: hidden;
+  width: 100%;
+  height: 11px;
+  background-color: #E3E6E8;
   border-radius: 999px;
-  background: #f1f1f6;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
 }
 
 .my-management-score-bar {
   display: block;
   height: 100%;
-  border-radius: inherit;
-  transition: width 180ms ease;
+  border-radius: 999px;
+  transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .my-management-comparison-score {
+  font-size: 0.9rem;
+  font-weight: 600;
   text-align: right;
+  color: #111827;
 }
 
 .my-management-manager-grid {
+  width: 100%;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
-  gap: 16px;
+  gap: 1.5rem;
 }
 
 .my-management-manager-card {
-  display: flex;
+  width: 100%;
   min-width: 0;
+  display: flex;
   min-height: 110px;
   align-items: center;
-  gap: 0;
-  padding: 20px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: #fff;
-  box-shadow: 0 2px 8px rgb(23 24 26 / 4%);
+  padding: 1.5rem 2rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  background-color: #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
 }
 
-.my-management-avatar{
+.my-management-avatar {
   width: 48px;
   height: 48px;
   flex: 0 0 48px;
@@ -198,31 +217,32 @@
 
 .my-management-manager-info {
   min-width: 0;
+  flex: 1;
 }
 
 .my-management-manager-info h3 {
   overflow: hidden;
   margin: 0;
-  color: var(--text);
-  font-size: 16px;
+  color: #111827;
+  font-size: 1rem;
   font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .my-management-area {
-  margin: 0;
-  color: var(--text-muted);
-  font-size: 14px;
+  margin: 2px 0 0;
+  color: #6b7280;
+  font-size: 0.875rem;
 }
 
 .my-management-manager-meta {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-top: 4px;
-  color: var(--text-muted);
-  font-size: 13px;
+  margin-top: 6px;
+  color: #6b7280;
+  font-size: 0.8125rem;
 }
 
 .my-management-score-badge {
@@ -231,8 +251,8 @@
   height: 24px;
   place-items: center;
   border-radius: 50%;
-  color: #fff;
-  font-size: 12px;
+  color: #ffffff;
+  font-size: 0.75rem;
   font-weight: 700;
 }
 
@@ -241,15 +261,18 @@
   border-radius: 999px;
   background: #f1eafa;
   color: #51316e;
-  font-size: 10px;
+  font-size: 0.65rem;
+  font-weight: 500;
 }
 
 .my-management-table-wrap {
-  overflow: auto;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: #fff;
-  box-shadow: 0 2px 8px rgb(23 24 26 / 4%);
+  width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  background-color: #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
 }
 
 .my-management-table {
@@ -260,52 +283,59 @@
 
 .my-management-table th,
 .my-management-table td {
-  padding: 12px 20px;
-  border-bottom: 1px solid var(--border);
+  padding: 14px 20px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.my-management-table tr:last-child td {
+  border-bottom: none;
 }
 
 .my-management-table th {
-  color: var(--text-muted);
-  font-size: 11px;
+  color: #6b7280;
+  font-size: 0.75rem;
+  font-weight: 600;
   text-transform: uppercase;
+  letter-spacing: 0.4px;
 }
 
 .my-management-table td {
-  color: var(--text);
-  font-size: 13px;
+  color: #374151;
+  font-size: 0.875rem;
 }
 
 .my-management-state,
 .my-management-empty {
-  padding: 12px 0;
-  color: var(--text-muted);
-  font-size: 13px;
+  padding: 16px 0;
+  color: #6b7280;
+  font-size: 0.875rem;
 }
 
-@media (max-width: 800px) {
-  .my-management-metrics {
-    padding: 20px 16px 0;
-  }
-
-  .my-management-team {
-    padding: 20px 16px 0;
-  }
-
-}
-
-@media (max-width: 560px) {
-  .my-management-metrics {
-    grid-template-columns: 1fr;
-  }
-
-  .my-management-comparison-row {
-    grid-template-columns: minmax(88px, 105px) minmax(30px, 1fr) 25px;
-    gap: 7px;
-  }
-}
-
+/* --- Responsive --- */
 @media (max-width: 768px) {
+  .my-management-comparison,
+  .my-management-manager-card {
+    padding: 1.25rem 1.5rem;
+  }
+
   .my-management-view-toggle {
     display: none !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .my-management-comparison-row {
+    grid-template-columns: 100px minmax(0, 1fr) 38px;
+    gap: 0.65rem;
+  }
+
+  .my-management-comparison-name,
+  .my-management-comparison-score {
+    font-size: 0.85rem;
+  }
+
+  .my-management-table th,
+  .my-management-table td {
+    padding: 12px 14px;
   }
 }
