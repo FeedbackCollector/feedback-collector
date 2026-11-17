@@ -51,7 +51,9 @@ export type ManagerFeedback = Omit<Feedback, 'ic_id' | 'ic_name'> & {
 };
 
 export type ManagerFeedbackFilters = {
-  managerId: number;
+  managerId?: number;
+  projectId?: string;
+  score?: string;
   sortBy?: 'newest' | 'oldest';
 };
 
