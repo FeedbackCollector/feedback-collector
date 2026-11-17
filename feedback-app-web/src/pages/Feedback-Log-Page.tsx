@@ -1,4 +1,4 @@
-import FeedbackLogComp from "../components/FeedbackLogComp";
+import FeedbackLogComp from "../components/Feedback-log-comp";
 
 
 export default function FeedbackLog(){
