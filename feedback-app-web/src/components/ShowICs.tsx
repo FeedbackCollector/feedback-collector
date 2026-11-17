@@ -2,9 +2,7 @@ import { useMemo, useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { obtainAllICs } from '../service/ObtainICs';
-import { obtainAllFeedback } from '../service/ObtainFeedback';
 import { ICsMetricsRow, ICsComparisonCard } from './FeedbackDashboard';
-import { UserAvatar } from '../components/UserAvatar';
 import { useToastStore } from '../store/toastStore';
 import LoadingOverlay from './LoadingOverlay';
 import '../styles/ShowICs.css';
@@ -29,7 +27,7 @@ function ObtainICs() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('cards');
-    const [animateBars, setAnimateBars] = useState(false);
+  const [animateBars, setAnimateBars] = useState(false);
 
   useEffect(() => {
     if (!loading && ics.length > 0) {
@@ -102,26 +100,9 @@ function ObtainICs() {
     setLoading(true);
     setIcs([]);
 
-    Promise.all([obtainAllICs(managerId), obtainAllFeedback()])
-      .then(([data, feedback]) => {
-        if (!isCurrent) return;
-
-        const scoresByIC = new Map<number, number[]>();
-        for (const item of feedback) {
-          const scores = scoresByIC.get(item.ic_id) ?? [];
-          scores.push(item.score);
-          scoresByIC.set(item.ic_id, scores);
-        }
-
-        setIcs(data.map((ic) => {
-          const scores = scoresByIC.get(ic.IC_id) ?? [];
-          return {
-            ...ic,
-            score: scores.length > 0
-              ? scores.reduce((sum, score) => sum + score, 0) / scores.length
-              : null,
-          };
-        }));
+    obtainAllICs(managerId)
+      .then((data) => {
+        if (isCurrent) setIcs(data);
       })
       .catch((error) => {
         if (isCurrent) console.error('Error retrieving ICs:', error);
@@ -248,18 +229,22 @@ function ObtainICs() {
                 onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f3f4f6')}
                 onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'white')}
               >
-                
+
                 <div className="team-metric-info">
                   <h3>{formatPersonName(item.name)}</h3>
                   <p className="team-metric-role">{item.title}</p>
 
                   <div className="team-metric-badge-row">
-                    <span
-                      className="team-metric-badge"
-                      style={{ backgroundColor: getBadgeColor(item.score) }}
-                    >
-                      {item.score === null ? '—' : Math.round(item.score)}
-                    </span>
+                    {item.score === null ? (
+                      <span className="team-no-score">No data</span>
+                    ) : (
+                      <span
+                        className="team-metric-badge"
+                        style={{ backgroundColor: getBadgeColor(item.score) }}
+                      >
+                        {Math.round(item.score)}
+                      </span>
+                    )}
                     <span className="team-metric-detail">{item.entries} entries</span>
                   </div>
                 </div>
@@ -282,11 +267,19 @@ function ObtainICs() {
                   <tr
                     key={item.IC_id}
                     onClick={() => openICTimeline(item)}
-                    style={{ cursor: 'pointer' }}
+                    style={{ cursor: 'pointer', transition: 'background-color 0.2s' }}
+                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f3f4f6')}
+                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                   >
                     <td>{formatPersonName(item.name)}</td>
                     <td>{item.title}</td>
-                    <td>{item.score === null ? '—' : item.score.toFixed(1)}</td>
+                    <td>
+                      {item.score === null ? (
+                        <span className="team-no-score">No data</span>
+                      ) : (
+                        Math.round(item.score)
+                      )}
+                    </td>
                     <td>{item.entries}</td>
                   </tr>
                 ))}

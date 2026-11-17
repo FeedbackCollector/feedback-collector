@@ -78,6 +78,7 @@ export interface APIC {
   title: string;
   manager_id: number;
   entries: number;
+  score?: number | null;
 }
 
 export interface APIProject {

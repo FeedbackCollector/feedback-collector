@@ -419,12 +419,9 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
       return formatManagementName(value, activeTab);
     }
     if (key === 'averageScore' && typeof value === 'number') {
-      if (activeTab === 'Managers') {
-        const scoreClass = Math.round(value) >= 4 ? 'management-score-high' : 'management-score-low';
-        return <span className={`management-score ${scoreClass}`}>{Math.round(value)}</span>;
-      }
-      const scoreClass = value >= 4 ? 'management-score-high' : 'management-score-low';
-      return <span className={`management-score ${scoreClass}`}>{value.toFixed(1)}</span>;
+      const rounded = Math.round(value);
+      const scoreClass = rounded >= 4 ? 'management-score-high' : 'management-score-low';
+      return <span className={`management-score ${scoreClass}`}>{rounded}</span>;
     }
     if (key === 'averageScore' && activeTab === 'Managers') {
       return <span className="management-no-score">No data</span>;

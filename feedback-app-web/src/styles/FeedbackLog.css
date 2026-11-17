@@ -183,3 +183,18 @@
     grid-template-columns: 1fr;
   }
 }
+
+.fl-truncate {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fl-truncate-wide {
+  max-width: 280px;
+}
+
+.fl-subject .fl-truncate {
+  max-width: 100%;
+}

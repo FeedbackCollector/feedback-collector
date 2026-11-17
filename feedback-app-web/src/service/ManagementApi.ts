@@ -78,44 +78,38 @@ export async function loadManagementData(
   token: string
 ): Promise<ManagementData> {
   if (tab === 'Areas') {
-    const [areas, managerAccounts, ics, feedback] = await Promise.all([
+    const [areas, managerAccounts, ics] = await Promise.all([
       getList<APIArea>('/areas', token),
       getList<APIUser>(withQuery('/users', 'role=manager'), token),
       getAllPages<APIC>('/ics', token),
-      getAllPages<APIFeedback>('/feedback', token),
     ]);
     const managers = managerAccounts.filter((manager) => manager.status !== 'pending');
     const managersById = new Map(managers.map((manager) => [manager.id, manager]));
-    const areaByICId = new Map<number, number>();
     const icsByArea = new Map<number, number>();
-    const scoresByArea = new Map<number, number[]>();
+    const scoreTotalsByArea = new Map<number, { weighted: number; entries: number }>();
 
     for (const ic of ics) {
       const areaId = managersById.get(ic.manager_id)?.area_id;
       if (areaId === null || areaId === undefined) continue;
-      areaByICId.set(ic.IC_id, areaId);
       icsByArea.set(areaId, (icsByArea.get(areaId) ?? 0) + 1);
-    }
-    for (const feedbackItem of feedback) {
-      const areaId = areaByICId.get(feedbackItem.ic_id);
-      if (areaId === undefined) continue;
-      const scores = scoresByArea.get(areaId) ?? [];
-      scores.push(feedbackItem.score);
-      scoresByArea.set(areaId, scores);
+      if (typeof ic.score === 'number' && ic.entries > 0) {
+        const totals = scoreTotalsByArea.get(areaId) ?? { weighted: 0, entries: 0 };
+        totals.weighted += ic.score * ic.entries;
+        totals.entries += ic.entries;
+        scoreTotalsByArea.set(areaId, totals);
+      }
     }
 
     return {
       rows: areas.map((area) => {
         const areaManagers = managers.filter((manager) => manager.area_id === area.id);
-        const scores = scoresByArea.get(area.id) ?? [];
+        const totals = scoreTotalsByArea.get(area.id);
         return {
           id: area.id,
           name: area.name,
           managers: areaManagers.length,
           ics: icsByArea.get(area.id) ?? 0,
-          averageScore: scores.length > 0
-            ? scores.reduce((sum, score) => sum + score, 0) / scores.length
-            : undefined,
+          averageScore: totals ? totals.weighted / totals.entries : undefined,
         };
       }),
       areas,
