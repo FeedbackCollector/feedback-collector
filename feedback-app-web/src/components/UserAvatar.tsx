@@ -1,5 +1,6 @@
 import React from 'react';
 import { getInitials, getAvatarColor } from '../utils/avatar';
+import { formatPersonName } from './formatPersonName';
 
 interface UserAvatarProps {
   name: string;
@@ -16,7 +17,8 @@ export function UserAvatar({
   size = 40,
   className,
 }: UserAvatarProps) {
-  const initials = getInitials(name);
+  const displayName = formatPersonName(name);
+  const initials = getInitials(displayName);
   const backgroundColor = getAvatarColor(id, entityType);
 
   return (
@@ -34,7 +36,7 @@ export function UserAvatar({
         fontSize: `${size * 0.4}px`,
         userSelect: 'none',
       }}
-      title={name}
+      title={displayName}
     >
       {initials}
     </div>

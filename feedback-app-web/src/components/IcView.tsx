@@ -12,6 +12,7 @@ import { UserAvatar } from './UserAvatar';
 import { resolveScreenshotUrl } from '../service/screenshotUrl';
 import { useToastStore } from '../store/toastStore';
 import LoadingOverlay from './LoadingOverlay';
+import { formatPersonName } from './formatPersonName';
 
 type ICInfo = {
   IC_id: number;
@@ -396,7 +397,7 @@ function ICView({ ic, onBack }: ICViewProps) {
           >
             <i className="fa-solid fa-arrow-left" />
           </button>
-          <h1 className="icv-title">{ic.name}</h1>
+          <h1 className="icv-title">{formatPersonName(ic.name)}</h1>
         </div>
 
         <button type="button" className="icv-primary-btn" onClick={openCreate}>
@@ -418,7 +419,7 @@ function ICView({ ic, onBack }: ICViewProps) {
                     className="team-metric-avatar"
                   />
           <div>
-            <div className="icv-person-name">{ic.name}</div>
+            <div className="icv-person-name">{formatPersonName(ic.name)}</div>
             <div className="icv-person-role">{ic.title}</div>
           </div>
         </div>

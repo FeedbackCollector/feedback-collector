@@ -11,6 +11,7 @@ import '../styles/ShowICs.css';
 import AutocompleteSearch from './AutocompleteSearch';
 import type { SearchSuggestion } from '../types/autoComplete';
 import { normalizeSearchText } from '../utils/search';
+import { formatPersonName } from './formatPersonName';
 
 type IC = {
   IC_id: number;
@@ -157,8 +158,8 @@ function ObtainICs() {
   const searchSuggestions = useMemo<SearchSuggestion[]>(
     () => ics.map((ic) => ({
       id: String(ic.IC_id),
-      label: ic.name,
-      value: ic.name,
+      label: formatPersonName(ic.name),
+      value: formatPersonName(ic.name),
     })),
     [ics]
   );
@@ -249,7 +250,7 @@ function ObtainICs() {
               >
                 
                 <div className="team-metric-info">
-                  <h3>{item.name}</h3>
+                  <h3>{formatPersonName(item.name)}</h3>
                   <p className="team-metric-role">{item.title}</p>
 
                   <div className="team-metric-badge-row">
@@ -283,7 +284,7 @@ function ObtainICs() {
                     onClick={() => openICTimeline(item)}
                     style={{ cursor: 'pointer' }}
                   >
-                    <td>{item.name}</td>
+                    <td>{formatPersonName(item.name)}</td>
                     <td>{item.title}</td>
                     <td>{item.score === null ? '—' : item.score.toFixed(1)}</td>
                     <td>{item.entries}</td>

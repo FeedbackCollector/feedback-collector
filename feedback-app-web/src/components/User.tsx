@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { API_URL } from '../service/api';
 import { UserAvatar } from './UserAvatar';
 import { useToastStore } from '../store/toastStore';
+import { formatPersonName } from './formatPersonName';
 
 export function User() {
   const user = useAuthStore((state) => state.user);
@@ -110,7 +111,7 @@ function clearPasswordFields() {
             className="user-profile__avatar"
           />        
           <div className='user-profile_name'>
-            <span>{user?.name}</span>
+            <span>{formatPersonName(user?.name)}</span>
             <p style={{ color:'#5f2169', fontWeight: '600', textTransform: 'capitalize' }}>{user?.role}</p>
           </div>
         </div>
@@ -207,7 +208,7 @@ function clearPasswordFields() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <div>
             <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', color: '#9ca3af', fontWeight: 500, marginBottom: '4px' }}>Name</label>
-            <input type="text" value={user?.name} readOnly disabled style={{ width: '100%', padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '8px', backgroundColor: '#f9fafb', color: '#4b5563', boxSizing: 'border-box' }} />
+            <input type="text" value={formatPersonName(user?.name)} readOnly disabled style={{ width: '100%', padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '8px', backgroundColor: '#f9fafb', color: '#4b5563', boxSizing: 'border-box' }} />
           </div>
           <div>
             <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', color: '#9ca3af', fontWeight: 500, marginBottom: '4px' }}>Email</label>
