@@ -187,7 +187,7 @@ export const useAuthStore = create<AuthState>()(
                             regConfirmPassword: ''
                         }); 
                         useToastStore.getState().addToast('Account created successfully! Please log in.', 'success');
-                        return true;
+                        return successMessage;
                     } else {
                         set({ error: { field: 'regEmail', message: datos.message || datos.error || datos.mensaje || 'Error creating account.' } });
                         return null;
