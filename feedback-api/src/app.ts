@@ -3,6 +3,7 @@ import express, { Request, Response } from "express";
 import userRoutes from "./routes/user.routes.ts";
 import icRoutes from "./routes/ic.routes.ts";
 import feedbackRoutes, { UPLOADS_DIR } from "./routes/feedback.routes.ts";
+import managerFeedbackRoutes from "./routes/managerFeedback.routes.ts";
 import usersRoutes from "./routes/users.routes.ts";
 import areaRoutes from "./routes/area.routes.ts";
 import projectRoutes from "./routes/project.routes.ts";
@@ -37,6 +38,7 @@ app.use("/uploads", express.static(UPLOADS_DIR, {
 app.use("/auth", userRoutes);
 app.use("/ics", icRoutes);
 app.use("/feedback", feedbackRoutes);
+app.use("/manager-feedback", managerFeedbackRoutes);
 app.use("/users", usersRoutes);
 app.use("/areas", areaRoutes);
 app.use("/projects", projectRoutes);

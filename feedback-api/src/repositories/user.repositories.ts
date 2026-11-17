@@ -1,5 +1,5 @@
 import { fn, col, where } from "sequelize";
-import { User as UserModel, ICs as ICModel, Feedback as FeedbackModel } from "../models/Index.ts";
+import { User as UserModel, ICs as ICModel, Feedback as FeedbackModel, ManagerFeedback as ManagerFeedbackModel } from "../models/Index.ts";
 import { sequelize } from "../db/connection.ts";
 import { AccountStatus, User, UpdateUser, UserFilters, UsersPage } from "../types/user.ts";
 
@@ -92,7 +92,8 @@ export async function userHasICs(id: number): Promise<boolean> {
     return (await ICModel.count({ where: { manager_id: id } })) > 0;
 }
 export async function userHasFeedback(id: number): Promise<boolean> {
-    return (await FeedbackModel.count({ where: { author_id: id } })) > 0;
+    return (await FeedbackModel.count({ where: { author_id: id } })) > 0
+        || (await ManagerFeedbackModel.count({ where: { author_id: id } })) > 0;
 }
 
 export async function deleteUser(id: number): Promise<boolean> {
