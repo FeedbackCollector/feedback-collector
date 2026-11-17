@@ -161,6 +161,7 @@ function ObtainICs() {
   }
 
   return (
+    <>
     <div className="MyICs-containers">
       <section className="team-page">
         <ICsMetricsRow
@@ -234,36 +235,36 @@ function ObtainICs() {
                   <h3>{formatPersonName(item.name)}</h3>
                   <p className="team-metric-role">{item.title}</p>
 
-                  <div className="team-metric-badge-row">
-                    {item.score === null ? (
-                      <span className="team-no-score">No data</span>
-                    ) : (
-                      <span
-                        className="team-metric-badge"
-                        style={{ backgroundColor: getBadgeColor(item.score) }}
-                      >
-                        {Math.round(item.score)}
-                      </span>
-                    )}
-                    <span className="team-metric-detail">{item.entries} entries</span>
+                    <div className="team-metric-badge-row">
+                      {item.score === null ? (
+                        <span className="team-no-score">No data</span>
+                      ) : (
+                        <span
+                          className="team-metric-badge"
+                          style={{ backgroundColor: getBadgeColor(item.score) }}
+                        >
+                          {Math.round(item.score)}
+                        </span>
+                      )}
+                      <span className="team-metric-detail">{item.entries} entries</span>
+                    </div>
                   </div>
-                </div>
-              </article>
-            ))}
-          </div>
-        ) : (
-          <div className="team-table-wrap" ref={viewContainerRef}>
-            <table className="team-table">
-              <thead>
-                <tr>
-                  <th>IC</th>
-                  <th>Title</th>
-                  <th>Score</th>
-                  <th>Entries</th>
-                </tr>
-              </thead>
-              <tbody>
-                {visibleICs.map((item) => (
+                </article>
+              ))}
+            </div>
+          ) : (
+            <div className="team-table-wrap" ref={viewContainerRef}>
+              <table className="team-table">
+                <thead>
+                  <tr>
+                    <th>IC</th>
+                    <th>Title</th>
+                    <th>Score</th>
+                    <th>Entries</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visibleICs.map((item) => (
                   <tr
                     key={item.IC_id}
                     onClick={() => openICTimeline(item)}
@@ -282,13 +283,14 @@ function ObtainICs() {
                     </td>
                     <td>{item.entries}</td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
-    </div>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      </div>
+    </>
   );
 }
 
