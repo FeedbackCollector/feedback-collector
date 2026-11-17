@@ -1,18 +1,36 @@
-# FEEDBACK COLLECTOR PROJECT
+# Feedback Collector - Frontend
 
-# React + Vite
+## Description
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+The frontend of Feedback Collector, an internal tool designed to centralize the recording and tracking of performance feedback within an organization.
 
-Currently, two official plugins are available:
+This part of the project contains the interface through which users interact, allowing them to access the system’s various features based on their role.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Technologies
 
-## React Compiler
+- React
+- Vite
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Key Features
 
-## Expanding the ESLint configuration
+- Viewing and managing feedback.
+- Viewing a user’s feedback history.
+- Searching and filtering records.
+- Viewing information and statistics.
+- Interacting with backend services via the API.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Installation and Execution
+
+1. Clone the repository.
+2. Navigate to the `front` folder.
+3. Install the dependencies:
+
+```bash
+npm install
+```
+
+4. Start the development server:
+
+```bash
+npm run dev
+```
