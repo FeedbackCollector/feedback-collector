@@ -2,6 +2,20 @@
   position: relative;
 }
 
+.autocomplete-search input[type="search"] {
+  background-image: none;
+}
+
+.autocomplete-search input[type="search"]::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+  display: none;
+}
+
+.autocomplete-search input[type="search"]::-ms-clear {
+  display: none;
+}
+
 .autocomplete-suggestions {
   position: absolute;
   z-index: 20;
@@ -15,6 +29,7 @@
   border: 1px solid var(--border);
   border-radius: 8px;
   background: #fff;
+  background-image: none;
   box-shadow: 0 8px 20px rgb(23 24 26 / 14%);
   list-style: none;
 }
@@ -32,7 +47,8 @@
 
 .autocomplete-suggestions li.is-active,
 .autocomplete-suggestions li:hover {
-  background: var(--primary-light);
+  background: #f3f4f6;
+  background-image: none;
 }
 
 .autocomplete-suggestions small {

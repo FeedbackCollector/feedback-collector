@@ -12,7 +12,9 @@ export class ICs extends Model<InferAttributes<ICs>, InferCreationAttributes<ICs
   declare name: string;
   declare title: string;
   declare manager_id: number;
+  declare area_id: number | null;
   declare entries: number;
+  declare score: CreationOptional<number | null>;
 }
 
 ICs.init(
@@ -21,7 +23,10 @@ ICs.init(
     name: { type: DataTypes.STRING(200), allowNull: false },
     title: { type: DataTypes.STRING(200), allowNull: false },
     manager_id: { type: DataTypes.INTEGER, allowNull: false },
+    area_id: { type: DataTypes.INTEGER, allowNull: true },
     entries: { type: DataTypes.INTEGER, allowNull: false },
+    // Average of the IC's feedback scores; null until the first feedback. Maintained by recalculateICScore.
+    score: { type: DataTypes.FLOAT, allowNull: true },
   },
   { sequelize, tableName: "ics", timestamps: false }
 );

@@ -18,6 +18,24 @@ function getBadgeColor(score: number) {
   return '#55a613';
 }
 
+const SCORE_COLORS: Record<number, string> = {
+  1: '#E12339',
+  2: '#EA580C',
+  3: '#D97706',
+  4: '#65A30D',
+  5: '#2B8000',
+};
+
+function getScoreColor(score: number | null): string {
+  if (score === null) return '#94a3b8';
+  if (score < 1.5) return SCORE_COLORS[1];
+  if (score < 2.5) return SCORE_COLORS[2];
+  if (score < 3.5) return SCORE_COLORS[3];
+  if (score < 4.5) return SCORE_COLORS[4];
+  return SCORE_COLORS[5];
+}
+
+
 export default function MyManagementComp() {
   const token = useAuthStore((state) => state.token);
   const [managers, setManagers] = useState<Manager[]>([]);
@@ -29,6 +47,16 @@ export default function MyManagementComp() {
   const [areasError, setAreasError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('cards');
+  const [animateBars, setAnimateBars] = useState(false);
+
+  useEffect(() => {
+    if (!loading && managers.length > 0) {
+      setAnimateBars(false);
+      const frame = requestAnimationFrame(() => setAnimateBars(true));
+      return () => cancelAnimationFrame(frame);
+    }
+    setAnimateBars(false);
+  }, [loading, managers, search]);
   const viewContainerRef = useRef<HTMLDivElement>(null);
   const shouldAnimateViewChange = useRef(false);
 
@@ -220,38 +248,32 @@ export default function MyManagementComp() {
                 Could not load area names: {areasError}
               </p>
             )}
-            <section className="my-management-comparison" aria-label="Manager comparison">
+                        <section className="my-management-comparison" aria-label="Manager comparison">
               <h3>Manager Comparison</h3>
-              {visibleManagers.map((manager) => (
-                <div className="my-management-comparison-row" key={manager.id}>
-                  <span className="my-management-comparison-name">{manager.name}</span>
-                  <span
-                    className="my-management-score-track"
-                    role="meter"
-                    aria-label={`${manager.name} average score`}
-                    aria-valuemin={0}
-                    aria-valuemax={5}
-                    aria-valuenow={manager.averageScore ?? 0}
-                  >
-                    <span
-                      className="my-management-score-bar"
-                      style={{
-                        width: `${manager.averageScore === null ? 0 : Math.min(manager.averageScore / 5, 1) * 100}%`,
-                        backgroundColor: manager.averageScore === null
-                          ? 'transparent'
-                          : getBadgeColor(manager.averageScore),
-                      }}
-                    />
-                  </span>
-                  <span className="my-management-comparison-score">
-                    {manager.averageScore?.toFixed(1) ?? '0'}
-                  </span>
-                </div>
-              ))}
-              {visibleManagers.length === 0 && (
-                <p className="my-management-empty">No managers match your search.</p>
-              )}
+              {visibleManagers.map((manager) => {
+                const score = manager.averageScore ?? null;
+                const percentage = score === null ? 0 : (score / 5) * 100;
+
+                return (
+                  <div className="my-management-comparison-row" key={manager.id}>
+                    <span className="my-management-comparison-name">{manager.name}</span>
+                    <span className="my-management-score-track">
+                      <span
+                        className="my-management-score-bar"
+                        style={{
+                          backgroundColor: getScoreColor(score),
+                          width: animateBars ? `${percentage}%` : '0%',
+                        }}
+                      />
+                    </span>
+                    <span className="my-management-comparison-score">
+                      {score === null ? '—' : score.toFixed(1)}
+                    </span>
+                  </div>
+                );
+              })}
             </section>
+
 
             {viewMode === 'cards' ? (
               <div className="my-management-manager-grid" ref={viewContainerRef}>
@@ -275,7 +297,7 @@ export default function MyManagementComp() {
                         ) : (
                           <span
                             className="my-management-score-badge"
-                            style={{ backgroundColor: getBadgeColor(manager.averageScore) }}
+                            style={{ backgroundColor: getBadgeColor(Math.round(manager.averageScore)) }}
                           >
                             {Math.round(manager.averageScore)}
                           </span>

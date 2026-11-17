@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 import type { Feedback, Project } from '../types/feedback';
-import { obtainAllFeedback } from '../service/ObtainFeedback';
+import { obtainAllFeedback, obtainFeedbackPage } from '../service/ObtainFeedback';
 
 import { useAuthStore } from '../store/authStore';
 import { formatDate, getInitials } from '../utils/feedbackFormat';
@@ -12,6 +12,7 @@ import { UserAvatar } from './UserAvatar';
 import { useToastStore } from '../store/toastStore';
 import LoadingOverlay from './LoadingOverlay';
 import DropdownSelect from './DropdownSelect';
+import { resolveScreenshotUrl } from '../service/screenshotUrl';
 
 type ICInfo = {
   IC_id: number;
@@ -36,6 +37,10 @@ type EntryForm = {
 };
 
 const API_URL = `${BASE_URL}/feedback`;
+
+const MAX_SCREENSHOT_BYTES = 100 * 1024 * 1024;
+const TIMELINE_FEEDBACK_LIMIT = 20;
+const ALLOWED_SCREENSHOT_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
 
 const today = () => {
   const now = new Date();
@@ -95,25 +100,66 @@ function ICView({ ic, onBack }: ICViewProps) {
   const currentUserId = useAuthStore((state) => state.user?.id);
 
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
+  const [timelineFeedbacks, setTimelineFeedbacks] = useState<Feedback[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [editingItem, setEditingItem] = useState<Feedback | null>(null);
   const [form, setForm] = useState<EntryForm>(emptyForm);
   const [formError, setFormError] = useState('');
+  const [screenshotFile, setScreenshotFile] = useState<File | null>(null);
+  const screenshotInputRef = useRef<HTMLInputElement>(null);
+
+  const screenshotFilePreview = useMemo(
+    () => (screenshotFile ? URL.createObjectURL(screenshotFile) : null),
+    [screenshotFile]
+  );
+  useEffect(() => {
+    return () => {
+      if (screenshotFilePreview) URL.revokeObjectURL(screenshotFilePreview);
+    };
+  }, [screenshotFilePreview]);
+
+  function handleScreenshotChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0] ?? null;
+    if (file && !ALLOWED_SCREENSHOT_TYPES.includes(file.type)) {
+      setFormError('Screenshot must be a PNG, JPEG or WebP image.');
+      event.target.value = '';
+      return;
+    }
+    if (file && file.size > MAX_SCREENSHOT_BYTES) {
+      setFormError('Screenshot is too large (max 100 MB).');
+      event.target.value = '';
+      return;
+    }
+    setFormError('');
+    setScreenshotFile(file);
+  }
+
+  function removeScreenshot() {
+    setScreenshotFile(null);
+    setForm((current) => ({ ...current, screenshot_url: '' }));
+    if (screenshotInputRef.current) screenshotInputRef.current.value = '';
+  }
 
   async function loadFeedbacks() {
     setLoading(true);
     setError('');
 
     try {
-      const data = await obtainAllFeedback();
-      setFeedbacks(data.filter((item) => item.ic_id === ic.IC_id));
+      const filters = { icId: ic.IC_id, sortBy: 'newest' as const };
+      const [data, timeline] = await Promise.all([
+        obtainAllFeedback(filters),
+        obtainFeedbackPage(1, TIMELINE_FEEDBACK_LIMIT, filters),
+      ]);
+      setFeedbacks(data);
+      setTimelineFeedbacks(timeline.data);
     } catch (err) {
       console.error('Error loading feedback:', err);
       setError('Could not load feedbacks. Please try again.');
@@ -137,10 +183,10 @@ function ICView({ ic, onBack }: ICViewProps) {
 
   const oldestFirstScores = useMemo(
     () =>
-      [...feedbacks]
-        .sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''))
+      [...timelineFeedbacks]
+        .sort((a, b) => (a.date ?? '').localeCompare(b.date ?? '') || a.id - b.id)
         .map((item) => Number(item.score)),
-    [feedbacks]
+    [timelineFeedbacks]
   );
 
   const averageScore = useMemo(() => {
@@ -164,6 +210,7 @@ function ICView({ ic, onBack }: ICViewProps) {
   function openCreate() {
     setEditingItem(null);
     setForm(emptyForm());
+    setScreenshotFile(null);
     setFormError('');
     setError('');
     setSuccess('');
@@ -176,11 +223,12 @@ function ICView({ ic, onBack }: ICViewProps) {
       project_id: item.project_id === null ? '' : String(item.project_id),
       date: item.date?.slice(0, 10) || today(),
       source_name: item.source_name ?? '',
-      source_title: '',
+      source_title: item.source_title ?? '',
       comment: item.comment ?? '',
       score: String(item.score),
       screenshot_url: item.screenshot_url ?? '',
     });
+    setScreenshotFile(null);
     setFormError('');
     setError('');
     setSuccess('');
@@ -194,6 +242,7 @@ function ICView({ ic, onBack }: ICViewProps) {
     window.setTimeout(() => {
       setModalOpen(false);
       setEditingItem(null);
+      setScreenshotFile(null);
       setFormError('');
       setIsClosing(false);
     }, 300);
@@ -232,20 +281,43 @@ function ICView({ ic, onBack }: ICViewProps) {
       return;
     }
 
-    const payload = {
-      author_id: authorId,
-      ic_id: ic.IC_id,
-      project_id: projectId,
-      date: form.date,
-      source_name: form.source_name.trim(),
-      score,
-      comment: form.comment.trim() || null,
-      screenshot_url: form.screenshot_url.trim() || null,
-    };
-
     setSaving(true);
 
     try {
+    
+      let screenshotUrl: string | null = form.screenshot_url.trim() || null;
+
+      if (screenshotFile) {
+        const body = new FormData();
+        body.append('file', screenshotFile);
+
+       
+        const uploadResponse = await fetch(`${API_URL}/screenshot`, {
+          method: 'POST',
+          headers: authHeaders(),
+          body,
+        });
+
+        if (!uploadResponse.ok) {
+          const responseText = await uploadResponse.text();
+          throw new Error(responseText || `Screenshot upload failed (${uploadResponse.status})`);
+        }
+
+        screenshotUrl = (await uploadResponse.json()).url as string;
+      }
+
+      const payload = {
+        author_id: authorId,
+        ic_id: ic.IC_id,
+        project_id: projectId,
+        date: form.date,
+        source_name: form.source_name.trim(),
+        source_title: form.source_title.trim() || null,
+        score,
+        comment: form.comment.trim() || null,
+        screenshot_url: screenshotUrl,
+      };
+
       const isEditing = editingItem !== null;
       const response = await fetch(
         isEditing ? `${API_URL}/${editingItem.id}` : API_URL,
@@ -296,8 +368,8 @@ function ICView({ ic, onBack }: ICViewProps) {
         throw new Error(responseText || `Request failed with status ${response.status}`);
       }
 
-      setFeedbacks((current) => current.filter((item) => item.id !== id));
       useToastStore.getState().addToast('Entry deleted successfully.', 'success');
+      await loadFeedbacks();
 
       if (editingItem?.id === id) {
         closeModal();
@@ -356,7 +428,7 @@ function ICView({ ic, onBack }: ICViewProps) {
           <div className="icv-stat">
             <span className="icv-stat-label">Average</span>
             {averageScore === null ? (
-              <span className="icv-stat-value">—</span>
+              <span className="icv-stat-value"> </span>
             ) : (
               <span
                 className="score-badge icv-avg-badge"
@@ -420,13 +492,18 @@ function ICView({ ic, onBack }: ICViewProps) {
               {item.comment && <p className="icv-entry-body">{item.comment}</p>}
 
               {item.screenshot_url && (
-                <a href={item.screenshot_url} target="_blank" rel="noreferrer">
+                <button
+                  type="button"
+                  className="icv-thumb-btn"
+                  onClick={() => setPreviewUrl(item.screenshot_url)}
+                  aria-label="View screenshot"
+                >
                   <img
                     className="icv-thumb"
-                    src={item.screenshot_url}
+                    src={resolveScreenshotUrl(item.screenshot_url)}
                     alt="Screenshot attached to this entry"
                   />
-                </a>
+                </button>
               )}
             </article>
           ))}
@@ -533,17 +610,48 @@ function ICView({ ic, onBack }: ICViewProps) {
                 />
               </label>
 
-              <label className="icv-field">
+              <div className="icv-field">
                 <span className="icv-label">Screenshot (optional)</span>
+                <div className="icv-file-row">
+                  <label
+                    htmlFor="icv-screenshot"
+                    className="btn btn-secondary icv-file-btn"
+                  >
+                    <i className="fa-solid fa-image" aria-hidden="true" />
+                    {screenshotFilePreview || form.screenshot_url
+                      ? 'Change screenshot'
+                      : 'Upload screenshot'}
+                  </label>
+                  <span className="icv-file-name">
+                    {screenshotFile?.name ?? 'PNG, JPEG or WebP'}
+                  </span>
+                </div>
                 <input
-                  className="input-control"
-                  name="screenshot_url"
-                  type="url"
-                  value={form.screenshot_url}
-                  onChange={handleFieldChange}
-                  placeholder="https://..."
+                  id="icv-screenshot"
+                  ref={screenshotInputRef}
+                  className="icv-file-input"
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  onChange={handleScreenshotChange}
                 />
-              </label>
+                {(screenshotFilePreview || form.screenshot_url) && (
+                  <>
+                    <img
+                      className="icv-thumb"
+                      src={screenshotFilePreview ?? resolveScreenshotUrl(form.screenshot_url)}
+                      alt="Screenshot to attach"
+                    />
+                    <button
+                      type="button"
+                      className="icv-ghost-btn"
+                      onClick={removeScreenshot}
+                      disabled={saving}
+                    >
+                      Remove screenshot
+                    </button>
+                  </>
+                )}
+              </div>
 
               {formError && (
                 <div role="alert" className="icv-alert is-error">
@@ -570,6 +678,22 @@ function ICView({ ic, onBack }: ICViewProps) {
               </div>
             </form>
           </div>
+        </div>
+      )}
+
+      {previewUrl && (
+        <div
+          className="icv-overlay is-dark"
+          onClick={() => setPreviewUrl(null)}
+        >
+          <img
+            className="icv-preview-img"
+            src={resolveScreenshotUrl(previewUrl)}
+            alt="Screenshot preview"
+            role="dialog"
+            aria-modal="true"
+            onClick={(event) => event.stopPropagation()}
+          />
         </div>
       )}
     </div>

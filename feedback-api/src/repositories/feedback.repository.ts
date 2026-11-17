@@ -1,6 +1,7 @@
-import { Feedback as FeedbackModel, ICs } from "../models/Index.ts";
+import { Feedback as FeedbackModel, ICs, Project } from "../models/Index.ts";
 import { Feedback, FeedbackFilters, NewFeedback, UpdateFeedback } from "../types/feedback.ts";
 import { Op, Sequelize, type WhereOptions, type Order } from 'sequelize';
+import { recalculateICScore } from './ic.repository.ts';
 
 const unaccentIlike = (column: string, value: string) =>
     Sequelize.where(
@@ -20,8 +21,7 @@ export async function getAllFeedbacks(page: number, limit: number, filters: Feed
         if (filters[key] !== undefined) where[key] = filters[key];
     }
     const contains = (value: string) => `%${value.replace(/[\\%_]/g, '\\$&')}%`;
-    if (filters.text) where[Op.and] = [...((where[Op.and] as unknown[]) ?? []), unaccentIlike('Feedback.comment', contains(filters.text))];
-    const icWhere: WhereOptions = {};
+    if (filters.text) where[Op.and as unknown as string] = [unaccentIlike('Feedback.comment', contains(filters.text))];    const icWhere: WhereOptions = {};
     if (filters.ic_name) icWhere.name = { [Op.iLike]: contains(filters.ic_name) };
     if (filters.manager_id !== undefined) icWhere.manager_id = filters.manager_id;
     const order: Order = filters.sort
@@ -53,6 +53,26 @@ export async function getAllFeedbacks(page: number, limit: number, filters: Feed
     };
 }
 
+// Only the requested entries (ids that do not exist are left out), with the IC and project names, newest first.
+export async function getFeedbacksForExport(ids: number[]) {
+    const [rows, ics, projects] = await Promise.all([
+        FeedbackModel.findAll({ where: { id: { [Op.in]: ids } }, order: [['date', 'DESC'], ['id', 'DESC']] }),
+        ICs.findAll({ attributes: ['IC_id', 'name'], raw: true }),
+        Project.findAll({ attributes: ['id', 'name'], raw: true }),
+    ]);
+    const icNames = new Map(ics.map(ic => [ic.IC_id, ic.name]));
+    const projectNames = new Map(projects.map(project => [project.id, project.name]));
+
+    return rows.map(row => {
+        const feedback = row.toJSON();
+        return {
+            ...feedback,
+            ic_name: icNames.get(feedback.ic_id) ?? null,
+            project_name: projectNames.get(feedback.project_id) ?? null,
+        };
+    });
+}
+
 export async function insertFeedback(feedbackData: NewFeedback): Promise<Feedback[]> {
     const row = await FeedbackModel.create({
         author_id: feedbackData.author_id,
@@ -65,10 +85,12 @@ export async function insertFeedback(feedbackData: NewFeedback): Promise<Feedbac
         screenshot_url: feedbackData.screenshot_url
     });
 
+    await recalculateICScore(row.ic_id);
     return [row.toJSON()];
 }
 
 export async function putFeedback(feedbackData: NewFeedback, feedbackId: number): Promise<Feedback[]> {
+    const previous = await FeedbackModel.findByPk(feedbackId);
     await FeedbackModel.update(
         {
             author_id: feedbackData.author_id,
@@ -84,10 +106,18 @@ export async function putFeedback(feedbackData: NewFeedback, feedbackId: number)
     );
 
     const row = await FeedbackModel.findByPk(feedbackId);
+    await syncScores(previous?.ic_id, row?.ic_id);
     return row ? [row.toJSON()] : [];
 }
 
+async function syncScores(...icIds: (number | undefined)[]) {
+    for (const id of new Set(icIds)) {
+        if (id !== undefined) await recalculateICScore(id);
+    }
+}
+
 export async function patchFeedback(feedbackData: UpdateFeedback, feedbackId: number): Promise<Feedback[]> {
+    const previous = await FeedbackModel.findByPk(feedbackId);
     const updates: Record<string, unknown> = {};
     if (feedbackData.author_id !== undefined) updates.author_id = feedbackData.author_id;
     if (feedbackData.ic_id !== undefined) updates.ic_id = feedbackData.ic_id;
@@ -105,13 +135,15 @@ export async function patchFeedback(feedbackData: UpdateFeedback, feedbackId: nu
     });
 
     const row = await FeedbackModel.findByPk(feedbackId);
+    await syncScores(previous?.ic_id, row?.ic_id);
     return row ? [row.toJSON()] : [];
 }
 
 export async function deleteFeedback(feedbackId: number): Promise<boolean> {
+    const previous = await FeedbackModel.findByPk(feedbackId);
     const deleted = await FeedbackModel.destroy({ 
         where: { id: feedbackId } 
     });
+    await syncScores(previous?.ic_id);
     return deleted > 0;
 }
-
