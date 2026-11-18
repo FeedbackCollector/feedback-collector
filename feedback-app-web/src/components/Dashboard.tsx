@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuthStore } from '../store/authStore';
 import {
   calculateDashboardMetrics,
@@ -22,6 +23,11 @@ export default function DashboardComp() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedAreaId, setSelectedAreaId] = useState<number | null>(null);
+  const [headerActions, setHeaderActions] = useState<HTMLElement | null>(null);
+
+  useLayoutEffect(() => {
+    setHeaderActions(document.getElementById('page-header-actions'));
+  }, []);
 
   useEffect(() => {
     let isCurrent = true;
@@ -92,14 +98,9 @@ export default function DashboardComp() {
     return <LoadingOverlay message="Loading dashboard..." />;
   }
 
-  const handleSelectPerson = (person: SearchResultItem) => {
-    setSearchQuery(person.name);
-    setIsSearchOpen(false);
-  };
-
   return (
     <section className="dashboard-page" aria-label="Dashboard overview">
-      <SearchBar data={data} />
+      {headerActions && createPortal(<SearchBar data={data} />, headerActions)}
 
       <div className="dashboard-area-filter">
         <div className="dashboard-area-options" role="group" aria-label="Filter by area">

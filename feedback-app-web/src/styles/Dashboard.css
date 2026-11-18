@@ -107,10 +107,7 @@
 }
 
 .dashboard-search {
-  position: fixed;
-  top: 16px;
-  right: 32px;
-  z-index: 1000;
+  position: relative;
   display: flex;
   align-items: center;
   width: 240px;
@@ -307,12 +304,7 @@
 
 @media (max-width: 768px) {
   .dashboard-search {
-    position: fixed;
-    top: 12px;
-    right: 16px;
-    left: auto;
     width: clamp(120px, calc(100vw - 220px), 220px);
-    z-index: 1000;
   }
 
   .dashboard-search-icon {
