@@ -75,7 +75,10 @@ export async function icDelete(id: number): Promise<boolean> {
 
 export async function recalculateICScore(icId: number): Promise<void> {
     await sequelize.query(
-        `UPDATE ics SET score = (SELECT ROUND(AVG(score)::numeric, 2) FROM feedback WHERE ic_id = :icId) WHERE "IC_id" = :icId`,
+        `UPDATE ics SET
+            score = (SELECT ROUND(AVG(score)::numeric, 2) FROM feedback WHERE ic_id = :icId),
+            entries = (SELECT COUNT(*) FROM feedback WHERE ic_id = :icId)
+         WHERE "IC_id" = :icId`,
         {replacements: {icId}}
     );
 }
