@@ -8,7 +8,6 @@ export function Header({ title }: { title: string }) {
         document.querySelector('.manager-sidebar')?.classList.toggle('open');
         }}></i>
       <h1>{title}</h1>
-      <div id="page-header-actions" className="page-header-actions" />
     </header>
   );
 }

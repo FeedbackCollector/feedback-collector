@@ -1,5 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { useEffect, useMemo, useState } from 'react';
 import { useAuthStore } from '../store/authStore';
 import {
   calculateDashboardMetrics,
@@ -9,6 +8,13 @@ import {
 import { DashboardStats } from './DashboardStats';
 import { SearchBar } from './SearchBar';
 import '../styles/Dashboard.css';
+import LoadingOverlay from './LoadingOverlay';
+
+interface SearchResultItem {
+  id: number;
+  name: string;
+  role: 'Manager' | 'IC';
+}
 
 export default function DashboardComp() {
   const token = useAuthStore((state) => state.token);
@@ -16,11 +22,6 @@ export default function DashboardComp() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedAreaId, setSelectedAreaId] = useState<number | null>(null);
-  const [headerActions, setHeaderActions] = useState<HTMLElement | null>(null);
-
-  useLayoutEffect(() => {
-    setHeaderActions(document.getElementById('page-header-actions'));
-  }, []);
 
   useEffect(() => {
     let isCurrent = true;
@@ -60,7 +61,7 @@ export default function DashboardComp() {
     [data, selectedArea?.id]
   );
 
-  const show = (value: string) => (loading ? '…' : error || !calculated ? '0' : value);
+  const show = (value: string) => (loading ? '…' : error || !calculated ? '—' : value);
   const metrics = [
     ...(selectedArea === null
       ? [{ label: 'Areas', value: show(String(areas.length)), detail: 'Total areas' }]
@@ -87,9 +88,18 @@ export default function DashboardComp() {
     },
   ];
 
+  if (loading) {
+    return <LoadingOverlay message="Loading dashboard..." />;
+  }
+
+  const handleSelectPerson = (person: SearchResultItem) => {
+    setSearchQuery(person.name);
+    setIsSearchOpen(false);
+  };
+
   return (
     <section className="dashboard-page" aria-label="Dashboard overview">
-      {headerActions && createPortal(<SearchBar data={data} />, headerActions)}
+      <SearchBar data={data} />
 
       <div className="dashboard-area-filter">
         <div className="dashboard-area-options" role="group" aria-label="Filter by area">

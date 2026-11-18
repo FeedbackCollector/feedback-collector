@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import type { DashboardData } from '../service/ObtainDashboard';
 import { useDashboardCharts, type ChartBarItem } from '../service/DashboardStatistics';
 
-
 interface DashboardStatsProps {
   data: DashboardData | null;
   selectedAreaId: number | null;
@@ -58,7 +57,6 @@ export function DashboardStats({
 
   return (
     <div className="dashboard-stats" aria-label="Detailed statistics">
-      
       {selectedAreaId === null && (
         <article className="dashboard-stats-card">
           <h2 className="dashboard-stats-title">Area Comparison</h2>
@@ -70,7 +68,6 @@ export function DashboardStats({
         </article>
       )}
 
-      
       <article className="dashboard-stats-card">
         <h2 className="dashboard-stats-title">Score Distribution</h2>
         <div className="dashboard-chart-list">
