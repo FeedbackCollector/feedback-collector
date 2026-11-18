@@ -14,6 +14,7 @@ import { obtainAllICs } from '../service/ObtainICs';
 import { useAuthStore } from '../store/authStore';
 import LoadingOverlay from './LoadingOverlay';
 import { formatPersonName } from './formatPersonName';
+import DropdownSelect from './DropdownSelect';
 
 const SEARCH_DEBOUNCE_MS = 300;
 const PAGE_SIZE = 10;
@@ -68,23 +69,6 @@ function FeedbackLogComp() {
     shouldAnimateViewChange.current = true;
     setViewMode(nextMode);
   }
-
-  useEffect(() => {
-  const mediaQuery = window.matchMedia('(max-width: 767px)');
-
-  if (mediaQuery.matches) {
-    setViewMode('list');
-  }
-
-  const handleMediaChange = (e: MediaQueryListEvent) => {
-    if (e.matches) {
-      setViewMode('list');
-    }
-  }; 
-  mediaQuery.addEventListener('change', handleMediaChange);
-  return () => mediaQuery.removeEventListener('change', handleMediaChange);
-  }, []);
-  
 
   useEffect(() => {
   const mediaQuery = window.matchMedia('(max-width: 767px)');
@@ -222,15 +206,8 @@ function FeedbackLogComp() {
     }, { replace });
   }
 
-  function handleChange(e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
-    const { name, value } = e.target;
-    if (name === 'text') {
-      setSearchInputs((current) => ({ ...current, text: value }));
-      return;
-    }
-    if (name === 'sort' && value !== 'newest' && value !== 'oldest') return;
-    setLoading(true);
-    updateParams({ [name]: value });
+  function handleChange(e: ChangeEvent<HTMLInputElement>) {
+    setSearchInputs((current) => ({ ...current, text: e.target.value }));
   }
 
   function goToPage(next: number) {
@@ -332,34 +309,50 @@ function FeedbackLogComp() {
 
             <div className="filter-item">
               <span className="filter-label">Project</span>
-              <select name="project" className="input-control" value={filters.projectId} onChange={handleChange}>
-                <option value="">All</option>
-                {projects.map((project) => (
-                  <option key={project.id} value={String(project.id)}>
-                    {project.name}
-                  </option>
-                ))}
-              </select>
+              <DropdownSelect
+                id="feedback-project"
+                label="Project"
+                value={filters.projectId}
+                options={[
+                  { value: '', label: 'All' },
+                  ...projects.map((project) => ({
+                    value: String(project.id),
+                    label: project.name,
+                  })),
+                ]}
+                onChange={(value) => updateParams({ project: value })}
+              />
             </div>
 
             <div className="filter-item">
               <span className="filter-label">Score</span>
-              <select name="score" className="input-control" value={filters.score} onChange={handleChange}>
-                <option value="">All</option>
-                {SCORES.map((score) => (
-                  <option key={score} value={String(score)}>
-                    {score}
-                  </option>
-                ))}
-              </select>
+              <DropdownSelect
+                id="feedback-score"
+                label="Score"
+                value={filters.score}
+                options={[
+                  { value: '', label: 'All' },
+                  ...SCORES.map((score) => ({
+                    value: String(score),
+                    label: String(score),
+                  })),
+                ]}
+                onChange={(value) => updateParams({ score: value })}
+              />
             </div>
 
             <div className="filter-item">
               <span className="filter-label">Sort by date</span>
-              <select name="sort" className="input-control" value={filters.sortBy} onChange={handleChange}>
-                <option value="newest">Newest first</option>
-                <option value="oldest">Oldest first</option>
-              </select>
+              <DropdownSelect
+                id="feedback-sort-by"
+                label="Sort by date"
+                value={filters.sortBy}
+                options={[
+                  { value: 'newest', label: 'Newest first' },
+                  { value: 'oldest', label: 'Oldest first' },
+                ]}
+                onChange={(value) => updateParams({ sort: value })}
+              />
             </div>
           </div>
 
@@ -398,7 +391,7 @@ function FeedbackLogComp() {
 
         {loading && <LoadingOverlay message="Loading feedback..." />}
         {!loading && loadError && <LoadingOverlay message="Error loading feedback." />}
-        {!loading && !loadError && enrichedFeedback.length === 0 && <LoadingOverlay message="No feedback entries match the applied filters." />}
+        {!loading && !loadError && enrichedFeedback.length === 0 && <p style={{ justifySelf:"center", fontSize:"20px"  }}>No feedback entries match the applied filters.</p>}
 
         {!loading && enrichedFeedback.length > 0 && (
           <div ref={feedbackContainerRef}>

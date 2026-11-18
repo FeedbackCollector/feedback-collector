@@ -107,10 +107,13 @@
 }
 
 .dashboard-search {
-  position: relative;
+  position: fixed;
+  top: 16px;
+  right: 32px;
+  z-index: 1000;
   display: flex;
   align-items: center;
-  width: 280px;
+  width: 240px;
   max-width: 100%;
   box-sizing: border-box;
 }
@@ -304,7 +307,12 @@
 
 @media (max-width: 768px) {
   .dashboard-search {
+    position: fixed;
+    top: 12px;
+    right: 16px;
+    left: auto;
     width: clamp(120px, calc(100vw - 220px), 220px);
+    z-index: 1000;
   }
 
   .dashboard-search-icon {
@@ -328,6 +336,7 @@
     left: auto;
     right: 0;
     width: min(280px, calc(100vw - 32px));
+    z-index: 1010;
   }
 
   .dashboard-area-options {
