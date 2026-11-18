@@ -43,20 +43,37 @@ interface UsersResponse {
     area_id: number | null;
     role: string;
   }>;
+  pagination?: {
+    totalPages?: number;
+  };
 }
 
-async function obtainManagers(): Promise<DashboardManager[]> {
-  const response = await fetch(`${API_URL}/users?role=manager`, { headers: authHeaders() });
+const USERS_PAGE_LIMIT = 100;
+
+async function obtainUsersPage(page: number): Promise<UsersResponse> {
+  const params = new URLSearchParams({ role: 'manager', page: String(page), limit: String(USERS_PAGE_LIMIT) });
+  const response = await fetch(`${API_URL}/users?${params}`, { headers: authHeaders() });
   if (!response.ok) {
     throw new Error(`Could not load managers (${response.status}).`);
   }
+  return (await response.json()) as UsersResponse;
+}
 
-  const result = (await response.json()) as UsersResponse;
-  if (!Array.isArray(result.data)) {
+async function obtainManagers(): Promise<DashboardManager[]> {
+  const firstPage = await obtainUsersPage(1);
+  const totalPages = firstPage.pagination?.totalPages;
+  if (!Array.isArray(firstPage.data) || totalPages === undefined || !Number.isInteger(totalPages)) {
     throw new Error('The users response has an invalid format.');
   }
 
-  return result.data
+  const remainingPages = await Promise.all(
+    Array.from({ length: Math.max(0, totalPages - 1) }, (_, index) => obtainUsersPage(index + 2))
+  );
+  if (remainingPages.some((page) => !Array.isArray(page.data))) {
+    throw new Error('The users response has an invalid format.');
+  }
+
+  return [...firstPage.data, ...remainingPages.flatMap((page) => page.data ?? [])]
     .filter((user) => user.role.toLowerCase() === 'manager')
     .map((user) => ({
       id: user.id,
