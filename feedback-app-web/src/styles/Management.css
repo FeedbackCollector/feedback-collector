@@ -417,7 +417,7 @@
 
 .management-dialog-backdrop {
   position: fixed;
-  z-index: 10;
+  z-index: 55;
   display: grid;
   padding: 20px;
   background: rgb(23 24 26 / 42%);
@@ -669,20 +669,20 @@
 
 
 .management-dialog-backdrop {
-  animation: popup-backdrop-in 300ms ease both;
+  animation: popup-backdrop-in 150ms ease both;
 }
 
 .management-dialog {
-  animation: popup-in 300ms ease both;
+  animation: popup-in 150ms ease both;
 }
 
 .management-dialog-backdrop.is-closing {
-  animation: popup-backdrop-out 300ms ease both;
+  animation: popup-backdrop-out 150ms ease both;
   pointer-events: none;
 }
 
 .management-dialog-backdrop.is-closing .management-dialog {
-  animation: popup-out 300ms ease both;
+  animation: popup-out 150ms ease both;
 }
 
 .management-assignment-backdrop,
@@ -708,4 +708,41 @@
 @keyframes popup-out {
   from { opacity: 1; transform: translateY(0) scale(1); }
   to { opacity: 0; transform: translateY(8px) scale(0.98); }
+}
+.management-delete-message {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.management-delete-message strong {
+  color: inherit;
+  font-weight: 600;
+}
+
+.management-delete-button {
+  min-height: 40px;
+  padding: 0 18px;
+  border: 1px solid #c62828;
+  border-radius: 999px;
+  background: #c62828;
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+}
+
+.management-delete-button:hover {
+  background: #a32121;
+}
+
+.management-delete-button:focus-visible {
+  outline: 2px solid #c62828;
+  outline-offset: 2px;
+}
+
+.management-delete-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
 }
