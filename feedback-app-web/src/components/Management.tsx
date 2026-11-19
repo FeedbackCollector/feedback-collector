@@ -21,6 +21,7 @@ import '../styles/Management.css';
 import {useToastStore} from '../store/toastStore';
 import LoadingOverlay from './LoadingOverlay';
 import { formatPersonName } from './formatPersonName';
+import DropdownSelect from './DropdownSelect';
 
 type ViewMode = 'table' | 'cards';
 
@@ -79,6 +80,14 @@ const arrowBack = <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" he
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
+
+type DeleteTarget = {
+  id: number;
+  name: string;
+  kind: string;
+  tab: ManagementTab;
+  isPendingRequest: boolean;
+};
 
 type ManagementCompProps = {
   activeTab: ManagementTab;
@@ -146,7 +155,9 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
   const [selectedICIds, setSelectedICIds] = useState<number[]>([]);
   const [feedbackManager, setFeedbackManager] = useState<ManagementRow | null>(null);
   const [formValues, setFormValues] = useState<ManagementFormValues>(EMPTY_FORM);
-  const [closingPopup, setClosingPopup] = useState<'feedback' | 'form' | null>(null);
+  const [closingPopup, setClosingPopup] = useState<'feedback' | 'form' | 'delete' | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
+
 
   const [searchParams, setSearchParams] = useSearchParams();
   const pageParam = Number(searchParams.get('page'));
@@ -247,7 +258,7 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
       setFormValues(EMPTY_FORM);
       setError(null);
       setClosingPopup(null);
-    }, 300);
+    }, 150);
   };
 
   const closeFeedbackDialog = () => {
@@ -257,7 +268,7 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
     window.setTimeout(() => {
       setFeedbackManager(null);
       setClosingPopup(null);
-    }, 300);
+    }, 150);
   };
 
   const updateFormValue = (key: keyof ManagementFormValues, value: string) => {
@@ -296,18 +307,44 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
     }
   };
 
-  const deleteRow = async (row: ManagementRow) => {
-    const displayName = formatManagementName(row.name, activeTab);
-    if (!token || !window.confirm(`Delete ${displayName}?`)) return;
+
+  const requestDeleteRow = (row: ManagementRow) => {
+    setError(null);
+    setClosingPopup(null);
+    setDeleteTarget({
+      id: row.id,
+      name: row.name,
+      kind: TAB_SINGULAR[activeTab],
+      tab: activeTab,
+      isPendingRequest: false,
+    });
+  };
+
+  const closeDeleteDialog = () => {
+    if (closingPopup || isMutating) return;
+
+    setClosingPopup('delete');
+    window.setTimeout(() => {
+      setDeleteTarget(null);
+      setError(null);
+      setClosingPopup(null);
+    }, 150);
+  };
+
+  const confirmDelete = async () => {
+    if (!token || !deleteTarget) return;
 
     setIsMutating(true);
     setError(null);
     try {
-      await deleteManagementRow(activeTab, row.id, token);
+      await deleteManagementRow(deleteTarget.tab, deleteTarget.id, token);
       await refreshRows();
-      useToastStore.getState().addToast(`${TAB_SINGULAR[activeTab]} deleted successfully!`, 'success');
+      setDeleteTarget(null);
+      if (!deleteTarget.isPendingRequest) {
+        useToastStore.getState().addToast(`${deleteTarget.kind} deleted successfully!`, 'success');
+      }
     } catch (reason: unknown) {
-      console.error(`Could not delete ${activeTab.toLowerCase()}:`, reason);
+      console.error(`Could not delete ${deleteTarget.kind.toLowerCase()}:`, reason);
       setError(getErrorMessage(reason));
     } finally {
       setIsMutating(false);
@@ -338,15 +375,14 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
 
     setIsMutating(true);
     setError(null);
-    try {
-      await deleteManagementRow('Managers', account.id, token);
-      await refreshRows();
-    } catch (reason: unknown) {
-      console.error('Could not delete pending account:', reason);
-      setError(getErrorMessage(reason));
-    } finally {
-      setIsMutating(false);
-    }
+    setClosingPopup(null);
+    setDeleteTarget({
+      id: account.id,
+      name: account.name,
+      kind: 'Account request',
+      tab: 'Managers',
+      isPendingRequest: true,
+    });
   };
 
   const renderPendingActions = (account: PendingAccount) => (
@@ -362,7 +398,7 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
       <button
         type="button"
         className="management-request-delete"
-        onClick={() => void deletePendingAccount(account)}
+        onClick={() => deletePendingAccount(account)}
         disabled={isMutating}
       >
         Delete
@@ -552,14 +588,14 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
           </div>
         </div>
 
-        {error && !isDialogOpen && !assigningManager && (
+        {error && !isDialogOpen && !assigningManager && !deleteTarget && (
           <p className="management-error" role="alert">
             Could not complete the request: {error}
           </p>
         )}
         {loading ? (
           <LoadingOverlay message={`Loading ${activeTab.toLowerCase()}...`} />
-        ) : error && !isDialogOpen && !assigningManager ? null : (
+        ) : error && !isDialogOpen && !assigningManager && !deleteTarget ? null : (
           <>
             {activeTab === 'Managers' && showPendingRequests ? (
               <section
@@ -625,8 +661,8 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
             ) : rows.length === 0 ? (
           <p className="management-empty-state">No {activeTab.toLowerCase()} to display.</p>
             ) : viewMode === 'table' ? (
-          <div className="management-table-wrap">
-            <table className={`management-table${activeTab === 'Managers' ? ' management-managers-table' : ''}`}>
+          <div className={`management-table-wrap${activeTab === 'Managers' ? ' management-managers-table-wrap' : ''}`}>
+            <table className={`management-table${activeTab === 'Managers' ? ' management-managers-table' : ''}${activeTab === 'Areas' || activeTab === 'Projects' ? ' management-scroll-table' : ''}`}>
               <thead>
                 <tr>
                   {COLUMNS[activeTab].map(({ label }) => <th key={label}>{label}</th>)}
@@ -639,18 +675,23 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
                     {COLUMNS[activeTab].map(({ key, label }) => (
                       <td key={key} data-label={label}>
                         {activeTab === 'Managers' && key === 'area' ? (
-                          <select
-                            className="management-area-select"
-                            aria-label={`Area for ${formatManagementName(row.name, activeTab)}`}
-                            value={row.areaId ?? ''}
-                            disabled={isMutating || areas.length === 0}
-                            onChange={(event) => void changeManagerArea(row, Number(event.target.value))}
-                          >
-                            {row.areaId === undefined && <option value="">No area assigned</option>}
-                            {areas.map((area) => (
-                              <option key={area.id} value={area.id}>{area.name}</option>
-                            ))}
-                          </select>
+                          <DropdownSelect
+                            id={`management-area-${row.id}`}
+                            label={`Area for ${formatManagementName(row.name, activeTab)}`}
+                            value={row.areaId === undefined ? '' : String(row.areaId)}
+                            options={[
+                              ...(row.areaId === undefined
+                                ? [{ value: '', label: 'No area assigned' }]
+                                : []),
+                              ...areas.map((area) => ({
+                                value: String(area.id),
+                                label: area.name,
+                              })),
+                            ]}
+                            onChange={(value) => {
+                              if (value) void changeManagerArea(row, Number(value));
+                            }}
+                          />
                         ) : renderCell(row, key)}
                       </td>
                     ))}
@@ -691,8 +732,8 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
                       <button
                         type="button"
                         className="management-row-action"
-                        aria-label={`Delete ${formatManagementName(row.name, activeTab)}`}
-                        onClick={() => void deleteRow(row)}
+                        aria-label={`Delete ${row.name}`}
+                        onClick={() => requestDeleteRow(row)}
                         disabled={isMutating}
                       >
                         <i className="fa-regular fa-trash-can" aria-hidden="true" />
@@ -734,8 +775,8 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
                     <button
                       type="button"
                       className="management-row-action"
-                      aria-label={`Delete ${formatManagementName(row.name, activeTab)}`}
-                      onClick={() => void deleteRow(row)}
+                      aria-label={`Delete ${row.name}`}
+                      onClick={() => requestDeleteRow(row)}
                       disabled={isMutating}
                     >
                       <i className="fa-regular fa-trash-can" aria-hidden="true" />
@@ -977,17 +1018,19 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
                   </>
                 )}
                 <label htmlFor="management-area">Area</label>
-                <select
+                <DropdownSelect
                   id="management-area"
-                  required
+                  label="Area"
                   value={formValues.areaId}
-                  onChange={(event) => updateFormValue('areaId', event.target.value)}
-                >
-                  <option value="" disabled>Select an area</option>
-                  {areas.map((area) => (
-                    <option key={area.id} value={area.id}>{area.name}</option>
-                  ))}
-                </select>
+                  options={[
+                    { value: '', label: 'Select an area' },
+                    ...areas.map((area) => ({
+                      value: String(area.id),
+                      label: area.name,
+                    })),
+                  ]}
+                  onChange={(value) => updateFormValue('areaId', value)}
+                />
                 {areas.length === 0 && <p className="management-form-hint">Create an area before adding a manager.</p>}
               </>
             )}
@@ -1002,17 +1045,20 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
                   onChange={(event) => updateFormValue('title', event.target.value)}
                 />
                 <label htmlFor="management-manager">Manager</label>
-                <select
+                <DropdownSelect
                   id="management-manager"
-                  required
+                  label="Manager"
                   value={formValues.managerId}
-                  onChange={(event) => updateFormValue('managerId', event.target.value)}
-                >
-                  <option value="" disabled>Select a manager</option>
-                  {managers.map((manager) => (
-                    <option key={manager.id} value={manager.id}>{formatPersonName(manager.name)}</option>
-                  ))}
-                </select>
+                  options={[
+                    { value: '', label: 'Select a manager' },
+                    ...managers.map((manager) => ({
+                      value: String(manager.id),
+                      label: formatPersonName(manager.name),
+                    })),
+                  ]}
+                  onChange={(value) => updateFormValue('managerId', value)}
+                />
+
                 {managers.length === 0 && <p className="management-form-hint">Create a manager before adding an IC.</p>}
               </>
             )}
@@ -1031,6 +1077,48 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {deleteTarget && (
+        <div
+          className={`management-dialog-backdrop${closingPopup === 'delete' ? ' is-closing' : ''}`}
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) closeDeleteDialog();
+          }}
+        >
+          <section
+            className="management-dialog management-delete-dialog"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="management-delete-title"
+            aria-describedby="management-delete-description"
+          >
+            <h2 id="management-delete-title">Delete {deleteTarget.kind}</h2>
+            <p id="management-delete-description" className="management-delete-message">
+              Are you sure you want to delete <strong>{deleteTarget.name}</strong>? This action cannot be undone.
+            </p>
+            {error && <p className="management-error" role="alert">{error}</p>}
+            <div className="management-dialog-actions">
+              <button
+                type="button"
+                className="management-cancel-button"
+                onClick={closeDeleteDialog}
+                disabled={isMutating}
+                autoFocus
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="management-delete-button"
+                onClick={() => void confirmDelete()}
+                disabled={isMutating}
+              >
+                {isMutating ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </section>
         </div>
       )}
     </section>

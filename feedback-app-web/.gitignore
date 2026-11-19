@@ -23,3 +23,6 @@ dist-ssr
 *.sln
 *.sw?
 package.json
+
+# TypeScript incremental build cache
+*.tsbuildinfo
