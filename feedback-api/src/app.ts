@@ -10,6 +10,7 @@ import projectRoutes from "./routes/project.routes.ts";
 import swaggerUi from "swagger-ui-express";
 import YAML from "yaml";
 import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import cors from "cors";
 
 const app = express();
@@ -32,6 +33,11 @@ app.get("/", (req: Request, res: Response) => {
 });
 
 app.use("/uploads", express.static(UPLOADS_DIR, {
+  setHeaders: (res) => res.set("X-Content-Type-Options", "nosniff"),
+}));
+
+app.use("/assets", express.static(fileURLToPath(new URL("../assets", import.meta.url)), {
+  maxAge: "7d",
   setHeaders: (res) => res.set("X-Content-Type-Options", "nosniff"),
 }));
 
