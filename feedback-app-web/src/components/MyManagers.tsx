@@ -153,11 +153,13 @@ export default function MyManagementComp() {
 
   const visibleManagers = useMemo(() => {
     const query = normalizeSearchText(search.trim());
-    if (!query) return managers;
-    return managers.filter((manager) =>
-      normalizeSearchText(`${manager.name} ${manager.email} ${getAreaName(manager.area_id)}`)
-        .includes(query)
-    );
+    const matched = query
+      ? managers.filter((manager) =>
+          normalizeSearchText(`${manager.name} ${manager.email} ${getAreaName(manager.area_id)}`)
+            .includes(query)
+        )
+      : managers;
+    return [...matched].sort((a, b) => Number(a.averageScore == null) - Number(b.averageScore == null));
   }, [areaNamesById, managers, search]);
 
   const [searchParams, setSearchParams] = useSearchParams();

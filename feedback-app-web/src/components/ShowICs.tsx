@@ -156,10 +156,10 @@ function ObtainICs() {
 
   const visibleICs = useMemo(() => {
     const query = normalizeSearchText(search.trim());
-    if (!query) return ics;
-    return ics.filter((ic) =>
-      normalizeSearchText(`${ic.name} ${ic.title}`).includes(query)
-    );
+    const matched = query
+      ? ics.filter((ic) => normalizeSearchText(`${ic.name} ${ic.title}`).includes(query))
+      : ics;
+    return [...matched].sort((a, b) => Number(a.score === null) - Number(b.score === null));
   }, [ics, search]);
 
   const searchSuggestions = useMemo<SearchSuggestion[]>(
