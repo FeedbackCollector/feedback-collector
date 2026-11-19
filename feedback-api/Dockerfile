@@ -17,6 +17,8 @@ COPY --from=build /app/feedback-api/dist ./feedback-api/dist
 COPY --from=build /app/feedback-api/package.json ./feedback-api/package.json
 # el server lee docs/openapi.yaml en runtime (Swagger UI)
 COPY --from=build /app/feedback-api/docs ./feedback-api/docs
+# logo usado en los mails (se sirve en /assets)
+COPY --from=build /app/feedback-api/assets ./feedback-api/assets
 EXPOSE 3000
 USER node
 CMD ["node", "feedback-api/dist/server.js"]
