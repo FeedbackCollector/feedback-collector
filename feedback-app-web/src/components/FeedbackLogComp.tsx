@@ -1,15 +1,15 @@
 import { truncateText, MAX_NAME_LEN, MAX_SOURCE_LEN, MAX_EXCERPT_LEN, MAX_BODY_LEN } from '../utils/feedbackFormat';
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import type { Feedback, FeedbackFilters, IC, Project } from '../types/feedback';
+import type { Feedback, FeedbackFilters, IC, ManagerFeedback, Project } from '../types/feedback';
 import { obtainICs } from '../service/ObtainICs';
 import { obtainProjects } from '../service/ObtainProjects';
 import '../styles/index.css'
 import { obtainFeedbackPage } from '../service/ObtainFeedback';
+import { obtainManagerFeedbackPage, obtainManagerOptions } from '../service/ManagerFeedbackApi';
 import ScreenshotThumb from './ScreenshotThumb';
 import AutocompleteSearch from './AutocompleteSearch';
 import type { SearchSuggestion } from '../types/autoComplete';
-import '../styles/index.css'
 import { obtainAllICs } from '../service/ObtainICs';
 import { useAuthStore } from '../store/authStore';
 import LoadingOverlay from './LoadingOverlay';
@@ -28,7 +28,8 @@ const arrowForward = <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
 const arrowBack = <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" height="10px" width="10px" fill="#1f1f1f"><path d="M10,22L0,12L10,2l1.78,1.77L3.55,12l8.23,8.23L10,22Z"/></svg>
 
 function FeedbackLogComp() {
-  const [feedback, setFeedback] = useState<Feedback[]>([]);
+  const [feedback, setFeedback] = useState<(Feedback | ManagerFeedback)[]>([]);
+  const [managers, setManagers] = useState<{ id: number; name: string }[]>([]);
   const [ics, setIcs] = useState<IC[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [icsLoading, setIcsLoading] = useState(true);
@@ -42,6 +43,12 @@ function FeedbackLogComp() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
+
+  // Directors can switch between feedback about ICs and about managers; managers only ever see ICs.
+  const isDirector = user?.role.toLowerCase() === 'director';
+  const target: 'ics' | 'managers' = isDirector && searchParams.get('type') === 'managers' ? 'managers' : 'ics';
+  const managerParam = searchParams.get('manager') ?? '';
+  const managerFilter = /^[1-9][0-9]*$/.test(managerParam) ? managerParam : '';
 
   const pageParam = Number(searchParams.get('page'));
   const page = Number.isInteger(pageParam) && pageParam > 0 ? pageParam : 1;
@@ -101,9 +108,10 @@ function FeedbackLogComp() {
         return;
       }
 
-      const [icsResult, projectsResult] = await Promise.allSettled([
+      const [icsResult, projectsResult, managersResult] = await Promise.allSettled([
         obtainAllICs(managerId),
         obtainProjects(),
+        user.role.toLowerCase() === 'director' ? obtainManagerOptions() : Promise.resolve([]),
       ]);
 
       if (cancelled) return;
@@ -113,6 +121,12 @@ function FeedbackLogComp() {
       } else {
         console.error('Error retrieving ICs:', icsResult.reason);
         setIcsLoadError('Could not load ICs. Please try again.');
+      }
+
+      if (managersResult.status === 'fulfilled') {
+        setManagers(managersResult.value);
+      } else {
+        console.error('Error loading managers:', managersResult.reason);
       }
 
       if (projectsResult.status === 'fulfilled') {
@@ -139,7 +153,19 @@ function FeedbackLogComp() {
       setLoading(true);
       setLoadError(null);
       try {
-        const result = await obtainFeedbackPage(page, PAGE_SIZE, filters, controller.signal);
+        const result = target === 'managers'
+          ? await obtainManagerFeedbackPage(
+              page,
+              PAGE_SIZE,
+              {
+                managerId: managerFilter ? Number(managerFilter) : undefined,
+                projectId: filters.projectId,
+                score: filters.score,
+                sortBy: filters.sortBy,
+              },
+              controller.signal,
+            )
+          : await obtainFeedbackPage(page, PAGE_SIZE, filters, controller.signal);
         if (cancelled) return;
         setFeedback(result.data ?? []);
         const lastPage = Math.max(result.pagination.totalPages, 1);
@@ -163,7 +189,7 @@ function FeedbackLogComp() {
       cancelled = true;
       controller.abort();
     };
-  }, [page, filters]);
+  }, [page, filters, target, managerFilter]);
 
   useEffect(() => {
     if (!shouldAnimateViewChange.current) return;
@@ -206,8 +232,15 @@ function FeedbackLogComp() {
     }, { replace });
   }
 
-  function handleChange(e: ChangeEvent<HTMLInputElement>) {
+  function handleChange(e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
     setSearchInputs((current) => ({ ...current, text: e.target.value }));
+  }
+
+  function changeTarget(next: 'ics' | 'managers') {
+    if (next === target) return;
+    setLoading(true);
+    setFeedback([]);
+    setSearchParams(next === 'managers' ? { type: 'managers' } : {});
   }
 
   function goToPage(next: number) {
@@ -217,14 +250,16 @@ function FeedbackLogComp() {
   }
 
   const enrichedFeedback = feedback.map((item) => {
-    const matchedIC = ics.find((ic) => ic.IC_id === item.ic_id);
     const matchedProject = projects.find((p) => p.id === item.project_id);
+    const project_name = matchedProject?.name ?? item.project_name ?? null;
 
-    return {
-      ...item,
-      ic_name: matchedIC?.name ?? item.ic_name ?? null,
-      project_name: matchedProject?.name ?? item.project_name ?? null,
-    };
+    if ('manager_id' in item) {
+      const matchedManager = managers.find((manager) => manager.id === item.manager_id);
+      return { ...item, project_name, subject_id: item.manager_id, subject_name: matchedManager?.name ?? null };
+    }
+
+    const matchedIC = ics.find((ic) => ic.IC_id === item.ic_id);
+    return { ...item, project_name, subject_id: item.ic_id, subject_name: matchedIC?.name ?? item.ic_name ?? null };
   });
 
   const searchSuggestions = ics.map<SearchSuggestion>((ic) => ({
@@ -233,22 +268,69 @@ function FeedbackLogComp() {
     value: formatPersonName(ic.name),
   }));
 
-  function openICTimeline(item: Feedback) {
-    if (item.ic_id === null) {
-      alert('Could not find the IC associated with this feedback.');
+  function openTimeline(item: { subject_id: number | null }) {
+    if (item.subject_id === null) {
+      alert(`Could not find the ${target === 'managers' ? 'manager' : 'IC'} associated with this feedback.`);
       return;
     }
 
-    navigate(`/my-ics/${item.ic_id}`);
+    navigate(target === 'managers' ? `/my-management/${item.subject_id}` : `/my-ics/${item.subject_id}`);
   }
+
+  const toolbar = (
+    <div className="feedback-toolbar">
+      {isDirector ? (
+        <div className="entity-toggle-container" role="group" aria-label="Feedback type">
+          <button
+            type="button"
+            onClick={() => changeTarget('ics')}
+            className={`btn-toggle-view ${target === 'ics' ? 'active' : ''}`}
+            aria-label="Feedback about ICs"
+            aria-pressed={target === 'ics'}
+            title="ICs"
+          >
+            <i className="fa-solid fa-user-group" aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            onClick={() => changeTarget('managers')}
+            className={`btn-toggle-view ${target === 'managers' ? 'active' : ''}`}
+            aria-label="Feedback about managers"
+            aria-pressed={target === 'managers'}
+            title="Managers"
+          >
+            <i className="fa-solid fa-user-tie" aria-hidden="true" />
+          </button>
+        </div>
+      ) : <span />}
+
+      <div className="view-toggle-container">
+        <button
+          type="button"
+          onClick={() => changeViewMode('table')}
+          className={`btn-toggle-view ${viewMode === 'table' ? 'active' : ''}`}
+        >
+          {tableChartIcon}
+        </button>
+        <button
+          type="button"
+          onClick={() => changeViewMode('list')}
+          className={`btn-toggle-view ${viewMode === 'list' ? 'active' : ''}`}
+        >
+          {viewListIcon}
+        </button>
+      </div>
+    </div>
+  );
 
   if (icsLoading) {
     return <LoadingOverlay message="Loading Feedback..." />;
   }
 
-  if (ics.length === 0) {
+  if (target === 'ics' && ics.length === 0) {
     return (
       <div className="MyICs-containers">
+        {isDirector && <div style={{ padding: '20px 20px 0' }}>{toolbar}</div>}
         <div className="show-ics-empty" role="status">
           <i className="fa-solid fa-user-group" aria-hidden="true"></i>
           <p>
@@ -291,21 +373,35 @@ function FeedbackLogComp() {
       <div style={{ padding: '0 20px' }}>
         <div className="box" style={{ margin: '20px 0', maxWidth: '100%' }}>
           <div className="filters-grid">
-            <div className="filter-item">
-              <span className="filter-label">IC</span>
-              <AutocompleteSearch
-                id="feedback-ic-search"
-                className="search-wrapper"
-                inputClassName="input-control"
-                label="Search ICs"
-                placeholder="Search ICs..."
-                value={searchInputs.icName}
-                suggestions={searchSuggestions}
-                onChange={(value) =>
-                  setSearchInputs((current) => ({ ...current, icName: value }))
-                }
-              />
-            </div>
+            {target === 'managers' ? (
+              <div className="filter-item">
+                <span className="filter-label">Manager</span>
+                <select name="manager" className="input-control" value={managerFilter} onChange={handleChange}>
+                  <option value="">All</option>
+                  {managers.map((manager) => (
+                    <option key={manager.id} value={String(manager.id)}>
+                      {formatPersonName(manager.name)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <div className="filter-item">
+                <span className="filter-label">IC</span>
+                <AutocompleteSearch
+                  id="feedback-ic-search"
+                  className="search-wrapper"
+                  inputClassName="input-control"
+                  label="Search ICs"
+                  placeholder="Search ICs..."
+                  value={searchInputs.icName}
+                  suggestions={searchSuggestions}
+                  onChange={(value) =>
+                    setSearchInputs((current) => ({ ...current, icName: value }))
+                  }
+                />
+              </div>
+            )}
 
             <div className="filter-item">
               <span className="filter-label">Project</span>
@@ -356,6 +452,7 @@ function FeedbackLogComp() {
             </div>
           </div>
 
+          {target === 'ics' && (
           <div className="filter-item">
             <span className="filter-label">Search</span>
             <div className="search-wrapper">
@@ -370,24 +467,10 @@ function FeedbackLogComp() {
               />
             </div>
           </div>
+          )}
         </div>
 
-        <div className="view-toggle-container">
-          <button
-            type="button"
-            onClick={() => changeViewMode('table')}
-            className={`btn-toggle-view ${viewMode === 'table' ? 'active' : ''}`}
-          >
-            {tableChartIcon}
-          </button>
-          <button
-            type="button"
-            onClick={() => changeViewMode('list')}
-            className={`btn-toggle-view ${viewMode === 'list' ? 'active' : ''}`}
-          >
-            {viewListIcon}
-          </button>
-        </div>
+        {toolbar}
 
         {loading && <LoadingOverlay message="Loading feedback..." />}
         {!loading && loadError && <LoadingOverlay message="Error loading feedback." />}
@@ -416,7 +499,7 @@ function FeedbackLogComp() {
                         <td className="text-caption-default" style={{ color: 'var(--text-muted)' }}>{item.date}</td>
                         <td>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                            <span style={{ fontWeight: 600 }}>{formatPersonName(item.ic_name)}</span>
+                            <span style={{ fontWeight: 600 }}>{formatPersonName(item.subject_name)}</span>
                             {item.source_name.toLowerCase().includes('peer') && <span className="badge-shared" style={{ width: 'fit-content' }}>Shared</span>}
                           </div>
                         </td>
@@ -434,7 +517,7 @@ function FeedbackLogComp() {
                           ) : ''}
                         </td>
                         <td>
-                          <button type="button" className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '13px', borderRadius: '6px' }} onClick={() => openICTimeline(item)}>View in Timeline</button>
+                          <button type="button" className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '13px', borderRadius: '6px' }} onClick={() => openTimeline(item)}>View in Timeline</button>
                         </td>
                       </tr>
                     ))}
@@ -456,9 +539,9 @@ function FeedbackLogComp() {
                         <div className="feedback-card-name-row">
                           <h4
                             className="feedback-card-name feedback-card-clip"
-                            title={item.ic_name ?? undefined}
+                            title={item.subject_name ?? undefined}
                           >
-                            {truncateText(formatPersonName(item.ic_name), MAX_NAME_LEN) || '-'}
+                            {truncateText(formatPersonName(item.subject_name), MAX_NAME_LEN) || '-'}
                           </h4>
                           {(item.source_name.toLowerCase().includes('peer') || item.id === 3) && (
                             <span className="badge-shared">Shared</span>
@@ -483,7 +566,7 @@ function FeedbackLogComp() {
                       <span className="text-label-meta feedback-card-source" style={{ color: 'var(--text-muted)', fontSize: '12px' }} title={item.source_name}>
                         {truncateText(item.source_name, MAX_SOURCE_LEN)}
                       </span>
-                      <button type="button" className="btn btn-secondary" style={{ padding: '6px 14px', borderRadius: '6px', fontSize: '13px' }} onClick={() => openICTimeline(item)}>
+                      <button type="button" className="btn btn-secondary" style={{ padding: '6px 14px', borderRadius: '6px', fontSize: '13px' }} onClick={() => openTimeline(item)}>
                         View in Timeline
                       </button>
                     </div>

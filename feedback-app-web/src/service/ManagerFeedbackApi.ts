@@ -22,11 +22,10 @@ export async function obtainManagerFeedbackPage(
   filters: ManagerFeedbackFilters,
   signal?: AbortSignal
 ): Promise<ManagerFeedbackPageResponse> {
-  const params = new URLSearchParams({
-    page: String(page),
-    limit: String(limit),
-    manager_id: String(filters.managerId),
-  });
+  const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+  if (filters.managerId !== undefined) params.set('manager_id', String(filters.managerId));
+  if (filters.projectId) params.set('project_id', filters.projectId);
+  if (filters.score) params.set('score', filters.score);
   if (filters.sortBy) params.set('sort', filters.sortBy);
 
   const response = await fetch(`${URLEndpoint}?${params}`, { headers: authHeaders(), signal });
@@ -36,7 +35,7 @@ export async function obtainManagerFeedbackPage(
   return response.json() as Promise<ManagerFeedbackPageResponse>;
 }
 
-export async function obtainAllManagerFeedback(filters: ManagerFeedbackFilters): Promise<ManagerFeedback[]> {
+export async function obtainAllManagerFeedback(filters: ManagerFeedbackFilters = {}): Promise<ManagerFeedback[]> {
   const firstPage = await obtainManagerFeedbackPage(1, PAGE_LIMIT, filters);
   const totalPages = Math.max(firstPage.pagination.totalPages, 1);
   const remainingPages = await Promise.all(
@@ -89,4 +88,26 @@ export async function obtainManagerById(id: number): Promise<ManagerInfo> {
   const user = body.data ?? body;
   if (user.role !== 'manager') throw new Error('The selected user is not a manager.');
   return user as ManagerInfo;
+}
+
+// Managers for the Feedback Log filter (director only).
+export async function obtainManagerOptions(): Promise<{ id: number; name: string }[]> {
+  const limit = 100;
+  const fetchPage = async (page: number) => {
+    const response = await fetch(`${API_URL}/users?role=manager&page=${page}&limit=${limit}`, { headers: authHeaders() });
+    if (!response.ok) throw new Error(`Could not load managers (${response.status}).`);
+    return response.json() as Promise<{
+      data?: { id: number; name: string; status?: string }[];
+      pagination?: { totalPages?: number };
+    }>;
+  };
+
+  const first = await fetchPage(1);
+  const rest = await Promise.all(
+    Array.from({ length: Math.max(0, (first.pagination?.totalPages ?? 1) - 1) }, (_, i) => fetchPage(i + 2))
+  );
+  return [first, ...rest]
+    .flatMap((page) => page.data ?? [])
+    .filter((user) => user.status !== 'pending')
+    .map(({ id, name }) => ({ id, name }));
 }
