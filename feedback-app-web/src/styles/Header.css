@@ -8,7 +8,7 @@
   gap: 5%;
   position: sticky;
   top: 0;
-  z-index: 1000;
+  z-index: 50;
 }
 
 .page-header-actions {
@@ -41,6 +41,14 @@
     background: #f3f3f3;
     color: #676E73;
     line-height: 1;
+  }
+
+  .page-header {
+    position: sticky;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 1000;
   }
 
 }

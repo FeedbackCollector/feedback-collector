@@ -110,7 +110,7 @@
   position: relative;
   display: flex;
   align-items: center;
-  width: 280px;
+  width: 240px;
   max-width: 100%;
   box-sizing: border-box;
 }
@@ -328,6 +328,7 @@
     left: auto;
     right: 0;
     width: min(280px, calc(100vw - 32px));
+    z-index: 1010;
   }
 
   .dashboard-area-options {

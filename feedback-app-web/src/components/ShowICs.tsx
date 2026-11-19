@@ -4,12 +4,14 @@ import { useAuthStore } from '../store/authStore';
 import { obtainAllICs } from '../service/ObtainICs';
 import { ICsMetricsRow, ICsComparisonCard } from './FeedbackDashboard';
 import { useToastStore } from '../store/toastStore';
+import ICView from './IcView';
 import LoadingOverlay from './LoadingOverlay';
 import '../styles/ShowICs.css';
 import AutocompleteSearch from './AutocompleteSearch';
 import type { SearchSuggestion } from '../types/autoComplete';
 import { normalizeSearchText } from '../utils/search';
 import { formatPersonName } from './formatPersonName';
+import { UserAvatar } from './UserAvatar';
 
 type IC = {
   IC_id: number;
@@ -28,7 +30,6 @@ const arrowForward = <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
 const arrowBack = <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" height="10px" width="10px" fill="#1f1f1f"><path d="M15.97,22L17.75,20.23L9.52,12L17.75,3.77L15.97,2l-10,10l10,10Z"/></svg>
 
 function ObtainICs() {
-  const navigate = useNavigate();
   const [ics, setIcs] = useState<IC[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -58,11 +59,23 @@ function ObtainICs() {
     shouldAnimateViewChange.current = true;
     setViewMode(nextMode);
   };
+    const [selectedIC, setSelectedIC] = useState<{
+    IC_id: number;
+    name: string;
+    title: string;
+    entries: number;
+  } | null>(null);
 
   function openICTimeline(item: IC) {
-    navigate(`/my-ics/${item.IC_id}`);
-  }
-
+      const ic = ics.find((entry) => entry.IC_id === item.IC_id);
+  
+      if (!ic) {
+        alert('Could not find the IC associated with this card.');
+        return;
+      }
+  
+      setSelectedIC(ic);
+    }
   useEffect(() => {
     const mediaQuery = window.matchMedia('(max-width: 768px)');
 
@@ -116,8 +129,10 @@ function ObtainICs() {
         if (isCurrent) setIcs(data);
       })
       .catch((error) => {
-        if (isCurrent) console.error('Error retrieving ICs:', error);
-        useToastStore.getState().addToast('Error retrieving ICs. Please try again later.', 'error');
+        if (!isCurrent) return;
+
+        console.error('Could not load My ICs data:', error);
+        useToastStore.getState().addToast('Could not load My ICs. Please try again later.', 'error');
       })
       .finally(() => {
         if (isCurrent) setLoading(false);
@@ -141,10 +156,10 @@ function ObtainICs() {
 
   const visibleICs = useMemo(() => {
     const query = normalizeSearchText(search.trim());
-    if (!query) return ics;
-    return ics.filter((ic) =>
-      normalizeSearchText(`${ic.name} ${ic.title}`).includes(query)
-    );
+    const matched = query
+      ? ics.filter((ic) => normalizeSearchText(`${ic.name} ${ic.title}`).includes(query))
+      : ics;
+    return [...matched].sort((a, b) => Number(a.score === null) - Number(b.score === null));
   }, [ics, search]);
 
   const searchSuggestions = useMemo<SearchSuggestion[]>(
@@ -195,6 +210,10 @@ function ObtainICs() {
     mediaQuery.addEventListener('change', handleChange);
     return () => mediaQuery.removeEventListener('change', handleChange);
   }, []);
+
+  if (selectedIC) {
+  return <ICView ic={selectedIC} onBack={() => setSelectedIC(null)} />;
+}
 
   if (loading) {
     return <LoadingOverlay message="Loading ICs..." />;
@@ -280,7 +299,13 @@ function ObtainICs() {
                 onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f3f4f6')}
                 onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'white')}
               >
-
+                <UserAvatar
+                  name={item.name}
+                  id={item.IC_id}
+                  entityType="ic"
+                  size={48}
+                  className="team-metric-avatar"
+                />
                 <div className="team-metric-info">
                   <h3>{formatPersonName(item.name)}</h3>
                   <p className="team-metric-role">{item.title}</p>
@@ -315,7 +340,7 @@ function ObtainICs() {
               </thead>
               <tbody>
                 {pagedICs.map((item) => (
-                  <tr
+                    <tr
                     key={item.IC_id}
                     onClick={() => openICTimeline(item)}
                     style={{ cursor: 'pointer', transition: 'background-color 0.2s' }}

@@ -1,13 +1,24 @@
 .toast-container {
   position: fixed;
-  bottom: 20px;
-  right: 20px;
+  left: 50%;
+  right: auto;
+  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
   z-index: 9999;
   display: flex;
   flex-direction: column;
   gap: 12px;
+  width: calc(100% - 32px);
   max-width: 380px;
-  width: 100%;
+  transform: translateX(-50%);
+}
+
+@media (min-width: 768px) {
+  .toast-container {
+    left: auto;
+    right: 24px;
+    bottom: 24px;
+    transform: none;
+  }
 }
 
 .toast-card {
