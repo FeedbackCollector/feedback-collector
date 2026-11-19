@@ -14,6 +14,7 @@ export class Feedback extends Model<InferAttributes<Feedback>, InferCreationAttr
     declare project_id: number;
     declare date: string;
     declare source_name: string;
+    declare source_title: string | null;
     declare score: number;
     declare comment: string | null;
     declare screenshot_url: string | null;
@@ -28,6 +29,7 @@ Feedback.init(
     project_id: { type: DataTypes.INTEGER, allowNull: false },
     date: { type: DataTypes.DATEONLY, allowNull: false },
     source_name: { type: DataTypes.STRING(200), allowNull: false },
+    source_title: { type: DataTypes.STRING(200), allowNull: true },
     score: { type: DataTypes.INTEGER, allowNull: false, validate: { min: 1, max: 5 } },    comment: { type: DataTypes.TEXT, allowNull: true },
     screenshot_url: { type: DataTypes.STRING(500), allowNull: true },
     created_at: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW },

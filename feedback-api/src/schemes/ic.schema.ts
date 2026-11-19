@@ -23,6 +23,8 @@ export const listICsQueryScheme = Joi.object({
     name: Joi.string().trim().min(1),
     title: Joi.string().trim().min(1),
     manager_id: managerId,
+    area_id: Joi.number().integer().positive(),
+    score: Joi.number().min(0).max(5),
     page: Joi.number().integer().min(1).default(1),
     limit: Joi.number().integer().min(1).max(100).default(10),
 });

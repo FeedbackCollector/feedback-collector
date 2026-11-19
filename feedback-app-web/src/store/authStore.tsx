@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { API_URL } from '../service/api';
+import { useToastStore } from './toastStore';
 
 export interface User {
     id?: number;
@@ -39,7 +40,7 @@ interface AuthState {
     setRegEmail: (email: string) => void;
     setRegPassword: (password: string) => void;
     setRegConfirmPassword: (confirmPassword: string) => void;
-    createAccount: () => Promise<boolean>; 
+    createAccount: () => Promise<string | null>;
     logout: () => void;
 }
 
@@ -103,24 +104,19 @@ export const useAuthStore = create<AuthState>()(
                             atob(payload.padEnd(Math.ceil(payload.length / 4) * 4, '='))
                         ) as User;
                         // esto es para decodificar el token
+                        let currentUser = decodedUser;
                         const usersResponse = await fetch(`${API_URL}/users`, {
                         headers: {
                             Authorization: `Bearer ${token}`
                         }
                     });
 
-                    if (!usersResponse.ok) {
-                        throw new Error('Could not load users');
-                    }
-
-                    const usersData = await usersResponse.json();
-
-                    const currentUser = usersData.data.find(
-                        (item: User) => item.email === decodedUser.email
-                    );
-
-                    if (!currentUser) {
-                        throw new Error('User not found');
+                    if (usersResponse.ok) {
+                        const usersData = await usersResponse.json();
+                        const userFromList = Array.isArray(usersData.data)
+                            ? usersData.data.find((item: User) => item.email === decodedUser.email)
+                            : undefined;
+                        if (userFromList) currentUser = { ...decodedUser, ...userFromList };
                     }
 
                     set({
@@ -135,10 +131,11 @@ export const useAuthStore = create<AuthState>()(
                         isAuthenticated: true,
                         error: null
                     });
+                        useToastStore.getState().addToast('Logged in successfully!', 'success');
                         return true;
                     } else {
                         set({ 
-                            error: { field: 'loginPassword', message: datos.mensaje || 'Email or password are incorrect.' }, 
+                            error: { field: 'loginPassword', message: datos.message || datos.error || datos.mensaje || 'Email or password are incorrect.' },
                             isAuthenticated: false 
                         });
                         return false;
@@ -154,31 +151,31 @@ export const useAuthStore = create<AuthState>()(
 
                 if (!regName.trim()) {
                     set({ error: { field: 'regName', message: 'Enter your name' } });
-                    return false;
+                    return null;
                 }
                 if (!regEmail.includes('@')) {
                     set({ error: { field: 'regEmail', message: 'Enter a valid email address' } });
-                    return false;
+                    return null;
                 }
                 if (regPassword.length < 8) {
                     set({ error: { field: 'regPassword', message: 'Password must be at least 8 characters.' } });
-                    return false;
+                    return null;
                 }
                 if (regPassword !== regConfirmPassword) {
                     set({ error: { field: 'regConfirmPassword', message: "Passwords don't match" } });
-                    return false;
+                    return null;
                 }
-
                 try {
                     const respuesta = await fetch(`${API_URL}/auth/register`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ name: regName, email: regEmail, password: regPassword, area_id: 1 }) 
+                        body: JSON.stringify({ name: regName, email: regEmail, password: regPassword, area_id: 1 })
                     });
 
                     const datos = await respuesta.json();
 
                     if (respuesta.ok) {
+                        const successMessage = 'Account created, please wait to be approved';
                         set({ 
                             activeForm: 'login', 
                             error: null,
@@ -187,15 +184,15 @@ export const useAuthStore = create<AuthState>()(
                             regPassword: '',
                             regConfirmPassword: ''
                         }); 
-                        alert('Account created successfully! Please log in.');
-                        return true;
+                        useToastStore.getState().addToast(successMessage, 'success');
+                        return successMessage;
                     } else {
-                        set({ error: { field: 'regEmail', message: datos.mensaje || 'Error creating account.' } });
-                        return false;
+                        set({ error: { field: 'regEmail', message: datos.message || datos.error || datos.mensaje || 'Error creating account.' } });
+                        return null;
                     }
                 } catch (error) {
                     set({ error: { field: 'regName', message: 'Server connection error.' } });
-                    return false;
+                    return null;
                 }
             },
 

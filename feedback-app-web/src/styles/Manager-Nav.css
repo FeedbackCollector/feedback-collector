@@ -20,6 +20,8 @@ h1{
   align-items: center;
   gap: 8px;
   margin-bottom: 24px;
+  color: inherit;
+  text-decoration: none;
 }
 
 .manager-sidebar-header img {
@@ -70,13 +72,7 @@ h1{
 }
 
 @media (max-width: 768px) {
-
   .manager-sidebar {
-    display: none;
-  }
-
-  .manager-sidebar.open {
-    display: flex;
     position: fixed;
     top: 0;
     left: 0;
@@ -84,19 +80,27 @@ h1{
     width: 240px;
     height: 100vh;
     border-right: 1px solid #e5e7eb;
+    background: #ffffff;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease-in-out;
+  }
+
+  .manager-sidebar.open {
+    transform: translateX(0);
   }
 
   .manager-sidebar.open + .manager-overlay {
-  display: block;
-  position: fixed;
-  inset: 0;
-  z-index: 49;
-  border: 0;
-  background: rgb(0 0 0 / 40%);
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 49;
+    border: 0;
+    background: rgb(0 0 0 / 40%);
+    animation: fadeIn 0.3s ease-in-out;
+  }
 }
 
-.manager-sidebar {
-  z-index: 50;
-}
-
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }

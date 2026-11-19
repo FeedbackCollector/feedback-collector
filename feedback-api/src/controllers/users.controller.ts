@@ -1,9 +1,9 @@
 import { Request, Response } from 'express';
-import { getAllUsersService, getUserByIdService, createUserService, updateUserService, deleteUserService, registerService, changePasswordService, loginService } from '../services/user.services.ts';
+import { getAllUsersService, getUserByIdService, createUserService, updateUserService, deleteUserService, registerService, changePasswordService, loginService, approveUserService } from '../services/user.services.ts';
 
 export async function getAll(req: Request, res: Response) {
-    const result = await getAllUsersService(res.locals.query);
-    return res.json({ data: result });
+    const result = await getAllUsersService(res.locals.query, res.locals.user);
+    return res.json(Array.isArray(result) ? { data: result } : result);
 }
 
 export async function getById(req: Request, res: Response) {
@@ -36,16 +36,26 @@ export async function remove(req: Request, res: Response) {
     return res.status(204).send();
 }
 
+export async function approve(req: Request, res: Response) {
+    const result = await approveUserService(Number(req.params.id));
+    if (result === "USER_NOT_FOUND") return res.status(404).json({ error: "User not found" });
+    if (result === "ACCOUNT_NOT_PENDING") {
+        return res.status(409).json({ error: "User account is not pending approval" });
+    }
+    return res.json({ data: result });
+}
+
 export async function register(req: Request, res: Response) {
     const result = await registerService(req.body.email, req.body.password , req.body.name , req.body.area_id);
     if (result === "AREA_NOT_FOUND") return res.status(400).json({ error: "Area not found" });
     if (result === "EMAIL_TAKEN") return res.status(409).json({ error: "Email already registered" });
-    res.status(201).json({ message: "Usuario creado" });
+    return res.status(201).json({ message: "Registration pending approval", status: "pending" });
 }
 
 export async function login(req: Request, res: Response) {
     const result = await loginService(req.body.email, req.body.password);
     if (result === "INVALID_CREDENTIALS") return res.status(400).json({ message: "Invalid credentials" });
+    if (result === "ACCOUNT_NOT_APPROVED") return res.status(403).json({ message: "you aren't approved" });
     res.json({ token: result });
 }
 
@@ -53,5 +63,5 @@ export async function login(req: Request, res: Response) {
 export async function changePassword(req: Request, res: Response) {
     const result = await changePasswordService(res.locals.user.id, req.body.currentPassword, req.body.newPassword);
     if (result === "INVALID_CREDENTIALS") return res.status(400).json({ message: "Invalid credentials" });
-    res.json({ message: "Password updated" });
+    res.json({ message: "Password updated", token: result.token });
 }

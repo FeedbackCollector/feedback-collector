@@ -1,20 +1,43 @@
-import { useEffect, useState, type FormEvent, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
+  approvePendingAccount,
   deleteManagementRow,
   loadManagementData,
   saveManagementRow,
   updateManagerArea,
-  type ManagementData,
-  type ManagementFormValues,
-  type ManagementRow,
-  type ManagementTab,
+  updateICManager,
 } from '../service/ManagementApi';
+import type {
+  ManagementData,
+  ManagementFormValues,
+  PendingAccount,
+  ManagementRow,
+  ManagementTab,
+} from '../types/managementTypes';
 import { useAuthStore } from '../store/authStore';
+import { normalizeSearchText } from '../utils/search';
 import '../styles/Management.css';
+import {useToastStore} from '../store/toastStore';
+import LoadingOverlay from './LoadingOverlay';
+import { formatPersonName } from './formatPersonName';
+import DropdownSelect from './DropdownSelect';
 
 type ViewMode = 'table' | 'cards';
 
 const TABS: ManagementTab[] = ['Areas', 'Managers', 'ICs', 'Projects'];
+
+function formatManagementName(name: string, tab: ManagementTab): string {
+  return tab === 'Managers' || tab === 'ICs' ? formatPersonName(name) : name;
+}
+
+function shouldCenterColumn(tab: ManagementTab, key: keyof ManagementRow): boolean {
+  return (
+    (tab === 'Areas' && (key === 'managers' || key === 'averageScore')) ||
+    (tab === 'Managers' && key === 'averageScore') ||
+    (tab === 'Projects' && key === 'entries')
+  );
+}
 
 const COLUMNS: Record<ManagementTab, { label: string; key: keyof ManagementRow }[]> = {
   Areas: [
@@ -58,14 +81,39 @@ const EMPTY_FORM: ManagementFormValues = {
   entries: '0',
 };
 
+const PAGE_SIZE = 10;
+const arrowForward = <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" height="10px" width="10px" fill="#1f1f1f"><path d="M8.03,22L6.25,20.23L14.48,12L6.25,3.77L8.03,2l10,10l-10,10Z"/></svg>;
+const arrowBack = <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" height="10px" width="10px" fill="#1f1f1f"><path d="M10,22L0,12L10,2l1.78,1.77L3.55,12l8.23,8.23L10,22Z"/></svg>;
+
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-function ManagementComp() {
+type DeleteTarget = {
+  id: number;
+  name: string;
+  kind: string;
+  tab: ManagementTab;
+  isPendingRequest: boolean;
+};
+
+type ManagementCompProps = {
+  activeTab: ManagementTab;
+  onTabChange: (tab: ManagementTab) => void;
+};
+
+function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
   const token = useAuthStore((state) => state.token);
-  const [activeTab, setActiveTab] = useState<ManagementTab>('Areas');
   const [viewMode, setViewMode] = useState<ViewMode>('table');
+  const viewContainerRef = useRef<HTMLDivElement>(null);
+  const shouldAnimateViewChange = useRef(false);
+
+  const changeViewMode = (nextMode: ViewMode) => {
+    if (nextMode === viewMode) return;
+
+    shouldAnimateViewChange.current = true;
+    setViewMode(nextMode);
+  };
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(max-width: 767px)');
@@ -84,17 +132,61 @@ function ManagementComp() {
     return () => mediaQuery.removeEventListener('change', handleMediaChange);
     }, []);
 
+  useEffect(() => {
+    if (!shouldAnimateViewChange.current) return;
+
+    shouldAnimateViewChange.current = false;
+    viewContainerRef.current?.animate(
+      [
+        { opacity: 0, transform: 'translateY(16px)' },
+        { opacity: 1, transform: 'translateY(0)' },
+      ],
+      { duration: 300, easing: 'ease-out' }
+    );
+  }, [viewMode]);
 
   const [rows, setRows] = useState<ManagementRow[]>([]);
   const [areas, setAreas] = useState<ManagementData['areas']>([]);
   const [managers, setManagers] = useState<ManagementData['managers']>([]);
+  const [individualContributors, setIndividualContributors] = useState<
+    NonNullable<ManagementData['individualContributors']>
+  >([]);
+  const [icSearch, setICSearch] = useState('');
+  const [pendingAccounts, setPendingAccounts] = useState<PendingAccount[]>([]);
+  const [showPendingRequests, setShowPendingRequests] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isMutating, setIsMutating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingRow, setEditingRow] = useState<ManagementRow | null>(null);
+  const [assigningManager, setAssigningManager] = useState<ManagementRow | null>(null);
+  const [selectedICIds, setSelectedICIds] = useState<number[]>([]);
   const [feedbackManager, setFeedbackManager] = useState<ManagementRow | null>(null);
   const [formValues, setFormValues] = useState<ManagementFormValues>(EMPTY_FORM);
+  const [closingPopup, setClosingPopup] = useState<'feedback' | 'form' | 'delete' | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
+
+
+  const [searchParams, setSearchParams] = useSearchParams();
+  const pageParam = Number(searchParams.get('page'));
+  const requestedPage = Number.isInteger(pageParam) && pageParam > 0 ? pageParam : 1;
+  const totalPages = Math.max(Math.ceil(rows.length / PAGE_SIZE), 1);
+  const page = Math.min(requestedPage, totalPages);
+  const visibleRows = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  function goToPage(next: number) {
+    if (loading || next < 1 || next > totalPages || next === page) return;
+    setSearchParams(next > 1 ? { page: String(next) } : {});
+  }
+
+  useEffect(() => {
+    if (loading || requestedPage <= totalPages) return;
+    setSearchParams(totalPages > 1 ? { page: String(totalPages) } : {}, { replace: true });
+  }, [loading, requestedPage, totalPages, setSearchParams]);
+
+  useEffect(() => {
+    setShowPendingRequests(false);
+  }, [activeTab]);
 
   useEffect(() => {
     let isCurrent = true;
@@ -103,6 +195,8 @@ function ManagementComp() {
 
     if (!token) {
       setRows([]);
+      setPendingAccounts([]);
+      setIndividualContributors([]);
       setError('You must be logged in to load management data.');
       setLoading(false);
       return () => {
@@ -116,6 +210,8 @@ function ManagementComp() {
           setRows(data.rows);
           setAreas(data.areas);
           setManagers(data.managers);
+          setPendingAccounts(data.pendingAccounts);
+          setIndividualContributors(data.individualContributors ?? []);
         }
       })
       .catch((reason: unknown) => {
@@ -140,6 +236,7 @@ function ManagementComp() {
       managerId: managers[0] ? String(managers[0].id) : '',
     });
     setError(null);
+    setClosingPopup(null);
     setIsDialogOpen(true);
   };
 
@@ -155,14 +252,31 @@ function ManagementComp() {
       entries: String(row.entries ?? 0),
     });
     setError(null);
+    setClosingPopup(null);
     setIsDialogOpen(true);
   };
 
   const closeDialog = () => {
-    setIsDialogOpen(false);
-    setEditingRow(null);
-    setFormValues(EMPTY_FORM);
-    setError(null);
+  if (closingPopup) return;
+
+    setClosingPopup('form');
+    window.setTimeout(() => {
+      setIsDialogOpen(false);
+      setEditingRow(null);
+      setFormValues(EMPTY_FORM);
+      setError(null);
+      setClosingPopup(null);
+    }, 150);
+  };
+
+  const closeFeedbackDialog = () => {
+  if (closingPopup) return;
+
+    setClosingPopup('feedback');
+    window.setTimeout(() => {
+      setFeedbackManager(null);
+      setClosingPopup(null);
+    }, 150);
   };
 
   const updateFormValue = (key: keyof ManagementFormValues, value: string) => {
@@ -175,6 +289,8 @@ function ManagementComp() {
     setRows(data.rows);
     setAreas(data.areas);
     setManagers(data.managers);
+    setPendingAccounts(data.pendingAccounts);
+    setIndividualContributors(data.individualContributors ?? []);
   };
 
   const saveRow = async (event: FormEvent<HTMLFormElement>) => {
@@ -190,6 +306,7 @@ function ManagementComp() {
       await saveManagementRow(activeTab, editingRow?.id ?? null, formValues, token);
       await refreshRows();
       closeDialog();
+      useToastStore.getState().addToast('Changes saved successfully!', 'success');
     } catch (reason: unknown) {
       console.error(`Could not save ${activeTab.toLowerCase()}:`, reason);
       setError(getErrorMessage(reason));
@@ -198,21 +315,103 @@ function ManagementComp() {
     }
   };
 
-  const deleteRow = async (row: ManagementRow) => {
-    if (!token || !window.confirm(`Delete ${row.name}?`)) return;
+
+  const requestDeleteRow = (row: ManagementRow) => {
+    setError(null);
+    setClosingPopup(null);
+    setDeleteTarget({
+      id: row.id,
+      name: row.name,
+      kind: TAB_SINGULAR[activeTab],
+      tab: activeTab,
+      isPendingRequest: false,
+    });
+  };
+
+  const closeDeleteDialog = () => {
+    if (closingPopup || isMutating) return;
+
+    setClosingPopup('delete');
+    window.setTimeout(() => {
+      setDeleteTarget(null);
+      setError(null);
+      setClosingPopup(null);
+    }, 75);
+  };
+
+  const confirmDelete = async () => {
+    if (!token || !deleteTarget) return;
 
     setIsMutating(true);
     setError(null);
     try {
-      await deleteManagementRow(activeTab, row.id, token);
+      await deleteManagementRow(deleteTarget.tab, deleteTarget.id, token);
       await refreshRows();
+      setDeleteTarget(null);
+      if (!deleteTarget.isPendingRequest) {
+        useToastStore.getState().addToast(`${deleteTarget.kind} deleted successfully!`, 'success');
+      }
     } catch (reason: unknown) {
-      console.error(`Could not delete ${activeTab.toLowerCase()}:`, reason);
+      console.error(`Could not delete ${deleteTarget.kind.toLowerCase()}:`, reason);
       setError(getErrorMessage(reason));
     } finally {
       setIsMutating(false);
     }
   };
+
+  const approveAccount = async (account: PendingAccount) => {
+    if (!token) {
+      setError('You must be logged in to approve accounts.');
+      return;
+    }
+
+    setIsMutating(true);
+    setError(null);
+    try {
+      await approvePendingAccount(account.id, token);
+      await refreshRows();
+    } catch (reason: unknown) {
+      console.error('Could not approve account:', reason);
+      setError(getErrorMessage(reason));
+    } finally {
+      setIsMutating(false);
+    }
+  };
+
+  const deletePendingAccount = async (account: PendingAccount) => {
+    if (!token) return;
+
+    setError(null);
+    setClosingPopup(null);
+    setDeleteTarget({
+      id: account.id,
+      name: account.name,
+      kind: 'Account request',
+      tab: 'Managers',
+      isPendingRequest: true,
+    });
+  };
+
+  const renderPendingActions = (account: PendingAccount) => (
+    <div className="management-request-actions">
+      <button
+        type="button"
+        className="management-request-approve"
+        onClick={() => void approveAccount(account)}
+        disabled={isMutating}
+      >
+        Approve
+      </button>
+      <button
+        type="button"
+        className="management-request-delete"
+        onClick={() => deletePendingAccount(account)}
+        disabled={isMutating}
+      >
+        Delete
+      </button>
+    </div>
+  );
 
   const changeManagerArea = async (row: ManagementRow, areaId: number) => {
     if (!token || row.areaId === areaId) return;
@@ -222,6 +421,7 @@ function ManagementComp() {
     try {
       await updateManagerArea(row.id, areaId, token);
       await refreshRows();
+      useToastStore.getState().addToast('Manager area updated successfully!', 'success');
     } catch (reason: unknown) {
       console.error('Could not update manager area:', reason);
       setError(getErrorMessage(reason));
@@ -230,19 +430,68 @@ function ManagementComp() {
     }
   };
 
+  const openAssignDialog = (manager: ManagementRow) => {
+    setAssigningManager(manager);
+    setSelectedICIds([]);
+    setICSearch('');
+    setError(null);
+  };
+
+  const closeAssignDialog = () => {
+    if (isMutating) return;
+    setAssigningManager(null);
+    setSelectedICIds([]);
+    setICSearch('');
+    setError(null);
+  };
+
+  const assignSelectedICs = async () => {
+    if (!token || !assigningManager || selectedICIds.length === 0) return;
+
+    setIsMutating(true);
+    setError(null);
+    try {
+      const results = await Promise.allSettled(
+        selectedICIds.map((icId) => updateICManager(icId, assigningManager.id, token))
+      );
+      await refreshRows();
+
+      const failures = results.filter((result) => result.status === 'rejected');
+      if (failures.length > 0) {
+        const firstFailure = failures[0];
+        setSelectedICIds([]);
+        setError(
+          firstFailure.status === 'rejected'
+            ? `Could not assign ${failures.length} IC${failures.length === 1 ? '' : 's'}: ${getErrorMessage(firstFailure.reason)}`
+            : 'Could not assign ICs.'
+        );
+        return;
+      }
+
+      setAssigningManager(null);
+      setSelectedICIds([]);
+    } catch (reason: unknown) {
+      console.error('Could not assign ICs to manager:', reason);
+      setError(getErrorMessage(reason));
+    } finally {
+      setIsMutating(false);
+    }
+  };
+
   const renderCell = (row: ManagementRow, key: keyof ManagementRow) => {
     const value = row[key];
+    if (key === 'name' && typeof value === 'string') {
+      return formatManagementName(value, activeTab);
+    }
     if (key === 'averageScore' && typeof value === 'number') {
-      if (activeTab === 'Managers') {
-        const scoreClass = value >= 4 ? 'management-score-high' : 'management-score-low';
-        return <span className={`management-score ${scoreClass}`}>{Math.round(value)}</span>;
-      }
-      const scoreClass = value >= 4 ? 'management-score-high' : 'management-score-low';
-      return <span className={`management-score ${scoreClass}`}>{value.toFixed(1)}</span>;
+      const rounded = Math.round(value);
+      const scoreClass = rounded >= 4 ? 'management-score-high' : 'management-score-low';
+      return <span className={`management-score ${scoreClass}`}>{rounded}</span>;
     }
     if (key === 'averageScore' && activeTab === 'Managers') {
       return <span className="management-no-score">No data</span>;
     }
+    if (Array.isArray(value)) return '—';
     return value ?? '—';
   };
 
@@ -257,11 +506,16 @@ function ManagementComp() {
     else return;
 
     event.preventDefault();
-    setActiveTab(TABS[nextIndex]);
+    onTabChange(TABS[nextIndex]);
     event.currentTarget.parentElement
       ?.querySelectorAll<HTMLButtonElement>('[role="tab"]')[nextIndex]
       ?.focus();
   };
+
+  const normalizedICSearch = normalizeSearchText(icSearch.trim());
+  const filteredICs = individualContributors.filter((ic) =>
+    normalizeSearchText(`${ic.name} ${ic.title}`).includes(normalizedICSearch)
+  );
 
   return (
     <section className="management-page" aria-label="Director management">
@@ -276,7 +530,7 @@ function ManagementComp() {
             aria-controls="management-panel"
             tabIndex={activeTab === tab ? 0 : -1}
             className={`management-tab${activeTab === tab ? ' is-active' : ''}`}
-            onClick={() => setActiveTab(tab)}
+            onClick={() => onTabChange(tab)}
             onKeyDown={handleTabKeyDown}
             disabled={isMutating}
           >
@@ -292,23 +546,25 @@ function ManagementComp() {
         aria-labelledby={`management-tab-${activeTab}`}
       >
         <div className="management-toolbar">
-          <button
-            type="button"
-            className="management-add-button"
-            onClick={openAddDialog}
-            disabled={loading || isMutating}
-          >
-            <i className="fa-solid fa-plus" aria-hidden="true" />
-            Add {TAB_SINGULAR[activeTab]}
-          </button>
+          {activeTab !== 'Managers' && (
+            <button
+              type="button"
+              className="management-add-button"
+              onClick={openAddDialog}
+              disabled={loading || isMutating}
+            >
+              <i className="fa-solid fa-plus" aria-hidden="true" />
+              Add {TAB_SINGULAR[activeTab]}
+            </button>
+          )}
 
-          <div className="management-view-toggle" role="group" aria-label="Choose layout">
+          <div className="management-view-toggle" role="group" aria-label="Management view">
             <button
               type="button"
               className={`management-view-button${viewMode === 'cards' ? ' is-active' : ''}`}
               aria-label="Card view"
               aria-pressed={viewMode === 'cards'}
-              onClick={() => setViewMode('cards')}
+              onClick={() => changeViewMode('cards')}
             >
               <svg aria-hidden="true" height="20" viewBox="0 -960 960 960" width="20" fill="currentColor">
                 <path d="M760-120H200q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120ZM200-640h560v-120H200v120Zm100 80H200v360h100v-360Zm360 0v360h100v-360H660Zm-80 0H380v360h200v-360Z" />
@@ -319,56 +575,141 @@ function ManagementComp() {
               className={`management-view-button${viewMode === 'table' ? ' is-active' : ''}`}
               aria-label="Table view"
               aria-pressed={viewMode === 'table'}
-              onClick={() => setViewMode('table')}
+              onClick={() => changeViewMode('table')}
             >
               <svg aria-hidden="true" height="20" viewBox="0 -960 960 960" width="20" fill="currentColor">
                 <path d="M360-240h440v-107H360v107ZM160-613h120v-107H160v107Zm0 187h120v-107H160v107Zm0 186h120v-107H160v107Zm200-186h440v-107H360v107Zm0-187h440v-107H360v107ZM160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h640q33 0 56.5 23.5T880-720v480q0 33-23.5 56.5T800-160H160Z" />
               </svg>
             </button>
+            {activeTab === 'Managers' && (
+              <button
+                type="button"
+                className={`management-view-button management-pending-toggle${showPendingRequests ? ' is-active' : ''}`}
+                aria-pressed={showPendingRequests}
+                onClick={() => setShowPendingRequests((showing) => !showing)}
+                disabled={loading || isMutating}
+              >
+                {showPendingRequests ? 'Managers' : `Pending (${pendingAccounts.length})`}
+              </button>
+            )}
           </div>
         </div>
 
-        {error && !isDialogOpen && (
-          <p className="management-error" role="alert">
-            Could not complete the request: {error}
-          </p>
-        )}
-        {error && isDialogOpen && (
+        {error && !isDialogOpen && !assigningManager && !deleteTarget && (
           <p className="management-error" role="alert">
             Could not complete the request: {error}
           </p>
         )}
         {loading ? (
-          <p className="management-loading" role="status">Loading {activeTab.toLowerCase()}...</p>
-        ) : error && !isDialogOpen ? null : rows.length === 0 ? (
+          <LoadingOverlay message={`Loading ${activeTab.toLowerCase()}...`} />
+        ) : error && !isDialogOpen && !assigningManager && !deleteTarget ? null : (
+          <>
+            {activeTab === 'Managers' && showPendingRequests ? (
+              <section
+                className="management-requests"
+                id="management-pending-requests"
+                aria-labelledby="management-requests-title"
+              >
+                <h2 className="management-requests-title" id="management-requests-title">
+                  Pending account requests ({pendingAccounts.length})
+                </h2>
+                {pendingAccounts.length === 0 ? (
+                  <p className="management-empty-state">There are no accounts waiting for approval.</p>
+                ) : viewMode === 'table' ? (
+                  <div className="management-table-wrap">
+                    <table className="management-table management-requests-table">
+                      <thead>
+                        <tr>
+                          <th>Name</th>
+                          <th>Email</th>
+                          <th>Area</th>
+                          <th><span className="management-visually-hidden">Actions</span></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {pendingAccounts.map((account) => (
+                          <tr key={account.id}>
+                            <td data-label="Name">{formatPersonName(account.name)}</td>
+                            <td data-label="Email">{account.email}</td>
+                            <td data-label="Area">
+                              {areas.find((area) => area.id === account.areaId)?.name ?? '—'}
+                            </td>
+                            <td className="management-actions-cell" data-label="Actions">
+                              {renderPendingActions(account)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="management-cards">
+                    {pendingAccounts.map((account) => (
+                      <article className="management-card" key={account.id}>
+                        <div className="management-card-heading">
+                          <h2>{formatPersonName(account.name)}</h2>
+                        </div>
+                        <dl>
+                          <div className="management-card-detail">
+                            <dt>Email</dt>
+                            <dd>{account.email}</dd>
+                          </div>
+                          <div className="management-card-detail">
+                            <dt>Area</dt>
+                            <dd>{areas.find((area) => area.id === account.areaId)?.name ?? '—'}</dd>
+                          </div>
+                        </dl>
+                        {renderPendingActions(account)}
+                      </article>
+                    ))}
+                  </div>
+                )}
+              </section>
+            ) : rows.length === 0 ? (
           <p className="management-empty-state">No {activeTab.toLowerCase()} to display.</p>
-        ) : viewMode === 'table' ? (
-          <div className="management-table-wrap">
-            <table className={`management-table${activeTab === 'Managers' ? ' management-managers-table' : ''}`}>
+            ) : viewMode === 'table' ? (
+          <div className={`management-table-wrap${activeTab === 'Managers' ? ' management-managers-table-wrap' : ''}`}>
+            <table className={`management-table${activeTab === 'Managers' ? ' management-managers-table' : ''}${activeTab === 'Areas' || activeTab === 'Projects' ? ' management-scroll-table' : ''}`}>
               <thead>
                 <tr>
-                  {COLUMNS[activeTab].map(({ label }) => <th key={label}>{label}</th>)}
+                  {COLUMNS[activeTab].map(({ label, key }) => (
+                    <th
+                      className={shouldCenterColumn(activeTab, key) ? 'management-centered-column' : undefined}
+                      key={label}
+                    >
+                      {label}
+                    </th>
+                  ))}
                   <th><span className="management-visually-hidden">Actions</span></th>
                 </tr>
               </thead>
               <tbody>
-                {rows.map((row) => (
+                {visibleRows.map((row) => (
                   <tr key={row.id}>
                     {COLUMNS[activeTab].map(({ key, label }) => (
-                      <td key={key} data-label={label}>
+                      <td
+                        className={shouldCenterColumn(activeTab, key) ? 'management-centered-column' : undefined}
+                        key={key}
+                        data-label={label}
+                      >
                         {activeTab === 'Managers' && key === 'area' ? (
-                          <select
-                            className="management-area-select"
-                            aria-label={`Area for ${row.name}`}
-                            value={row.areaId ?? ''}
-                            disabled={isMutating || areas.length === 0}
-                            onChange={(event) => void changeManagerArea(row, Number(event.target.value))}
-                          >
-                            {row.areaId === undefined && <option value="">No area assigned</option>}
-                            {areas.map((area) => (
-                              <option key={area.id} value={area.id}>{area.name}</option>
-                            ))}
-                          </select>
+                          <DropdownSelect
+                            id={`management-area-${row.id}`}
+                            label={`Area for ${formatManagementName(row.name, activeTab)}`}
+                            value={row.areaId === undefined ? '' : String(row.areaId)}
+                            options={[
+                              ...(row.areaId === undefined
+                                ? [{ value: '', label: 'No area assigned' }]
+                                : []),
+                              ...areas.map((area) => ({
+                                value: String(area.id),
+                                label: area.name,
+                              })),
+                            ]}
+                            onChange={(value) => {
+                              if (value) void changeManagerArea(row, Number(value));
+                            }}
+                          />
                         ) : renderCell(row, key)}
                       </td>
                     ))}
@@ -377,7 +718,19 @@ function ManagementComp() {
                         <button
                           type="button"
                           className="management-row-action"
-                          aria-label={`View feedback for ${row.name}`}
+                          aria-label={`Assign ICs to ${formatManagementName(row.name, activeTab)}`}
+                          title="Assign ICs"
+                          onClick={() => openAssignDialog(row)}
+                          disabled={isMutating}
+                        >
+                          <i className="fa-solid fa-user-plus" aria-hidden="true" />
+                        </button>
+                      )}
+                      {activeTab === 'Managers' && (
+                        <button
+                          type="button"
+                          className="management-row-action"
+                          aria-label={`View feedback for ${formatManagementName(row.name, activeTab)}`}
                           title="View feedback"
                           onClick={() => setFeedbackManager(row)}
                           disabled={isMutating}
@@ -388,7 +741,7 @@ function ManagementComp() {
                       <button
                         type="button"
                         className="management-row-action"
-                        aria-label={`Edit ${row.name}`}
+                        aria-label={`Edit ${formatManagementName(row.name, activeTab)}`}
                         onClick={() => openEditDialog(row)}
                         disabled={isMutating}
                       >
@@ -398,7 +751,7 @@ function ManagementComp() {
                         type="button"
                         className="management-row-action"
                         aria-label={`Delete ${row.name}`}
-                        onClick={() => void deleteRow(row)}
+                        onClick={() => requestDeleteRow(row)}
                         disabled={isMutating}
                       >
                         <i className="fa-regular fa-trash-can" aria-hidden="true" />
@@ -410,16 +763,28 @@ function ManagementComp() {
             </table>
           </div>
         ) : (
-          <div className="management-cards">
-            {rows.map((row) => (
+          <div className="management-cards" ref={viewContainerRef}>
+            {visibleRows.map((row) => (
               <article className="management-card" key={row.id}>
                 <div className="management-card-heading">
-                  <h2>{row.name}</h2>
+                  <h2>{formatManagementName(row.name, activeTab)}</h2>
                   <div className="management-card-actions">
+                    {activeTab === 'Managers' && (
+                      <button
+                        type="button"
+                        className="management-row-action"
+                        aria-label={`Assign ICs to ${formatManagementName(row.name, activeTab)}`}
+                        title="Assign ICs"
+                        onClick={() => openAssignDialog(row)}
+                        disabled={isMutating}
+                      >
+                        <i className="fa-solid fa-user-plus" aria-hidden="true" />
+                      </button>
+                    )}
                     <button
                       type="button"
                       className="management-row-action"
-                      aria-label={`Edit ${row.name}`}
+                      aria-label={`Edit ${formatManagementName(row.name, activeTab)}`}
                       onClick={() => openEditDialog(row)}
                       disabled={isMutating}
                     >
@@ -429,7 +794,7 @@ function ManagementComp() {
                       type="button"
                       className="management-row-action"
                       aria-label={`Delete ${row.name}`}
-                      onClick={() => void deleteRow(row)}
+                      onClick={() => requestDeleteRow(row)}
                       disabled={isMutating}
                     >
                       <i className="fa-regular fa-trash-can" aria-hidden="true" />
@@ -458,24 +823,56 @@ function ManagementComp() {
               </article>
             ))}
           </div>
+            )}
+            {!showPendingRequests && rows.length > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '16px', margin: '16px 0 20px 0' }}>
+                <button
+                  type="button"
+                  className="btn btn-icon btn-secondary"
+                  onClick={() => goToPage(page - 1)}
+                  disabled={page <= 1 || isMutating}
+                  aria-label="Previous page"
+                  style={{ width: '32px', height: '32px', padding: 0, borderRadius: '6px', color: 'var(--text)', background: 'var(--surface)' }}
+                >
+                  {arrowBack}
+                </button>
+                <span style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
+                  Page {page} of {totalPages}
+                </span>
+                <button
+                  type="button"
+                  className="btn btn-icon btn-secondary"
+                  onClick={() => goToPage(page + 1)}
+                  disabled={page >= totalPages || isMutating}
+                  aria-label="Next page"
+                  style={{ width: '32px', height: '32px', padding: 0, borderRadius: '6px', color: 'var(--text)', background: 'var(--surface)' }}
+                >
+                  {arrowForward}
+                </button>
+              </div>
+            )}
+          </>
         )}
         {feedbackManager && (
-          <div className="management-dialog-backdrop" onMouseDown={(event) => {
-            if (event.target === event.currentTarget) setFeedbackManager(null);
-          }}>
+          <div
+            className={`management-dialog-backdrop${closingPopup === 'feedback' ? ' is-closing' : ''}`}
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) closeFeedbackDialog();
+            }}
+            >
             <section
               className="management-dialog management-feedback-dialog"
               role="dialog"
               aria-modal="true"
               aria-labelledby="manager-feedback-title"
             >
-              <h2 id="manager-feedback-title">{feedbackManager.name} — Feedback</h2>
+              <h2 id="manager-feedback-title">{formatPersonName(feedbackManager.name)} — Feedback</h2>
               {feedbackManager.feedbackEntries?.length ? (
                 <div className="management-feedback-list">
                   {feedbackManager.feedbackEntries.map((entry) => (
                     <article className="management-feedback-entry" key={entry.id}>
                       <div className="management-feedback-entry-heading">
-                        <strong>{entry.icName}</strong>
+                        <strong>{formatPersonName(entry.icName)}</strong>
                         <span className={`management-score ${entry.score >= 4 ? 'management-score-high' : 'management-score-low'}`}>
                           {entry.score}
                         </span>
@@ -492,9 +889,95 @@ function ManagementComp() {
                 <button
                   type="button"
                   className="management-cancel-button"
-                  onClick={() => setFeedbackManager(null)}
+                  onClick={closeFeedbackDialog}
                 >
                   Close
+                </button>
+              </div>
+            </section>
+          </div>
+        )}
+        {assigningManager && (
+          <div
+            className="management-dialog-backdrop management-assignment-backdrop"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) closeAssignDialog();
+            }}
+          >
+            <section
+              className="management-dialog management-assignment-dialog"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="manager-assignment-title"
+            >
+              <h2 id="manager-assignment-title">Assign ICs to {formatPersonName(assigningManager.name)}</h2>
+              <input
+                type="search"
+                className="management-assignment-search"
+                aria-label="Search ICs"
+                placeholder="Select ICs to assign."
+                value={icSearch}
+                onChange={(event) => setICSearch(event.target.value)}
+              />
+              {individualContributors.length === 0 ? (
+                <p className="management-empty-state">There are no ICs to assign.</p>
+              ) : filteredICs.length === 0 ? (
+                <p className="management-empty-state">No ICs match your search.</p>
+              ) : (
+                <div className="management-assignment-list">
+                  {filteredICs.map((ic) => {
+                    const isAssignedToManager = ic.managerId === assigningManager.id;
+                    const isSelected = isAssignedToManager || selectedICIds.includes(ic.id);
+                    return (
+                      <button
+                        type="button"
+                        className={`management-assignment-option${isSelected ? ' is-selected' : ''}`}
+                        key={ic.id}
+                        aria-pressed={isSelected}
+                        disabled={isMutating || isAssignedToManager}
+                        onClick={() => {
+                          setSelectedICIds((current) =>
+                            current.includes(ic.id)
+                              ? current.filter((id) => id !== ic.id)
+                              : [...current, ic.id]
+                          );
+                        }}
+                      >
+                        <span className="management-assignment-option-info">
+                          <strong>{formatPersonName(ic.name)}</strong>
+                          <small>{ic.title}</small>
+                        </span>
+                        <span className="management-assignment-status">
+                          {isAssignedToManager
+                            ? 'Assigned'
+                            : isSelected
+                              ? 'Selected'
+                              : ic.managerName
+                                ? `Move from ${formatPersonName(ic.managerName)}`
+                                : 'Assign'}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+              {error && <p className="management-error" role="alert">{error}</p>}
+              <div className="management-dialog-actions">
+                <button
+                  type="button"
+                  className="management-cancel-button"
+                  onClick={closeAssignDialog}
+                  disabled={isMutating}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="management-add-button"
+                  onClick={() => void assignSelectedICs()}
+                  disabled={isMutating || selectedICIds.length === 0}
+                >
+                  {isMutating ? 'Assigning...' : 'Assign ICs'}
                 </button>
               </div>
             </section>
@@ -503,7 +986,12 @@ function ManagementComp() {
       </div>
 
       {isDialogOpen && (
-        <div className="management-dialog-backdrop">
+        <div
+          className={`management-dialog-backdrop${closingPopup === 'form' ? ' is-closing' : ''}`}
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !isMutating) closeDialog();
+          }}
+        >
           <form
             className="management-dialog"
             role="dialog"
@@ -548,17 +1036,19 @@ function ManagementComp() {
                   </>
                 )}
                 <label htmlFor="management-area">Area</label>
-                <select
+                <DropdownSelect
                   id="management-area"
-                  required
+                  label="Area"
                   value={formValues.areaId}
-                  onChange={(event) => updateFormValue('areaId', event.target.value)}
-                >
-                  <option value="" disabled>Select an area</option>
-                  {areas.map((area) => (
-                    <option key={area.id} value={area.id}>{area.name}</option>
-                  ))}
-                </select>
+                  options={[
+                    { value: '', label: 'Select an area' },
+                    ...areas.map((area) => ({
+                      value: String(area.id),
+                      label: area.name,
+                    })),
+                  ]}
+                  onChange={(value) => updateFormValue('areaId', value)}
+                />
                 {areas.length === 0 && <p className="management-form-hint">Create an area before adding a manager.</p>}
               </>
             )}
@@ -573,17 +1063,20 @@ function ManagementComp() {
                   onChange={(event) => updateFormValue('title', event.target.value)}
                 />
                 <label htmlFor="management-manager">Manager</label>
-                <select
+                <DropdownSelect
                   id="management-manager"
-                  required
+                  label="Manager"
                   value={formValues.managerId}
-                  onChange={(event) => updateFormValue('managerId', event.target.value)}
-                >
-                  <option value="" disabled>Select a manager</option>
-                  {managers.map((manager) => (
-                    <option key={manager.id} value={manager.id}>{manager.name}</option>
-                  ))}
-                </select>
+                  options={[
+                    { value: '', label: 'Select a manager' },
+                    ...managers.map((manager) => ({
+                      value: String(manager.id),
+                      label: formatPersonName(manager.name),
+                    })),
+                  ]}
+                  onChange={(value) => updateFormValue('managerId', value)}
+                />
+
                 {managers.length === 0 && <p className="management-form-hint">Create a manager before adding an IC.</p>}
               </>
             )}
@@ -602,6 +1095,48 @@ function ManagementComp() {
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {deleteTarget && (
+        <div
+          className={`management-dialog-backdrop management-delete-backdrop${closingPopup === 'delete' ? ' is-closing' : ''}`}
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) closeDeleteDialog();
+          }}
+        >
+          <section
+            className="management-dialog management-delete-dialog"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="management-delete-title"
+            aria-describedby="management-delete-description"
+          >
+            <h2 id="management-delete-title">Delete {deleteTarget.kind}</h2>
+            <p id="management-delete-description" className="management-delete-message">
+              Are you sure you want to delete <strong>{deleteTarget.name}</strong>? This action cannot be undone.
+            </p>
+            {error && <p className="management-error" role="alert">{error}</p>}
+            <div className="management-dialog-actions">
+              <button
+                type="button"
+                className="management-cancel-button"
+                onClick={closeDeleteDialog}
+                disabled={isMutating}
+                autoFocus
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="management-delete-button"
+                onClick={() => void confirmDelete()}
+                disabled={isMutating}
+              >
+                {isMutating ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </section>
         </div>
       )}
     </section>

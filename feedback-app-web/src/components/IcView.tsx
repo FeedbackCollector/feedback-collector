@@ -1,13 +1,19 @@
-import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 import type { Feedback, Project } from '../types/feedback';
-import { obtainAllFeedback } from '../service/ObtainFeedback';
+import { obtainAllFeedback, obtainFeedbackPage } from '../service/ObtainFeedback';
 
 import { useAuthStore } from '../store/authStore';
-import { formatDate, getInitials } from '../utils/feedbackFormat';
+import { formatDate, getInitials, truncateText, MAX_NAME_LEN, MAX_SOURCE_LEN, MAX_BODY_LEN, MAX_SOURCE_TITLE_LEN, MAX_COMMENT_LEN } from '../utils/feedbackFormat';
 import { obtainProjects } from '../service/ObtainProjects';
 import { API_URL as BASE_URL } from '../service/api';
 import { authHeaders } from '../service/authHeaders';
 import '../styles/IcView.css';
+import { UserAvatar } from './UserAvatar';
+import { useToastStore } from '../store/toastStore';
+import LoadingOverlay from './LoadingOverlay';
+import { formatPersonName } from './formatPersonName';
+import DropdownSelect from './DropdownSelect';
+import { resolveScreenshotUrl } from '../service/screenshotUrl';
 
 type ICInfo = {
   IC_id: number;
@@ -32,6 +38,10 @@ type EntryForm = {
 };
 
 const API_URL = `${BASE_URL}/feedback`;
+
+const MAX_SCREENSHOT_BYTES = 100 * 1024 * 1024;
+const TIMELINE_FEEDBACK_LIMIT = 20;
+const ALLOWED_SCREENSHOT_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
 
 const today = () => {
   const now = new Date();
@@ -91,24 +101,69 @@ function ICView({ ic, onBack }: ICViewProps) {
   const currentUserId = useAuthStore((state) => state.user?.id);
 
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
+  const [timelineFeedbacks, setTimelineFeedbacks] = useState<Feedback[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Feedback | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isDeleteClosing, setIsDeleteClosing] = useState(false);
   const [editingItem, setEditingItem] = useState<Feedback | null>(null);
   const [form, setForm] = useState<EntryForm>(emptyForm);
   const [formError, setFormError] = useState('');
+  const [screenshotFile, setScreenshotFile] = useState<File | null>(null);
+  const screenshotInputRef = useRef<HTMLInputElement>(null);
+
+  const screenshotFilePreview = useMemo(
+    () => (screenshotFile ? URL.createObjectURL(screenshotFile) : null),
+    [screenshotFile]
+  );
+  useEffect(() => {
+    return () => {
+      if (screenshotFilePreview) URL.revokeObjectURL(screenshotFilePreview);
+    };
+  }, [screenshotFilePreview]);
+
+  function handleScreenshotChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0] ?? null;
+    if (file && !ALLOWED_SCREENSHOT_TYPES.includes(file.type)) {
+      setFormError('Screenshot must be a PNG, JPEG or WebP image.');
+      event.target.value = '';
+      return;
+    }
+    if (file && file.size > MAX_SCREENSHOT_BYTES) {
+      setFormError('Screenshot is too large (max 100 MB).');
+      event.target.value = '';
+      return;
+    }
+    setFormError('');
+    setScreenshotFile(file);
+  }
+
+  function removeScreenshot() {
+    setScreenshotFile(null);
+    setForm((current) => ({ ...current, screenshot_url: '' }));
+    if (screenshotInputRef.current) screenshotInputRef.current.value = '';
+  }
 
   async function loadFeedbacks() {
     setLoading(true);
     setError('');
 
     try {
-      const data = await obtainAllFeedback();
-      setFeedbacks(data.filter((item) => item.ic_id === ic.IC_id));
+      const filters = { icId: ic.IC_id, sortBy: 'newest' as const };
+      const [data, timeline] = await Promise.all([
+        obtainAllFeedback(filters),
+        obtainFeedbackPage(1, TIMELINE_FEEDBACK_LIMIT, filters),
+      ]);
+      setFeedbacks(data);
+      setTimelineFeedbacks(timeline.data);
     } catch (err) {
       console.error('Error loading feedback:', err);
       setError('Could not load feedbacks. Please try again.');
@@ -132,10 +187,10 @@ function ICView({ ic, onBack }: ICViewProps) {
 
   const oldestFirstScores = useMemo(
     () =>
-      [...feedbacks]
-        .sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''))
+      [...timelineFeedbacks]
+        .sort((a, b) => (a.date ?? '').localeCompare(b.date ?? '') || a.id - b.id)
         .map((item) => Number(item.score)),
-    [feedbacks]
+    [timelineFeedbacks]
   );
 
   const averageScore = useMemo(() => {
@@ -159,6 +214,7 @@ function ICView({ ic, onBack }: ICViewProps) {
   function openCreate() {
     setEditingItem(null);
     setForm(emptyForm());
+    setScreenshotFile(null);
     setFormError('');
     setError('');
     setSuccess('');
@@ -171,11 +227,12 @@ function ICView({ ic, onBack }: ICViewProps) {
       project_id: item.project_id === null ? '' : String(item.project_id),
       date: item.date?.slice(0, 10) || today(),
       source_name: item.source_name ?? '',
-      source_title: '',
+      source_title: item.source_title ?? '',
       comment: item.comment ?? '',
       score: String(item.score),
       screenshot_url: item.screenshot_url ?? '',
     });
+    setScreenshotFile(null);
     setFormError('');
     setError('');
     setSuccess('');
@@ -183,10 +240,20 @@ function ICView({ ic, onBack }: ICViewProps) {
   }
 
   function closeModal() {
-    setModalOpen(false);
-    setEditingItem(null);
-    setFormError('');
+    if (isClosing) return;
+
+    setIsClosing(true);
+    window.setTimeout(() => {
+      setModalOpen(false);
+      setEditingItem(null);
+      setScreenshotFile(null);
+      setFormError('');
+      setIsClosing(false);
+    }, 75);
   }
+
+  const commentIsDirty =
+    form.comment.trim() !== '' && form.comment.trim() !== (editingItem?.comment ?? '').trim();
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -216,25 +283,64 @@ function ICView({ ic, onBack }: ICViewProps) {
       setFormError('Source is required.');
       return;
     }
+    if (form.source_name.trim().length > MAX_SOURCE_LEN) {
+      setFormError(`Source must be at most ${MAX_SOURCE_LEN} characters.`);
+      return;
+    }
+    if (!form.source_title.trim()) {
+      setFormError('Source title is required.');
+      return;
+    }
+    if (form.source_title.trim().length > MAX_SOURCE_TITLE_LEN) {
+      setFormError(`Source title must be at most ${MAX_SOURCE_TITLE_LEN} characters.`);
+      return;
+    }
+    if (form.comment.trim().length > MAX_COMMENT_LEN) {
+      setFormError(`Comment must be at most ${MAX_COMMENT_LEN} characters.`);
+      return;
+    }
     if (!Number.isInteger(score) || score < 1 || score > 5) {
       setFormError('Score must be between 1 and 5.');
       return;
     }
 
-    const payload = {
-      author_id: authorId,
-      ic_id: ic.IC_id,
-      project_id: projectId,
-      date: form.date,
-      source_name: form.source_name.trim(),
-      score,
-      comment: form.comment.trim() || null,
-      screenshot_url: form.screenshot_url.trim() || null,
-    };
-
     setSaving(true);
 
     try {
+    
+      let screenshotUrl: string | null = form.screenshot_url.trim() || null;
+
+      if (screenshotFile) {
+        const body = new FormData();
+        body.append('file', screenshotFile);
+
+       
+        const uploadResponse = await fetch(`${API_URL}/screenshot`, {
+          method: 'POST',
+          headers: authHeaders(),
+          body,
+        });
+
+        if (!uploadResponse.ok) {
+          const responseText = await uploadResponse.text();
+          throw new Error(responseText || `Screenshot upload failed (${uploadResponse.status})`);
+        }
+
+        screenshotUrl = (await uploadResponse.json()).url as string;
+      }
+
+      const payload = {
+        author_id: authorId,
+        ic_id: ic.IC_id,
+        project_id: projectId,
+        date: form.date,
+        source_name: form.source_name.trim(),
+        source_title: form.source_title.trim(),
+        score,
+        comment: form.comment.trim() || null,
+        screenshot_url: screenshotUrl,
+      };
+
       const isEditing = editingItem !== null;
       const response = await fetch(
         isEditing ? `${API_URL}/${editingItem.id}` : API_URL,
@@ -251,7 +357,7 @@ function ICView({ ic, onBack }: ICViewProps) {
       }
 
       closeModal();
-      setSuccess(isEditing ? 'Entry updated successfully.' : 'Entry created successfully.');
+      useToastStore.getState().addToast(`Entry ${isEditing ? 'updated' : 'created'} successfully!`, 'success');
       await loadFeedbacks();
     } catch (err) {
       console.error('Error saving feedback:', err);
@@ -265,12 +371,26 @@ function ICView({ ic, onBack }: ICViewProps) {
     }
   }
 
-  async function handleDelete(id: number) {
-    const confirmed = window.confirm(
-      'Are you sure you want to delete this entry? This action cannot be undone.'
-    );
-    if (!confirmed) return;
+  function requestDelete(item: Feedback) {
+    setIsDeleteClosing(false);
+    setDeleteTarget(item);
+  }
 
+  function closeDeleteDialog() {
+    if (isDeleting || isDeleteClosing) return;
+
+    setIsDeleteClosing(true);
+    window.setTimeout(() => {
+      setDeleteTarget(null);
+      setIsDeleteClosing(false);
+    }, 75);
+  }
+
+  async function handleDelete() {
+    if (!deleteTarget) return;
+    const id = deleteTarget.id;
+
+    setIsDeleting(true);
     setError('');
     setSuccess('');
 
@@ -285,20 +405,24 @@ function ICView({ ic, onBack }: ICViewProps) {
         throw new Error(responseText || `Request failed with status ${response.status}`);
       }
 
-      setFeedbacks((current) => current.filter((item) => item.id !== id));
-      setSuccess('Entry deleted successfully.');
+      setDeleteTarget(null);
+      useToastStore.getState().addToast('Entry deleted successfully.', 'success');
+      await loadFeedbacks();
 
       if (editingItem?.id === id) {
         closeModal();
       }
     } catch (err) {
-      console.error('Error deleting feedback:', err);
-      setError(
-        err instanceof Error
+        console.error('Error deleting feedback:', err);
+        
+        const errorMessage = err instanceof Error
           ? `Could not delete entry: ${err.message}`
-          : 'Could not delete entry.'
-      );
-    }
+          : 'Could not delete entry.';
+
+        useToastStore.getState().addToast(errorMessage, 'error');
+      } finally {
+        setIsDeleting(false);
+      }
   }
 
   return (
@@ -313,7 +437,7 @@ function ICView({ ic, onBack }: ICViewProps) {
           >
             <i className="fa-solid fa-arrow-left" />
           </button>
-          <h1 className="icv-title">{ic.name}</h1>
+          <h1 className="icv-title">{formatPersonName(ic.name)}</h1>
         </div>
 
         <button type="button" className="icv-primary-btn" onClick={openCreate}>
@@ -327,9 +451,15 @@ function ICView({ ic, onBack }: ICViewProps) {
 
       <section className="icv-summary">
         <div className="icv-person">
-          <div className="icv-avatar">{getInitials(ic.name)}</div>
+          <UserAvatar
+                    name={ic.name}
+                    id={ic.IC_id}
+                    entityType="ic"
+                    size={48}
+                    className="team-metric-avatar"
+                  />
           <div>
-            <div className="icv-person-name">{ic.name}</div>
+            <div className="icv-person-name">{formatPersonName(ic.name)}</div>
             <div className="icv-person-role">{ic.title}</div>
           </div>
         </div>
@@ -338,7 +468,7 @@ function ICView({ ic, onBack }: ICViewProps) {
           <div className="icv-stat">
             <span className="icv-stat-label">Average</span>
             {averageScore === null ? (
-              <span className="icv-stat-value">—</span>
+              <span className="icv-stat-value"> </span>
             ) : (
               <span
                 className="score-badge icv-avg-badge"
@@ -360,7 +490,7 @@ function ICView({ ic, onBack }: ICViewProps) {
       </section>
 
       <section className="icv-entries">
-        {loading && <p className="icv-muted">Loading feedback...</p>}
+        {loading && <LoadingOverlay message="Loading feedback..." />}
 
         {!loading && newestFirst.length === 0 && (
           <p className="icv-muted">No entries have been registered for this IC yet.</p>
@@ -374,8 +504,8 @@ function ICView({ ic, onBack }: ICViewProps) {
                   <span className="score-badge" data-score={item.score}>
                     {item.score}
                   </span>
-                  <span>
-                    {formatDate(item.date)} · {projectNameOf(item)} · {item.source_name}
+                  <span className="icv-entry-meta-text" title={`${formatDate(item.date)} · ${projectNameOf(item)} · ${item.source_name}`}>
+                    {formatDate(item.date)} · {truncateText(projectNameOf(item), MAX_NAME_LEN)} · {truncateText(item.source_name, MAX_SOURCE_LEN)}
                   </span>
                 </div>
 
@@ -391,7 +521,7 @@ function ICView({ ic, onBack }: ICViewProps) {
                   <button
                     type="button"
                     className="icv-icon-btn is-danger"
-                    onClick={() => void handleDelete(item.id)}
+                    onClick={() => requestDelete(item)}
                     aria-label="Delete entry"
                   >
                     <i className="fa-solid fa-trash-can" />
@@ -399,23 +529,73 @@ function ICView({ ic, onBack }: ICViewProps) {
                 </div>
               </div>
 
-              {item.comment && <p className="icv-entry-body">{item.comment}</p>}
+              {item.comment && <p className="icv-entry-body">{truncateText(item.comment, MAX_BODY_LEN)}</p>}
 
               {item.screenshot_url && (
-                <a href={item.screenshot_url} target="_blank" rel="noreferrer">
+                <button
+                  type="button"
+                  className="icv-thumb-btn"
+                  onClick={() => setPreviewUrl(item.screenshot_url)}
+                  aria-label="View screenshot"
+                >
                   <img
                     className="icv-thumb"
-                    src={item.screenshot_url}
+                    src={resolveScreenshotUrl(item.screenshot_url)}
                     alt="Screenshot attached to this entry"
                   />
-                </a>
+                </button>
               )}
             </article>
           ))}
       </section>
 
+      {deleteTarget && (
+        <div
+          className={`icv-overlay${isDeleteClosing ? ' is-closing' : ''}`}
+          onClick={closeDeleteDialog}
+        >
+          <div
+            className="icv-modal icv-delete-modal"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="icv-delete-title"
+            aria-describedby="icv-delete-description"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="icv-form">
+              <h2 id="icv-delete-title">Delete Entry</h2>
+              <p id="icv-delete-description" className="icv-delete-message">
+                Are you sure you want to delete this entry? This action cannot be undone.
+              </p>
+              <div className="icv-modal-actions">
+                <button
+                  type="button"
+                  className="icv-ghost-btn"
+                  onClick={closeDeleteDialog}
+                  disabled={isDeleting}
+                  autoFocus
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="icv-danger-btn"
+                  onClick={() => void handleDelete()}
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? 'Deleting...' : 'Delete'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {modalOpen && (
-        <div className="icv-overlay" onClick={closeModal}>
+        <div
+          className={`icv-overlay${isClosing ? ' is-closing' : ''}`}
+          onClick={closeModal}
+        >
           <div
             className="icv-modal"
             role="dialog"
@@ -443,29 +623,30 @@ function ICView({ ic, onBack }: ICViewProps) {
 
               <label className="icv-field">
                 <span className="icv-label">Project</span>
-                <select
-                  className="input-control"
-                  name="project_id"
+                <DropdownSelect
+                  id="ic-view-project"
+                  label="Project"
                   value={form.project_id}
-                  onChange={handleFieldChange}
-                  required
-                >
-                  <option value="">Select a project</option>
-                  {projects.map((project) => (
-                    
-                    <option key={project.id} value={String(project.id)}>
-                      {project.name}
-                    </option>
-                  ))}
-                </select>
+                  options={[
+                    { value: '', label: 'Select a project' },
+                    ...projects.map((project) => ({
+                      value: String(project.id),
+                      label: project.name,
+                    })),
+                  ]}
+                  onChange={(value) =>
+                    setForm((current) => ({ ...current, project_id: value }))
+                  }
+                />
               </label>
 
               <label className="icv-field">
-                <span className="icv-label">Source (who this feedback is from)</span>
+                <span className="icv-label">Source (who this feedback is from) *</span>
                 <input
                   className="input-control"
                   name="source_name"
                   type="text"
+                  maxLength={MAX_SOURCE_LEN}
                   value={form.source_name}
                   onChange={handleFieldChange}
                   placeholder="e.g. Stakeholder Review, Peer Feedback"
@@ -474,14 +655,16 @@ function ICView({ ic, onBack }: ICViewProps) {
               </label>
 
               <label className="icv-field">
-                <span className="icv-label">Source title</span>
+                <span className="icv-label">Source title *</span>
                 <input
                   className="input-control"
                   name="source_title"
                   type="text"
+                  maxLength={MAX_SOURCE_TITLE_LEN}
                   value={form.source_title}
                   onChange={handleFieldChange}
                   placeholder="e.g. Product Manager, Client, Peer"
+                  required
                 />
           
               </label>
@@ -490,40 +673,94 @@ function ICView({ ic, onBack }: ICViewProps) {
                 <span className="icv-label">Comment</span>
                 <textarea
                   name="comment"
+                  className={
+                    form.comment.length >= MAX_COMMENT_LEN
+                      ? 'is-error'
+                      : commentIsDirty
+                        ? 'is-success'
+                        : ''
+                  }
+                  maxLength={MAX_COMMENT_LEN}
                   value={form.comment}
                   onChange={handleFieldChange}
+                  placeholder="Add a short note..."
                   rows={4}
                 />
+                <span
+                  className={`icv-hint${
+                    form.comment.length >= MAX_COMMENT_LEN
+                      ? ' is-error'
+                      : commentIsDirty
+                        ? ' is-success'
+                        : ''
+                  }`}
+                >
+                  {form.comment.length >= MAX_COMMENT_LEN
+                    ? `Maximum of ${MAX_COMMENT_LEN} characters reached.`
+                    : commentIsDirty
+                      ? `Looks good. ${form.comment.length}/${MAX_COMMENT_LEN}`
+                      : `Up to ${MAX_COMMENT_LEN} characters.`}
+                </span>
               </label>
 
               <label className="icv-field">
                 <span className="icv-label">Score</span>
-                <select
-                  className="input-control"
-                  name="score"
+                <DropdownSelect
+                  id="ic-view-score"
+                  label="Score"
                   value={form.score}
-                  onChange={handleFieldChange}
-                  required
-                >
-                  <option value="1">1</option>
-                  <option value="2">2</option>
-                  <option value="3">3</option>
-                  <option value="4">4</option>
-                  <option value="5">5</option>
-                </select>
-              </label>
-
-              <label className="icv-field">
-                <span className="icv-label">Screenshot (optional)</span>
-                <input
-                  className="input-control"
-                  name="screenshot_url"
-                  type="url"
-                  value={form.screenshot_url}
-                  onChange={handleFieldChange}
-                  placeholder="https://..."
+                  options={['1', '2', '3', '4', '5'].map((score) => ({
+                    value: score,
+                    label: score,
+                  }))}
+                  onChange={(value) =>
+                    setForm((current) => ({ ...current, score: value }))
+                  }
                 />
               </label>
+
+              <div className="icv-field">
+                <span className="icv-label">Screenshot (optional)</span>
+                <div className="icv-file-row">
+                  <label
+                    htmlFor="icv-screenshot"
+                    className="btn btn-secondary icv-file-btn"
+                  >
+                    <i className="fa-solid fa-image" aria-hidden="true" />
+                    {screenshotFilePreview || form.screenshot_url
+                      ? 'Change screenshot'
+                      : 'Upload screenshot'}
+                  </label>
+                  <span className="icv-file-name">
+                    {screenshotFile?.name ?? 'PNG, JPEG or WebP'}
+                  </span>
+                </div>
+                <input
+                  id="icv-screenshot"
+                  ref={screenshotInputRef}
+                  className="icv-file-input"
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  onChange={handleScreenshotChange}
+                />
+                {(screenshotFilePreview || form.screenshot_url) && (
+                  <>
+                    <img
+                      className="icv-thumb"
+                      src={screenshotFilePreview ?? resolveScreenshotUrl(form.screenshot_url)}
+                      alt="Screenshot to attach"
+                    />
+                    <button
+                      type="button"
+                      className="icv-ghost-btn"
+                      onClick={removeScreenshot}
+                      disabled={saving}
+                    >
+                      Remove screenshot
+                    </button>
+                  </>
+                )}
+              </div>
 
               {formError && (
                 <div role="alert" className="icv-alert is-error">
@@ -550,6 +787,22 @@ function ICView({ ic, onBack }: ICViewProps) {
               </div>
             </form>
           </div>
+        </div>
+      )}
+
+      {previewUrl && (
+        <div
+          className="icv-overlay is-dark"
+          onClick={() => setPreviewUrl(null)}
+        >
+          <img
+            className="icv-preview-img"
+            src={resolveScreenshotUrl(previewUrl)}
+            alt="Screenshot preview"
+            role="dialog"
+            aria-modal="true"
+            onClick={(event) => event.stopPropagation()}
+          />
         </div>
       )}
     </div>

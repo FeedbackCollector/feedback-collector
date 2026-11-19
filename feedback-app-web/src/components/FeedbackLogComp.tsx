@@ -1,0 +1,585 @@
+import { truncateText, MAX_NAME_LEN, MAX_SOURCE_LEN, MAX_EXCERPT_LEN, MAX_BODY_LEN } from '../utils/feedbackFormat';
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import type { Feedback, FeedbackFilters, IC, ManagerFeedback, Project } from '../types/feedback';
+import { obtainICs } from '../service/ObtainICs';
+import { obtainProjects } from '../service/ObtainProjects';
+import '../styles/index.css'
+import { obtainFeedbackPage } from '../service/ObtainFeedback';
+import { obtainManagerFeedbackPage, obtainManagerOptions } from '../service/ManagerFeedbackApi';
+import ScreenshotThumb from './ScreenshotThumb';
+import AutocompleteSearch from './AutocompleteSearch';
+import type { SearchSuggestion } from '../types/autoComplete';
+import { obtainAllICs } from '../service/ObtainICs';
+import { useAuthStore } from '../store/authStore';
+import LoadingOverlay from './LoadingOverlay';
+import { formatPersonName } from './formatPersonName';
+import DropdownSelect from './DropdownSelect';
+
+const SEARCH_DEBOUNCE_MS = 300;
+const PAGE_SIZE = 10;
+const SCORES = [1,2,3,4,5];
+
+
+const searchIcon = <svg xmlns="http://w3.org" height="20px" viewBox="0 -960 960 960" width="20px" fill="currentColor"><path d="M784-120 532-372q-30 24-69 38t-83 14q-109 0-184.5-75.5T120-580q0-109 75.5-184.5T380-840q109 0 184.5 75.5T640-580q0 44-14 83t-38 69l252 252-56 56ZM380-400q75 0 127.5-52.5T560-580q0-75-52.5-127.5T380-760q-75 0-127.5 52.5T200-580q0 75 52.5 127.5T380-400Z"/></svg>
+const tableChartIcon = <svg xmlns="http://w3.org" height="20px" viewBox="0 -960 960 960" width="20px" fill="currentColor"><path d="M760-120H200q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120ZM200-640h560v-120H200v120Zm100 80H200v360h100v-360Zm360 0v360h100v-360H660Zm-80 0H380v360h200v-360Z"/></svg>
+const viewListIcon = <svg xmlns="http://w3.org" height="20px" viewBox="0 -960 960 960" width="20px" fill="currentColor"><path d="M360-240h440v-107H360v107ZM160-613h120v-107H160v107Zm0 187h120v-107H160v107Zm0 186h120v-107H160v107Zm200-186h440v-107H360v107Zm0-187h440v-107H360v107ZM160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h640q33 0 56.5 23.5T880-720v480q0 33-23.5 56.5T800-160H160Z"/></svg>
+const arrowForward = <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" height="10px" width="10px" fill="#1f1f1f"><path d="M8.03,22L6.25,20.23L14.48,12L6.25,3.77L8.03,2l10,10l-10,10Z"/></svg>
+const arrowBack = <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" height="10px" width="10px" fill="#1f1f1f"><path d="M10,22L0,12L10,2l1.78,1.77L3.55,12l8.23,8.23L10,22Z"/></svg>
+
+function FeedbackLogComp() {
+  const [feedback, setFeedback] = useState<(Feedback | ManagerFeedback)[]>([]);
+  const [managers, setManagers] = useState<{ id: number; name: string }[]>([]);
+  const [ics, setIcs] = useState<IC[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [icsLoading, setIcsLoading] = useState(true);
+  const [icsLoadError, setIcsLoadError] = useState<string | null>(null);
+  const user = useAuthStore((state) => state.user);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  const [viewMode, setViewMode] = useState<'table' | 'list'>('table');
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+
+  // Directors can switch between feedback about ICs and about managers; managers only ever see ICs.
+  const isDirector = user?.role.toLowerCase() === 'director';
+  const target: 'ics' | 'managers' = isDirector && searchParams.get('type') === 'managers' ? 'managers' : 'ics';
+  const managerParam = searchParams.get('manager') ?? '';
+  const managerFilter = /^[1-9][0-9]*$/.test(managerParam) ? managerParam : '';
+
+  const pageParam = Number(searchParams.get('page'));
+  const page = Number.isInteger(pageParam) && pageParam > 0 ? pageParam : 1;
+
+  const filters = useMemo<FeedbackFilters>(() => {
+    const projectId = searchParams.get('project') ?? '';
+    const score = searchParams.get('score') ?? '';
+    return {
+      icName: searchParams.get('ic') ?? '',
+      projectId: /^[1-9][0-9]*$/.test(projectId) ? projectId : '',
+      score: SCORES.map(String).includes(score) ? score : '',
+      sortBy: searchParams.get('sort') === 'oldest' ? 'oldest' : 'newest',
+      text: searchParams.get('text') ?? '',
+    };
+  }, [searchParams]);
+
+  const [searchInputs, setSearchInputs] = useState({ icName: filters.icName, text: filters.text });
+  const feedbackContainerRef = useRef<HTMLDivElement>(null);
+
+  const shouldAnimateViewChange = useRef(false);
+
+  function changeViewMode(nextMode: 'table' | 'list') {
+    if (nextMode === viewMode) return;
+
+    shouldAnimateViewChange.current = true;
+    setViewMode(nextMode);
+  }
+
+  useEffect(() => {
+  const mediaQuery = window.matchMedia('(max-width: 767px)');
+
+  if (mediaQuery.matches) {
+    setViewMode('list');
+  }
+
+  const handleMediaChange = (e: MediaQueryListEvent) => {
+    if (e.matches) {
+      setViewMode('list');
+    }
+  }; 
+  mediaQuery.addEventListener('change', handleMediaChange);
+  return () => mediaQuery.removeEventListener('change', handleMediaChange);
+  }, []);
+  
+
+  useEffect(() => {
+    let cancelled = false;
+    const managerId = user?.role.toLowerCase() === 'director' ? undefined : user?.id;
+
+    async function loadReferences() {
+      setIcsLoading(true);
+      setIcsLoadError(null);
+
+      if (!user || (managerId === undefined && user.role.toLowerCase() !== 'director')) {
+        setIcsLoadError('Could not determine assigned ICs. Please log in again.');
+        setIcsLoading(false);
+        return;
+      }
+
+      const [icsResult, projectsResult, managersResult] = await Promise.allSettled([
+        obtainAllICs(managerId),
+        obtainProjects(),
+        user.role.toLowerCase() === 'director' ? obtainManagerOptions() : Promise.resolve([]),
+      ]);
+
+      if (cancelled) return;
+
+      if (icsResult.status === 'fulfilled') {
+        setIcs(icsResult.value);
+      } else {
+        console.error('Error retrieving ICs:', icsResult.reason);
+        setIcsLoadError('Could not load ICs. Please try again.');
+      }
+
+      if (managersResult.status === 'fulfilled') {
+        setManagers(managersResult.value);
+      } else {
+        console.error('Error loading managers:', managersResult.reason);
+      }
+
+      if (projectsResult.status === 'fulfilled') {
+        setProjects(projectsResult.value);
+      } else {
+        console.error('Error loading projects:', projectsResult.reason);
+      }
+
+      setIcsLoading(false);
+    }
+
+    void loadReferences();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id, user?.role]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const controller = new AbortController();
+
+    async function loadFeedback() {
+      setLoading(true);
+      setLoadError(null);
+      try {
+        const result = target === 'managers'
+          ? await obtainManagerFeedbackPage(
+              page,
+              PAGE_SIZE,
+              {
+                managerId: managerFilter ? Number(managerFilter) : undefined,
+                projectId: filters.projectId,
+                score: filters.score,
+                sortBy: filters.sortBy,
+              },
+              controller.signal,
+            )
+          : await obtainFeedbackPage(page, PAGE_SIZE, filters, controller.signal);
+        if (cancelled) return;
+        setFeedback(result.data ?? []);
+        const lastPage = Math.max(result.pagination.totalPages, 1);
+        setTotalPages(lastPage);
+        setTotalItems(result.pagination.total);
+        if (page > lastPage) updateParams({ page: lastPage > 1 ? String(lastPage) : '' }, true);
+      } catch (error) {
+        if (cancelled) return;
+        console.error('Error retrieving feedback:', error);
+        setLoadError('Could not load feedback. Please try again.');
+        setFeedback([]);
+        setTotalPages(1);
+        setTotalItems(0);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    loadFeedback();
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [page, filters, target, managerFilter]);
+
+  useEffect(() => {
+    if (!shouldAnimateViewChange.current) return;
+
+    shouldAnimateViewChange.current = false;
+    const element = feedbackContainerRef.current;
+    if (!element) return;
+
+    element.animate(
+      [
+        { opacity: 0, transform: 'translateY(16px)' },
+        { opacity: 1, transform: 'translateY(0)' },
+      ],
+      { duration: 300, easing: 'ease-out' }
+    );
+  }, [viewMode]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (filters.icName === searchInputs.icName && filters.text === searchInputs.text) return;
+      setLoading(true);
+      updateParams({ ic: searchInputs.icName, text: searchInputs.text });
+    }, SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [searchInputs]);
+
+  useEffect(() => {
+    setSearchInputs({ icName: filters.icName, text: filters.text });
+  }, [filters.icName, filters.text]);
+
+  function updateParams(changes: Record<string, string>, replace = false) {
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      for (const [key, value] of Object.entries(changes)) {
+        if (value) next.set(key, value);
+        else next.delete(key);
+      }
+      if (!('page' in changes)) next.delete('page');
+      return next;
+    }, { replace });
+  }
+
+  function handleChange(e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
+    setSearchInputs((current) => ({ ...current, text: e.target.value }));
+  }
+
+  function changeTarget(next: 'ics' | 'managers') {
+    if (next === target) return;
+    setLoading(true);
+    setFeedback([]);
+    setSearchParams(next === 'managers' ? { type: 'managers' } : {});
+  }
+
+  function goToPage(next: number) {
+    if (loading || next < 1 || next > totalPages || next === page) return;
+    setLoading(true);
+    updateParams({ page: next > 1 ? String(next) : '' });
+  }
+
+  const enrichedFeedback = feedback.map((item) => {
+    const matchedProject = projects.find((p) => p.id === item.project_id);
+    const project_name = matchedProject?.name ?? item.project_name ?? null;
+
+    if ('manager_id' in item) {
+      const matchedManager = managers.find((manager) => manager.id === item.manager_id);
+      return { ...item, project_name, subject_id: item.manager_id, subject_name: matchedManager?.name ?? null };
+    }
+
+    const matchedIC = ics.find((ic) => ic.IC_id === item.ic_id);
+    return { ...item, project_name, subject_id: item.ic_id, subject_name: matchedIC?.name ?? item.ic_name ?? null };
+  });
+
+  const searchSuggestions = ics.map<SearchSuggestion>((ic) => ({
+    id: String(ic.IC_id),
+    label: formatPersonName(ic.name),
+    value: formatPersonName(ic.name),
+  }));
+
+  function openTimeline(item: { subject_id: number | null }) {
+    if (item.subject_id === null) {
+      alert(`Could not find the ${target === 'managers' ? 'manager' : 'IC'} associated with this feedback.`);
+      return;
+    }
+
+    navigate(target === 'managers' ? `/my-management/${item.subject_id}` : `/my-ics/${item.subject_id}`);
+  }
+
+  const toolbar = (
+    <div className="feedback-toolbar">
+      {isDirector ? (
+        <div className="entity-toggle-container" role="group" aria-label="Feedback type">
+          <button
+            type="button"
+            onClick={() => changeTarget('ics')}
+            className={`btn-toggle-view ${target === 'ics' ? 'active' : ''}`}
+            aria-label="Feedback about ICs"
+            aria-pressed={target === 'ics'}
+            title="ICs"
+          >
+            <i className="fa-solid fa-user-group" aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            onClick={() => changeTarget('managers')}
+            className={`btn-toggle-view ${target === 'managers' ? 'active' : ''}`}
+            aria-label="Feedback about managers"
+            aria-pressed={target === 'managers'}
+            title="Managers"
+          >
+            <i className="fa-solid fa-user-tie" aria-hidden="true" />
+          </button>
+        </div>
+      ) : <span />}
+
+      <div className="view-toggle-container">
+        <button
+          type="button"
+          onClick={() => changeViewMode('table')}
+          className={`btn-toggle-view ${viewMode === 'table' ? 'active' : ''}`}
+        >
+          {tableChartIcon}
+        </button>
+        <button
+          type="button"
+          onClick={() => changeViewMode('list')}
+          className={`btn-toggle-view ${viewMode === 'list' ? 'active' : ''}`}
+        >
+          {viewListIcon}
+        </button>
+      </div>
+    </div>
+  );
+
+  if (icsLoading) {
+    return <LoadingOverlay message="Loading Feedback..." />;
+  }
+
+  if (target === 'ics' && ics.length === 0) {
+    return (
+      <div className="MyICs-containers">
+        {isDirector && <div style={{ padding: '20px 20px 0' }}>{toolbar}</div>}
+        <div className="show-ics-empty" role="status">
+          <i className="fa-solid fa-user-group" aria-hidden="true"></i>
+          <p>
+            You don't have any Individual Contributors assigned yet. The Director assigns ICs to each manager.
+          </p>
+        </div>
+      </div>
+    );
+  }
+   const pagination = (
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '16px', margin: '0 0 20px 0' }}>
+      <button
+        type="button"
+        className="btn btn-icon btn-secondary"
+        onClick={() => goToPage(page - 1)}
+        disabled={page <= 1}
+        aria-label="Previous page"
+        style={{ width: '32px', height: '32px', padding: 0, borderRadius: '6px', color: 'var(--text)', background: 'var(--surface)', right:'4px' }}
+      >
+        {arrowBack}
+      </button>
+      <span style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
+        Page {page} of {totalPages}
+      </span>
+      <button
+        type="button"
+        className="btn btn-icon btn-secondary"
+        onClick={() => goToPage(page + 1)}
+        disabled={page >= totalPages}
+        aria-label="Next page"
+        style={{ width: '32px', height: '32px', padding: 0, borderRadius: '6px', color: 'var(--text)', background: 'var(--surface)', left:'4px' }}
+      >
+        {arrowForward}
+      </button>
+    </div>
+  );
+
+  return (
+    <>
+      <div style={{ padding: '0 20px' }}>
+        <div className="box" style={{ margin: '20px 0', maxWidth: '100%' }}>
+          <div className="filters-grid">
+            {target === 'managers' ? (
+              <div className="filter-item">
+                <span className="filter-label">Manager</span>
+                <select name="manager" className="input-control" value={managerFilter} onChange={handleChange}>
+                  <option value="">All</option>
+                  {managers.map((manager) => (
+                    <option key={manager.id} value={String(manager.id)}>
+                      {formatPersonName(manager.name)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <div className="filter-item">
+                <span className="filter-label">IC</span>
+                <AutocompleteSearch
+                  id="feedback-ic-search"
+                  className="search-wrapper"
+                  inputClassName="input-control"
+                  label="Search ICs"
+                  placeholder="Search ICs..."
+                  value={searchInputs.icName}
+                  suggestions={searchSuggestions}
+                  onChange={(value) =>
+                    setSearchInputs((current) => ({ ...current, icName: value }))
+                  }
+                />
+              </div>
+            )}
+
+            <div className="filter-item">
+              <span className="filter-label">Project</span>
+              <DropdownSelect
+                id="feedback-project"
+                label="Project"
+                value={filters.projectId}
+                options={[
+                  { value: '', label: 'All' },
+                  ...projects.map((project) => ({
+                    value: String(project.id),
+                    label: project.name,
+                  })),
+                ]}
+                onChange={(value) => updateParams({ project: value })}
+              />
+            </div>
+
+            <div className="filter-item">
+              <span className="filter-label">Score</span>
+              <DropdownSelect
+                id="feedback-score"
+                label="Score"
+                value={filters.score}
+                options={[
+                  { value: '', label: 'All' },
+                  ...SCORES.map((score) => ({
+                    value: String(score),
+                    label: String(score),
+                  })),
+                ]}
+                onChange={(value) => updateParams({ score: value })}
+              />
+            </div>
+
+            <div className="filter-item">
+              <span className="filter-label">Sort by date</span>
+              <DropdownSelect
+                id="feedback-sort-by"
+                label="Sort by date"
+                value={filters.sortBy}
+                options={[
+                  { value: 'newest', label: 'Newest first' },
+                  { value: 'oldest', label: 'Oldest first' },
+                ]}
+                onChange={(value) => updateParams({ sort: value })}
+              />
+            </div>
+          </div>
+
+          {target === 'ics' && (
+          <div className="filter-item">
+            <span className="filter-label">Search</span>
+            <div className="search-wrapper">
+              {searchIcon}
+              <input
+                type="text"
+                name="text"
+                placeholder="Search feedback text..."
+                className="input-control"
+                value={searchInputs.text}
+                onChange={handleChange}
+              />
+            </div>
+          </div>
+          )}
+        </div>
+
+        {toolbar}
+
+        {loading && <LoadingOverlay message="Loading feedback..." />}
+        {!loading && loadError && <LoadingOverlay message="Error loading feedback." />}
+        {!loading && !loadError && enrichedFeedback.length === 0 && <p style={{ justifySelf:"center", fontSize:"20px"  }}>No feedback entries match the applied filters.</p>}
+
+        {!loading && enrichedFeedback.length > 0 && (
+          <div ref={feedbackContainerRef}>
+            {viewMode === 'table' && (
+              <div className="box" style={{ margin: '0 0 20px 0', padding: '0', maxWidth: '100%', overflowX: 'auto' }}>
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Subject</th>
+                      <th>Project</th>
+                      <th>Source</th>
+                      <th>Score</th>
+                      <th>Excerpt</th>
+                      <th>Attachment</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {enrichedFeedback.map((item) => (
+                      <tr key={item.id}>
+                        <td className="text-caption-default" style={{ color: 'var(--text-muted)' }}>{item.date}</td>
+                        <td>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            <span style={{ fontWeight: 600 }}>{formatPersonName(item.subject_name)}</span>
+                            {item.source_name.toLowerCase().includes('peer') && <span className="badge-shared" style={{ width: 'fit-content' }}>Shared</span>}
+                          </div>
+                        </td>
+                        <td className="fl-truncate" title={item.project_name ?? undefined}>{truncateText(item.project_name, MAX_NAME_LEN) || '-'}</td>
+                        <td className="fl-truncate" style={{ color: 'var(--text-muted)' }} title={item.source_name}>{truncateText(item.source_name, MAX_SOURCE_LEN)}</td>
+                        <td>
+                          <span className="score-badge" data-score={item.score}>{item.score}</span>
+                        </td>
+                        <td className="fl-truncate fl-truncate-wide" title={item.comment ?? undefined}>
+                          {truncateText(item.comment, MAX_EXCERPT_LEN) || '-'}
+                        </td>
+                        <td>
+                          {item.screenshot_url ? (
+                            <ScreenshotThumb url={item.screenshot_url} size="sm" />
+                          ) : ''}
+                        </td>
+                        <td>
+                          <button type="button" className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '13px', borderRadius: '6px' }} onClick={() => openTimeline(item)}>View in Timeline</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {viewMode === 'list' && (
+              <div className="box-columns" style={{ gap: '16px', marginBottom: '20px' }}>
+                {enrichedFeedback.map((item) => (
+                  <div key={item.id} className="feedback-card">
+                    <div className="feedback-card-header">
+                      <span className="score-badge" data-score={item.score} style={{ width: '32px', height: '32px', fontSize: '14px'}}>
+                        {item.score}
+                      </span>
+
+                      <div className="feedback-card-meta">
+                        <div className="feedback-card-name-row">
+                          <h4
+                            className="feedback-card-name feedback-card-clip"
+                            title={item.subject_name ?? undefined}
+                          >
+                            {truncateText(formatPersonName(item.subject_name), MAX_NAME_LEN) || '-'}
+                          </h4>
+                          {(item.source_name.toLowerCase().includes('peer') || item.id === 3) && (
+                            <span className="badge-shared">Shared</span>
+                          )}
+                        </div>
+                        <span className="feedback-card-subtext feedback-card-clip" title={`${item.date} · ${item.project_name ?? '-'}`}>
+                          {item.date} · {truncateText(item.project_name, MAX_NAME_LEN) || '-'}
+                        </span>
+                      </div>
+                      {item.screenshot_url && (
+                        <div style={{ marginLeft: 'auto' }}>
+                          <ScreenshotThumb url={item.screenshot_url} size="sm" />
+                        </div>
+                      )}
+                    </div>
+
+                    <p className="feedback-card-body">
+                      {truncateText(item.comment, MAX_BODY_LEN) || '-'}
+                    </p>
+
+                    <div className="feedback-card-footer">
+                      <span className="text-label-meta feedback-card-source" style={{ color: 'var(--text-muted)', fontSize: '12px' }} title={item.source_name}>
+                        {truncateText(item.source_name, MAX_SOURCE_LEN)}
+                      </span>
+                      <button type="button" className="btn btn-secondary" style={{ padding: '6px 14px', borderRadius: '6px', fontSize: '13px' }} onClick={() => openTimeline(item)}>
+                        View in Timeline
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {!loading && totalItems > 0 && pagination}
+      </div>
+    </>
+  );
+}
+export default FeedbackLogComp;

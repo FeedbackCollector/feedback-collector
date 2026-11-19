@@ -15,7 +15,7 @@
 
 .MyICs-containers {
   flex: 1;
-  padding: 20px;
+  padding: 24px;
   background-color: #f5f5f5;
   display: flex;
   justify-content: center;
@@ -95,35 +95,37 @@ select.input-control {
 .view-toggle-container {
   display: flex;
   justify-content: flex-end;
-  gap: 0px;
+  gap: 6px;
   margin: 0 0 16px 0;
 }
 
 .btn-toggle-view {
-  background: var(--surface);
+  display: grid;
+  width: 38px;
+  height: 36px;
+  place-items: center;
   border: 1px solid var(--border);
-  padding: 8px 12px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
+  border-radius: 8px;
+  background: #fff;
   color: var(--text-muted);
-  transition: all 0.2s ease;
+  cursor: pointer;
+  font-size: 17px;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
 }
 
-.btn-toggle-view:first-of-type {
-  border-radius: 6px 0 0 6px;
-}
-
-.btn-toggle-view:last-of-type {
-  border-radius: 0 6px 6px 0;
-  border-left: none;
+.btn-toggle-view:hover {
+  background: var(--primary-light);
+  color: var(--primary);
 }
 
 .btn-toggle-view.active {
-  background: var(--primary);
-  color: var(--surface);
   border-color: var(--primary);
+  background: var(--primary);
+  color: #fff;
 }
+
 
 /* LIST CARDS - FIGMA SPECIFIC STYLE */
 .feedback-card {
@@ -192,4 +194,98 @@ select.input-control {
   padding: 2px 8px;
   border-radius: 4px;
   text-transform: capitalize;
+}
+
+.shot-thumb-btn {
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  display: block;
+  flex-shrink: 0;
+}
+
+.shot-thumb {
+  object-fit: cover;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  display: block;
+}
+
+.shot-thumb-btn.is-md .shot-thumb {
+  width: 120px;
+  height: 80px;
+}
+
+.shot-thumb-btn.is-sm .shot-thumb {
+  width: 60px;
+  height: 40px;
+}
+
+.shot-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(23, 24, 26, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 100;
+}
+
+.shot-preview {
+  max-width: min(90vw, 900px);
+  max-height: 85vh;
+  border-radius: 8px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+  background: var(--surface);
+}
+
+.feedback-card-meta {
+  min-width: 0;
+}
+
+.feedback-card-clip {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.feedback-card-name-row {
+  min-width: 0;
+}
+
+.feedback-card-body {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+.feedback-card-source {
+  min-width: 0;
+  max-width: 60%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Feedback Log: type switch (ICs / Managers) next to the table/list switch. */
+.feedback-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 0 16px 0;
+}
+
+.feedback-toolbar .view-toggle-container,
+.feedback-toolbar .entity-toggle-container {
+  margin: 0;
+}
+
+.entity-toggle-container {
+  display: flex;
+  gap: 6px;
 }

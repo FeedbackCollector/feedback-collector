@@ -16,6 +16,7 @@ export interface Feedback {
     project_id: number;
     date: string;
     source_name: string;
+    source_title: string | null;
     score: number;
     comment: string | null;
     screenshot_url: string | null;
@@ -28,6 +29,7 @@ export interface NewFeedback {
     project_id: number;
     date: string;
     source_name: string;
+    source_title: string | null;
     score: number;
     comment: string | null;
     screenshot_url: string | null;
@@ -39,4 +41,9 @@ export interface FeedbackFilters {
     ic_id?: number;
     author_id?: number;
     project_id?: number;
+    ic_name?: string;
+    manager_id?: number;
+    score?: number;
+    text?: string;
+    sort?: 'newest' | 'oldest';
 }

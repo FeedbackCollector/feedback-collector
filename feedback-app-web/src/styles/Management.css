@@ -57,12 +57,13 @@
 
 .management-toolbar {
   display: flex;
-  min-height: 88px;
+  min-height: auto;
   flex-direction: column;
   align-items: flex-end;
   justify-content: flex-start;
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: 5px;
+  margin-top: 20px;
+  margin-bottom: 20px;
 }
 
 .management-add-button {
@@ -84,6 +85,71 @@
 
 .management-add-button:hover {
   background: var(--primary-dk);
+}
+
+.management-requests {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.management-requests-title {
+  margin: 0;
+  color: var(--text);
+  font-size: 18px;
+}
+
+.management-requests-table {
+  min-width: 720px;
+}
+
+.management-request-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.management-request-approve,
+.management-request-delete {
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.management-request-approve {
+  background: var(--primary);
+  color: #fff;
+}
+
+.management-request-approve:hover {
+  background: var(--primary-dk);
+}
+
+.management-request-delete {
+  border-color: #e8b8b8;
+  background: #fff;
+  color: #a32121;
+}
+
+.management-request-delete:hover {
+  background: #fff1f1;
+}
+
+.management-request-approve:focus-visible,
+.management-request-delete:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.management-request-approve:disabled,
+.management-request-delete:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .management-view-toggle {
@@ -118,8 +184,26 @@
   color: #fff;
 }
 
+.management-pending-toggle {
+  width: auto;
+  min-width: 88px;
+  padding: 0 12px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.management-pending-toggle:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
 .management-table-wrap {
-  overflow: hidden;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
   border: 1px solid var(--border);
   border-radius: 16px;
   background: #fff;
@@ -130,6 +214,14 @@
   width: 100%;
   border-collapse: collapse;
   text-align: left;
+}
+
+.management-scroll-table {
+  min-width: 720px;
+}
+
+.management-table .management-centered-column {
+  text-align: center;
 }
 
 .management-managers-table {
@@ -148,7 +240,7 @@
 
 .management-managers-table th:last-child,
 .management-managers-table td:last-child {
-  width: 154px;
+  width: 194px;
 }
 
 .management-area-select {
@@ -337,7 +429,7 @@
 
 .management-dialog-backdrop {
   position: fixed;
-  z-index: 10;
+  z-index: 55;
   display: grid;
   padding: 20px;
   background: rgb(23 24 26 / 42%);
@@ -358,6 +450,92 @@
 
 .management-feedback-dialog {
   max-height: min(80vh, 720px);
+}
+
+.management-assignment-dialog {
+  width: min(100%, 560px);
+  max-height: min(88vh, 760px);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgb(23 24 26 / 14%);
+}
+
+.management-assignment-search::-webkit-search-cancel-button {
+  display: none;
+}
+
+.management-assignment-search {
+  flex-shrink: 0;
+}
+
+.management-assignment-list {
+  display: flex;
+  max-height: 48vh;
+  flex-direction: column;
+  gap: 6px;
+  overflow-y: auto;
+  padding: 1px;
+}
+
+.management-assignment-option {
+  display: flex;
+  width: 100%;
+  min-height: 54px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: #fff;
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.management-assignment-option:hover:not(:disabled) {
+  border-color: var(--text-muted);
+  background: #f8f8f8;
+}
+
+.management-assignment-option.is-selected {
+  border-color: var(--primary);
+  background: var(--primary-light);
+}
+
+.management-assignment-option:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.management-assignment-option:disabled {
+  cursor: default;
+}
+
+.management-assignment-option-info {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.management-assignment-option-info small {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.management-assignment-status {
+  flex: 0 0 auto;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.management-assignment-option.is-selected .management-assignment-status {
+  color: var(--primary);
 }
 
 .management-feedback-list {
@@ -496,7 +674,138 @@
 
 
 @media (max-width: 767px) {
-  .management-view-toggle {
-    display: none !important;
+  .management-view-button:not(.management-pending-toggle) {
+    display: none;
   }
+}
+
+
+.management-dialog-backdrop {
+  animation: popup-backdrop-in 75ms ease both;
+}
+
+.management-dialog {
+  animation: popup-in 75ms ease both;
+}
+
+.management-dialog-backdrop.is-closing {
+  animation: popup-backdrop-out 75ms ease both;
+  pointer-events: none;
+}
+
+.management-dialog-backdrop.is-closing .management-dialog {
+  animation: popup-out 75ms ease both;
+}
+
+.management-assignment-backdrop,
+.management-assignment-backdrop .management-assignment-dialog {
+  animation: none;
+}
+
+@keyframes popup-backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes popup-backdrop-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes popup-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes popup-out {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(8px) scale(0.98); }
+}
+.management-delete-message {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.management-delete-message strong {
+  color: inherit;
+  font-weight: 600;
+}
+
+.management-delete-button {
+  min-height: 40px;
+  padding: 0 18px;
+  border: 1px solid #c62828;
+  border-radius: 999px;
+  background: #c62828;
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+}
+
+.management-delete-button:hover {
+  background: #a32121;
+}
+
+.management-delete-button:focus-visible {
+  outline: 2px solid #c62828;
+  outline-offset: 2px;
+}
+
+.management-delete-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.management-delete-message {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.management-delete-message strong {
+  color: inherit;
+  font-weight: 600;
+}
+
+.management-delete-button {
+  min-height: 40px;
+  padding: 0 18px;
+  border: 1px solid #c62828;
+  border-radius: 999px;
+  background: #c62828;
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+}
+
+.management-delete-button:hover {
+  background: #a32121;
+}
+
+.management-delete-button:focus-visible {
+  outline: 2px solid #c62828;
+  outline-offset: 2px;
+}
+
+.management-delete-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.management-delete-backdrop {
+  animation-duration: 75ms;
+}
+
+.management-delete-backdrop .management-dialog {
+  animation-duration: 75ms;
+}
+
+.management-delete-backdrop.is-closing,
+.management-delete-backdrop.is-closing .management-dialog {
+  animation-duration: 75ms;
 }

@@ -1,24 +1,40 @@
-import type { Feedback, FeedbackPageResponse } from '../types/feedback';
+import type { Feedback, FeedbackFilters, FeedbackPageResponse } from '../types/feedback';
 import { API_URL } from './api';
 import { authHeaders } from './authHeaders';
 
 const URLEndpoint = `${API_URL}/feedback`;
 const PAGE_LIMIT = 100;
 
-export async function obtainFeedbackPage(page: number, limit: number = PAGE_LIMIT): Promise<FeedbackPageResponse> {
+export async function obtainFeedbackPage(page: number, limit: number = PAGE_LIMIT, filters: Partial<FeedbackFilters> = {}, signal?: AbortSignal): Promise<FeedbackPageResponse> {
   const params = new URLSearchParams({ page: String(page), limit: String(limit) });
-  const response = await fetch(`${URLEndpoint}?${params}`, { headers: authHeaders() });
+
+  const icName = filters.icName?.trim();
+  const text = filters.text?.trim();
+
+  if (icName) params.set('ic_name', icName);
+  if (filters.icId !== undefined) params.set('ic_id', String(filters.icId));
+  if (filters.projectId) params.set('project_id', filters.projectId);
+  if (filters.score) params.set('score', filters.score);
+  if (text) params.set('text', text);
+  if (filters.sortBy) params.set('sort', filters.sortBy);
+
+  const response = await fetch(`${URLEndpoint}?${params}`, { headers: authHeaders(), signal });
   if (!response.ok) {
     throw new Error(`Could not load feedback (${response.status}).`);
   }
   return response.json() as Promise<FeedbackPageResponse>;
 }
 
-export async function obtainAllFeedback(): Promise<(Feedback & { ic_id: number })[]> {
-  const firstPage = await obtainFeedbackPage(1);
+export async function obtainAllFeedback(
+  filters: Partial<FeedbackFilters> = {}
+): Promise<(Feedback & { ic_id: number })[]> {
+  const firstPage = await obtainFeedbackPage(1, PAGE_LIMIT, filters);
   const totalPages = Math.max(firstPage.pagination.totalPages, 1);
   const remainingPages = await Promise.all(
-    Array.from({ length: totalPages - 1 }, (_, index) => obtainFeedbackPage(index + 2))
+    Array.from(
+      { length: totalPages - 1 },
+      (_, index) => obtainFeedbackPage(index + 2, PAGE_LIMIT, filters)
+    )
   );
   return [firstPage, ...remainingPages]
     .flatMap((page) => page.data ?? [])

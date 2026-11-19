@@ -1,11 +1,30 @@
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+import { signToken } from '../utils/token.ts';
 import * as UsersRepository from '../repositories/user.repositories.ts';
 import { getAreaByID } from '../repositories/area.repository.ts';
-import { User, CreateUser, UpdateUser, UserFilters } from '../types/user.ts';
+import { sendPendingApprovalEmail, sendAccountApprovedEmail } from './mail.service.ts';
+import { AccountStatus, User, CreateUser, UpdateUser, UserFilters, UsersPage } from '../types/user.ts';
 
-export async function getAllUsersService(filters: UserFilters = {}) {
-    return UsersRepository.getAllUsers(filters);
+// Directors list every user; a manager only gets their own record.
+// Without `page`/`limit` the full list is returned (legacy behaviour); with either one the result is paginated.
+export async function getAllUsersService(filters: UserFilters, requester: { id: number; role: string }): Promise<User[] | UsersPage> {
+    const paginated = filters.page !== undefined || filters.limit !== undefined;
+    const page = filters.page ?? 1;
+    const limit = filters.limit ?? 10;
+
+    if (requester.role === 'director') {
+        return paginated ? UsersRepository.getUsersPage(filters, page, limit) : UsersRepository.getAllUsers(filters);
+    }
+
+    const self = await UsersRepository.getPublicUserByID(requester.id);
+    const visible = self && !(filters.role && self.role !== filters.role) ? [self] : [];
+    if (!paginated) return visible;
+
+    const total = visible.length;
+    return {
+        data: visible.slice((page - 1) * limit, page * limit),
+        pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+    };
 }
 
 export async function getUserByIdService(id: number): Promise<User | "USER_NOT_FOUND"> {
@@ -37,8 +56,15 @@ export async function createUserService(data: CreateUser): Promise<User | Refere
 }
 
 export async function registerService(email: string, password: string , name: string , area_id: number): Promise<"EMAIL_TAKEN" | "AREA_NOT_FOUND" | "REGISTERED"> {
-    const result = await createUserService({ email, password, name, area_id, role: 'manager' });
-    if (result === "AREA_NOT_FOUND" || result === "EMAIL_TAKEN") return result;
+    const invalid = await checkReferences({ email, area_id });
+    if (invalid) return invalid;
+
+    const passwordHash = await bcrypt.hash(password, 10);
+    await UsersRepository.insertUser(email, passwordHash, "manager", area_id, name, "pending");
+
+    sendPendingApprovalEmail(email, name).catch((err: unknown) =>
+        console.error('Could not send pending approval email:', err instanceof Error ? err.message : err),
+    );
     return "REGISTERED";
 }
 
@@ -63,18 +89,39 @@ export async function deleteUserService(id: number, requesterId: number): Promis
     return "DELETED";
 }
 
-export async function loginService(email: string, password: string): Promise<string | "INVALID_CREDENTIALS"> {
+export async function loginService(email: string, password: string): Promise<string | "INVALID_CREDENTIALS" | "ACCOUNT_NOT_APPROVED"> {
     const user = await UsersRepository.getUserByEmail(email);
     if (!user) return "INVALID_CREDENTIALS";
 
     const passwordOk = await bcrypt.compare(password, user.passwordHash);
     if (!passwordOk) return "INVALID_CREDENTIALS";
+    if (user.status !== "approved") return "ACCOUNT_NOT_APPROVED";
 
-    return jwt.sign({ email: user.email, role: user.role, id: user.id }, process.env.JWT_SECRET as string, {expiresIn: '1h',
-    });
+    return signToken(user);
 }
 
-export async function changePasswordService(userId: number, currentPassword: string, newPassword: string): Promise<"INVALID_CREDENTIALS" | "UPDATED"> {
+export async function approveUserService(id: number): Promise<User | "USER_NOT_FOUND" | "ACCOUNT_NOT_PENDING"> {
+    const user = await UsersRepository.getPublicUserByID(id);
+    if (!user) return "USER_NOT_FOUND";
+    if (user.status !== "pending") return "ACCOUNT_NOT_PENDING";
+
+    const approved = await UsersRepository.approvePendingUser(id);
+    if (!approved) {
+        const currentUser = await UsersRepository.getPublicUserByID(id);
+        if (!currentUser) return "USER_NOT_FOUND";
+        return "ACCOUNT_NOT_PENDING";
+    }
+
+    const approvedUser = await UsersRepository.getPublicUserByID(id);
+    if (!approvedUser) return "USER_NOT_FOUND";
+
+    sendAccountApprovedEmail(approvedUser.email, approvedUser.name).catch((err: unknown) =>
+        console.error('Could not send account approved email:', err instanceof Error ? err.message : err),
+    );
+    return approvedUser;
+}
+
+export async function changePasswordService(userId: number, currentPassword: string, newPassword: string): Promise<"INVALID_CREDENTIALS" | { token: string }> {
     const user = await UsersRepository.getUserByID(userId);
     if (!user) return "INVALID_CREDENTIALS";
 
@@ -83,5 +130,8 @@ export async function changePasswordService(userId: number, currentPassword: str
 
     const passwordHash = await bcrypt.hash(newPassword, 10);
     const updated = await UsersRepository.patchUserPassword(user.id, passwordHash);
-    return updated ? "UPDATED" : "INVALID_CREDENTIALS";
+    if (!updated) return "INVALID_CREDENTIALS";
+
+    // Tokens issued before the change stop working, so the caller gets a fresh one.
+    return { token: signToken({ ...user, passwordHash }) };
 }

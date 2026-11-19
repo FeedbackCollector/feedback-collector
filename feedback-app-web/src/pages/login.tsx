@@ -1,8 +1,10 @@
 import { useAuthStore } from "../store/authStore";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 // @ts-ignore CSS files are handled by the bundler.
 import "../styles/login.css";
+import { obtainAreas, type Area } from "../service/ObtainAreas";
+import DropdownSelect from '../components/DropdownSelect';
 
 function Login() {
     const activeForm = useAuthStore((state) => state.activeForm);
@@ -27,7 +29,10 @@ function Login() {
     const setRegPassword = useAuthStore((state) => state.setRegPassword);
     const setRegConfirmPassword = useAuthStore((state) => state.setRegConfirmPassword);
     const createAccount = useAuthStore((state) => state.createAccount);
-
+    
+    const [areas, setAreas] = useState<Area[]>([]);
+    const [selectedArea, setSelectedArea] = useState('');
+    const [isLoggingIn, setIsLoggingIn] = useState(false);
 
     const navigate = useNavigate();
 
@@ -37,12 +42,39 @@ function Login() {
         }
     }, [isAuthenticated, navigate]);
 
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (activeForm === 'login') {
-            loginSubmit();
+    useEffect(() => {
+    Promise.allSettled([obtainAreas()])
+      .then(([areaResult]) => {
+
+        if (areaResult.status === 'fulfilled') {
+          setAreas(areaResult.value);
+          setSelectedArea(areaResult.value[0]?.name ?? '');
         } else {
-            createAccount();
+          const message = areaResult.reason instanceof Error
+            ? areaResult.reason.message
+            : String(areaResult.reason);
+          console.error('Could not load areas:', areaResult.reason);
+
+        }
+      })
+    }, [])
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+
+        if (activeForm === 'login') {
+            if (isLoggingIn) return;
+
+            setIsLoggingIn(true);
+
+            try {
+                await loginSubmit();
+            } finally {
+                setIsLoggingIn(false);
+            }
+
+        } else {
+            await createAccount();
         }
     };
 
@@ -75,14 +107,18 @@ function Login() {
                     <button
                         type="button"
                         className={`tab-btn ${activeForm === 'login' ? 'active' : ''}`}
-                        onClick={() => switchForm('login')}
+                        onClick={() => {
+                            switchForm('login');
+                        }}
                     >
                         Login
                     </button>
                     <button
                         type="button"
                         className={`tab-btn ${activeForm === 'register' ? 'active' : ''}`}
-                        onClick={() => switchForm('register')}
+                        onClick={() => {
+                            switchForm('register');
+                        }}
                     >
                         Register
                     </button>
@@ -144,16 +180,22 @@ function Login() {
 
                     <div className={`form-group ${activeForm === 'register' ? 'show' : ''}`}>
                         <label className="label-field">Area</label>
-                        <select className="select-area" defaultValue="Design">
-                            <option value="Design">Design</option>
-                            <option value="Delivery">Delivery</option>
-                            <option value="Engineering">Engineering</option>
-                            <option value="Product">Product</option>
-                        </select>
+                            <DropdownSelect
+                                id="register-area"
+                                label="Area"
+                                value={selectedArea}
+                                options={areas.map((area) => ({
+                                    value: area.name,
+                                    label: area.name,
+                                }))}
+                                onChange={setSelectedArea}
+                                />
                     </div>
 
-                    <button className="btn-get-into" type="submit">
-                        {activeForm === 'login' ? 'Sign In' : 'Create Account'}
+                    <button className="btn-get-into" type="submit" disabled={activeForm === 'login' && isLoggingIn}>
+                        {activeForm === 'login' 
+                        ? isLoggingIn ? 'Signing In...' : 'Sign In'
+                        : 'Create Account'}
                     </button>
                 </form>
 

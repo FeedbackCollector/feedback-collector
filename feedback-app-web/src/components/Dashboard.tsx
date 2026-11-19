@@ -1,11 +1,21 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuthStore } from '../store/authStore';
 import {
   calculateDashboardMetrics,
   obtainDashboardData,
   type DashboardData,
 } from '../service/ObtainDashboard';
+import { DashboardStats } from './DashboardStats';
+import { SearchBar } from './SearchBar';
 import '../styles/Dashboard.css';
+import LoadingOverlay from './LoadingOverlay';
+
+interface SearchResultItem {
+  id: number;
+  name: string;
+  role: 'Manager' | 'IC';
+}
 
 export default function DashboardComp() {
   const token = useAuthStore((state) => state.token);
@@ -13,6 +23,11 @@ export default function DashboardComp() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedAreaId, setSelectedAreaId] = useState<number | null>(null);
+  const [headerActions, setHeaderActions] = useState<HTMLElement | null>(null);
+
+  useLayoutEffect(() => {
+    setHeaderActions(document.getElementById('page-header-actions'));
+  }, []);
 
   useEffect(() => {
     let isCurrent = true;
@@ -69,7 +84,7 @@ export default function DashboardComp() {
     },
     {
       label: 'Average Score',
-      value: show(calculated?.averageScore == null ? '—' : calculated.averageScore.toFixed(1)),
+      value: show(calculated?.averageScore == null ? '0' : calculated.averageScore.toFixed(1)),
       detail: 'Out of 5',
     },
     {
@@ -79,8 +94,14 @@ export default function DashboardComp() {
     },
   ];
 
+  if (loading) {
+    return <LoadingOverlay message="Loading dashboard..." />;
+  }
+
   return (
     <section className="dashboard-page" aria-label="Dashboard overview">
+      {headerActions && createPortal(<SearchBar data={data} />, headerActions)}
+
       <div className="dashboard-area-filter">
         <div className="dashboard-area-options" role="group" aria-label="Filter by area">
           <button
@@ -120,6 +141,14 @@ export default function DashboardComp() {
           </article>
         ))}
       </div>
+
+      {!error && (
+        <DashboardStats
+          data={data}
+          selectedAreaId={selectedAreaId}
+          loading={loading}
+        />
+      )}
     </section>
   );
 }

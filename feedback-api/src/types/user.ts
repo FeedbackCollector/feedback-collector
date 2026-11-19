@@ -10,10 +10,12 @@ export interface User {
     name: string;
     email: string;
     role: string;
-    area_id: number | null
+    area_id: number | null;
+    status: AccountStatus;
 }
 
 export type UserRole = "manager" | "director";
+export type AccountStatus = "pending" | "approved";
 
 export interface CreateUser {
     name: string;
@@ -31,4 +33,11 @@ export interface UpdateUser {
 
 export interface UserFilters {
     role?: UserRole;
+    page?: number;
+    limit?: number;
+}
+
+export interface UsersPage {
+    data: User[];
+    pagination: { page: number; limit: number; total: number; totalPages: number };
 }

@@ -1,6 +1,7 @@
 import { fn, col, where } from "sequelize";
-import { User as UserModel, ICs as ICModel, Feedback as FeedbackModel } from "../models/Index.ts";
-import { User, UpdateUser, UserFilters } from "../types/user.ts";
+import { User as UserModel, ICs as ICModel, Feedback as FeedbackModel, ManagerFeedback as ManagerFeedbackModel } from "../models/Index.ts";
+import { sequelize } from "../db/connection.ts";
+import { AccountStatus, User, UpdateUser, UserFilters, UsersPage } from "../types/user.ts";
 
 export async function getUserByEmail(email: string) {
     const row = await UserModel.findOne({ where: where(fn("lower", col("email")), email.trim().toLowerCase()) });
@@ -21,9 +22,39 @@ export async function getAllUsers(filters: UserFilters = {}): Promise<User[]> {
     return rows.map(row => row.toJSON());
 }
 
-export async function insertUser(email: string, passwordHash: string, role: string , area_id: number, name:string) {
-    const row = await UserModel.create({ name , email: email.trim().toLowerCase(), passwordHash, role , area_id});
+export async function getUsersPage(filters: UserFilters, page: number, limit: number): Promise<UsersPage> {
+    const result = await UserModel.findAndCountAll({
+        where: filters.role ? { role: filters.role } : {},
+        attributes: { exclude: ["passwordHash"] },
+        order: [["id", "ASC"]],
+        limit,
+        offset: (page - 1) * limit,
+    });
+
+    return {
+        data: result.rows.map(row => row.toJSON()),
+        pagination: { page, limit, total: result.count, totalPages: Math.ceil(result.count / limit) },
+    };
+}
+
+export async function insertUser(
+    email: string,
+    passwordHash: string,
+    role: string,
+    area_id: number,
+    name: string,
+    status: AccountStatus = "approved",
+) {
+    const row = await UserModel.create({ name, email: email.trim().toLowerCase(), passwordHash, role, area_id, status });
     return row.toJSON();
+}
+
+export async function approvePendingUser(id: number): Promise<boolean> {
+    const [affected] = await UserModel.update(
+        { status: "approved" },
+        { where: { id, status: "pending" } },
+    );
+    return affected > 0;
 }
 
 
@@ -45,7 +76,13 @@ export async function updateUser(id: number, data: UpdateUser): Promise<User | n
     if (data.name !== undefined) user.name = data.name;
     if (data.email !== undefined) user.email = data.email.trim().toLowerCase();
     if (data.area_id !== undefined) user.area_id = data.area_id;
-    await user.save();
+
+    await sequelize.transaction(async (transaction) => {
+        await user.save({ transaction });
+        if (data.area_id !== undefined) {
+            await ICModel.update({ area_id: data.area_id }, { where: { manager_id: id }, transaction });
+        }
+    });
 
     const { passwordHash, ...updated } = user.toJSON();
     return updated;
@@ -55,7 +92,8 @@ export async function userHasICs(id: number): Promise<boolean> {
     return (await ICModel.count({ where: { manager_id: id } })) > 0;
 }
 export async function userHasFeedback(id: number): Promise<boolean> {
-    return (await FeedbackModel.count({ where: { author_id: id } })) > 0;
+    return (await FeedbackModel.count({ where: { author_id: id } })) > 0
+        || (await ManagerFeedbackModel.count({ where: { author_id: id } })) > 0;
 }
 
 export async function deleteUser(id: number): Promise<boolean> {
