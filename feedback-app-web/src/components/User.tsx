@@ -247,11 +247,14 @@ function clearPasswordFields() {
             onClick={handleChangePassword}
             disabled={loading}
             style={{
-              padding: '8px 16px',
+              alignSelf: 'flex-start',
+              padding: '10px 20px',
               border: '1px solid #e5e7eb',
-              borderRadius: '8px',
-              color: '#374151',
-              backgroundColor: '#f9fafb',
+              borderRadius: '100px',
+              color: '#6b7280',
+              backgroundColor: '#ffffff',
+              fontSize: '14px',
+              fontWeight: 500,
               cursor: 'pointer'
             }}
           >
