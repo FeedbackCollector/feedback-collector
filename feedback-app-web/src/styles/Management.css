@@ -424,6 +424,11 @@
   font-weight: 600;
 }
 
+.management-card-detail-email dd {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .management-empty-state {
   padding: 32px;
   color: var(--text-muted);

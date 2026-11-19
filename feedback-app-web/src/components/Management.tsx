@@ -744,7 +744,7 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
                 </div>
                 <dl>
                   {COLUMNS[activeTab].slice(1).map(({ label, key }) => (
-                    <div className="management-card-detail" key={key}>
+                    <div className={`management-card-detail${key === 'email' ? ' management-card-detail-email' : ''}`} key={key}>
                       <dt>{label}</dt>
                       <dd>{renderCell(row, key)}</dd>
                     </div>
