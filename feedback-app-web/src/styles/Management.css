@@ -220,6 +220,10 @@
   min-width: 720px;
 }
 
+.management-table .management-centered-column {
+  text-align: center;
+}
+
 .management-managers-table {
   min-width: 900px;
 }
