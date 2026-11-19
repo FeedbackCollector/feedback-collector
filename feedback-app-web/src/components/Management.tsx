@@ -31,6 +31,14 @@ function formatManagementName(name: string, tab: ManagementTab): string {
   return tab === 'Managers' || tab === 'ICs' ? formatPersonName(name) : name;
 }
 
+function shouldCenterColumn(tab: ManagementTab, key: keyof ManagementRow): boolean {
+  return (
+    (tab === 'Areas' && (key === 'managers' || key === 'averageScore')) ||
+    (tab === 'Managers' && key === 'averageScore') ||
+    (tab === 'Projects' && key === 'entries')
+  );
+}
+
 const COLUMNS: Record<ManagementTab, { label: string; key: keyof ManagementRow }[]> = {
   Areas: [
     { label: 'Name', key: 'name' },
@@ -371,9 +379,8 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
   };
 
   const deletePendingAccount = async (account: PendingAccount) => {
-    if (!token || !window.confirm(`Delete the account request for ${formatPersonName(account.name)}?`)) return;
+    if (!token) return;
 
-    setIsMutating(true);
     setError(null);
     setClosingPopup(null);
     setDeleteTarget({
@@ -662,10 +669,17 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
           <p className="management-empty-state">No {activeTab.toLowerCase()} to display.</p>
             ) : viewMode === 'table' ? (
           <div className={`management-table-wrap${activeTab === 'Managers' ? ' management-managers-table-wrap' : ''}`}>
-            <table className={`management-table${activeTab === 'Managers' ? ' management-managers-table' : ''}${activeTab === 'Areas' ? ' management-areas-table' : ''}${activeTab === 'Areas' || activeTab === 'Projects' ? ' management-scroll-table' : ''}`}>
+            <table className={`management-table${activeTab === 'Managers' ? ' management-managers-table' : ''}${activeTab === 'Areas' || activeTab === 'Projects' ? ' management-scroll-table' : ''}`}>
               <thead>
                 <tr>
-                  {COLUMNS[activeTab].map(({ label }) => <th key={label}>{label}</th>)}
+                  {COLUMNS[activeTab].map(({ label, key }) => (
+                    <th
+                      className={shouldCenterColumn(activeTab, key) ? 'management-centered-column' : undefined}
+                      key={label}
+                    >
+                      {label}
+                    </th>
+                  ))}
                   <th><span className="management-visually-hidden">Actions</span></th>
                 </tr>
               </thead>
@@ -673,7 +687,11 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
                 {visibleRows.map((row) => (
                   <tr key={row.id}>
                     {COLUMNS[activeTab].map(({ key, label }) => (
-                      <td key={key} data-label={label}>
+                      <td
+                        className={shouldCenterColumn(activeTab, key) ? 'management-centered-column' : undefined}
+                        key={key}
+                        data-label={label}
+                      >
                         {activeTab === 'Managers' && key === 'area' ? (
                           <DropdownSelect
                             id={`management-area-${row.id}`}
