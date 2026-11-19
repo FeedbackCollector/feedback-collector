@@ -220,6 +220,13 @@
   min-width: 720px;
 }
 
+.management-areas-table th:nth-child(2),
+.management-areas-table td:nth-child(2),
+.management-areas-table th:nth-child(4),
+.management-areas-table td:nth-child(4) {
+  text-align: center;
+}
+
 .management-managers-table {
   min-width: 900px;
 }
