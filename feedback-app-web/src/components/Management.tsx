@@ -328,7 +328,7 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
       setDeleteTarget(null);
       setError(null);
       setClosingPopup(null);
-    }, 150);
+    }, 75);
   };
 
   const confirmDelete = async () => {
@@ -1082,7 +1082,7 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
 
       {deleteTarget && (
         <div
-          className={`management-dialog-backdrop${closingPopup === 'delete' ? ' is-closing' : ''}`}
+          className={`management-dialog-backdrop management-delete-backdrop${closingPopup === 'delete' ? ' is-closing' : ''}`}
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) closeDeleteDialog();
           }}

@@ -448,20 +448,20 @@
 
 
 .icv-overlay {
-  animation: popup-backdrop-in 300ms ease both;
+  animation: popup-backdrop-in 75ms ease both;
 }
 
 .icv-modal {
-  animation: popup-in 300ms ease both;
+  animation: popup-in 75ms ease both;
 }
 
 .icv-overlay.is-closing {
-  animation: popup-backdrop-out 300ms ease both;
+  animation: popup-backdrop-out 75ms ease both;
   pointer-events: none;
 }
 
 .icv-overlay.is-closing .icv-modal {
-  animation: popup-out 300ms ease both;
+  animation: popup-out 75ms ease both;
 }
 .icv-entry-meta-text {
   min-width: 0;
@@ -481,4 +481,31 @@
   -webkit-line-clamp: 6;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+.icv-delete-message {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.icv-danger-btn {
+  background: #c62828;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 18px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.icv-danger-btn:hover:not(:disabled) {
+  background: #a32121;
+}
+
+.icv-danger-btn:disabled {
+  opacity: 0.6;
+  cursor: wait;
 }
