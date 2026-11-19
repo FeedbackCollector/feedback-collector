@@ -102,6 +102,9 @@ function ManagerView({ manager, areaName, onBack }: ManagerViewProps) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Feedback | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isDeleteClosing, setIsDeleteClosing] = useState(false);
   const [editingItem, setEditingItem] = useState<Feedback | null>(null);
   const [form, setForm] = useState<EntryForm>(emptyForm);
   const [formError, setFormError] = useState('');
@@ -237,7 +240,7 @@ function ManagerView({ manager, areaName, onBack }: ManagerViewProps) {
       setScreenshotFile(null);
       setFormError('');
       setIsClosing(false);
-    }, 300);
+    }, 75);
   }
 
   const commentIsDirty =
@@ -326,18 +329,33 @@ function ManagerView({ manager, areaName, onBack }: ManagerViewProps) {
     }
   }
 
-  async function handleDelete(id: number) {
-    const confirmed = window.confirm(
-      'Are you sure you want to delete this entry? This action cannot be undone.'
-    );
-    if (!confirmed) return;
+  function requestDelete(item: Feedback) {
+    setIsDeleteClosing(false);
+    setDeleteTarget(item);
+  }
 
+  function closeDeleteDialog() {
+    if (isDeleting || isDeleteClosing) return;
+
+    setIsDeleteClosing(true);
+    window.setTimeout(() => {
+      setDeleteTarget(null);
+      setIsDeleteClosing(false);
+    }, 75);
+  }
+
+  async function handleDelete() {
+    if (!deleteTarget) return;
+    const id = deleteTarget.id;
+
+    setIsDeleting(true);
     setError('');
     setSuccess('');
 
     try {
       await deleteManagerFeedback(id);
 
+      setDeleteTarget(null);
       useToastStore.getState().addToast('Entry deleted successfully.', 'success');
       await loadFeedbacks();
 
@@ -352,6 +370,8 @@ function ManagerView({ manager, areaName, onBack }: ManagerViewProps) {
           : 'Could not delete entry.';
 
         useToastStore.getState().addToast(errorMessage, 'error');
+      } finally {
+        setIsDeleting(false);
       }
   }
 
@@ -451,7 +471,7 @@ function ManagerView({ manager, areaName, onBack }: ManagerViewProps) {
                   <button
                     type="button"
                     className="icv-icon-btn is-danger"
-                    onClick={() => void handleDelete(item.id)}
+                    onClick={() => requestDelete(item)}
                     aria-label="Delete entry"
                   >
                     <i className="fa-solid fa-trash-can" />
@@ -478,6 +498,48 @@ function ManagerView({ manager, areaName, onBack }: ManagerViewProps) {
             </article>
           ))}
       </section>
+
+      {deleteTarget && (
+        <div
+          className={`icv-overlay${isDeleteClosing ? ' is-closing' : ''}`}
+          onClick={closeDeleteDialog}
+        >
+          <div
+            className="icv-modal icv-delete-modal"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="icv-delete-title"
+            aria-describedby="icv-delete-description"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="icv-form">
+              <h2 id="icv-delete-title">Delete Entry</h2>
+              <p id="icv-delete-description" className="icv-delete-message">
+                Are you sure you want to delete this entry? This action cannot be undone.
+              </p>
+              <div className="icv-modal-actions">
+                <button
+                  type="button"
+                  className="icv-ghost-btn"
+                  onClick={closeDeleteDialog}
+                  disabled={isDeleting}
+                  autoFocus
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="icv-danger-btn"
+                  onClick={() => void handleDelete()}
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? 'Deleting...' : 'Delete'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {modalOpen && (
         <div
