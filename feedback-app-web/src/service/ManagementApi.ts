@@ -244,6 +244,11 @@ export async function loadManagementData(
   };
 }
 
+export async function countPendingManagers(token: string): Promise<number> {
+  const managers = await getAllPages<APIUser>(withQuery('/users', 'role=manager'), token);
+  return managers.filter((manager) => manager.status === 'pending').length;
+}
+
 export async function saveManagementRow(
   tab: ManagementTab,
   id: number | null,

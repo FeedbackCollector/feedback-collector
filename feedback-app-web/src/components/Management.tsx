@@ -16,6 +16,7 @@ import type {
   ManagementTab,
 } from '../types/managementTypes';
 import { useAuthStore } from '../store/authStore';
+import { usePendingStore } from '../store/pendingStore';
 import { normalizeSearchText } from '../utils/search';
 import '../styles/Management.css';
 import {useToastStore} from '../store/toastStore';
@@ -183,6 +184,12 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
     if (loading || requestedPage <= totalPages) return;
     setSearchParams(totalPages > 1 ? { page: String(totalPages) } : {}, { replace: true });
   }, [loading, requestedPage, totalPages, setSearchParams]);
+
+  const setPendingCount = usePendingStore((state) => state.setPendingCount);
+
+  useEffect(() => {
+    if (activeTab === 'Managers' && !loading) setPendingCount(pendingAccounts.length);
+  }, [activeTab, loading, pendingAccounts, setPendingCount]);
 
   useEffect(() => {
     setShowPendingRequests(false);
