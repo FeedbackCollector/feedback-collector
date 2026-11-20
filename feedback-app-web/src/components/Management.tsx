@@ -186,6 +186,7 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
   }, [loading, requestedPage, totalPages, setSearchParams]);
 
   const setPendingCount = usePendingStore((state) => state.setPendingCount);
+  const pendingCount = usePendingStore((state) => state.pendingCount);
 
   useEffect(() => {
     if (activeTab === 'Managers' && !loading) setPendingCount(pendingAccounts.length);
@@ -542,6 +543,14 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
             disabled={isMutating}
           >
             {tab}
+            {tab === 'Managers' && pendingCount > 0 && (
+              <span
+                className="nav-badge"
+                aria-label={`${pendingCount} pending manager approvals`}
+              >
+                {pendingCount}
+              </span>
+            )}
           </button>
         ))}
       </div>
