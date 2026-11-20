@@ -223,6 +223,10 @@ export default function MyManagementComp() {
     },
   ];
 
+  if (loading) {
+    return <LoadingOverlay message="Loading managers..." />;
+  }
+  
   return (
     <section className="my-management-page" aria-label="My Managers">
       <div className="my-management-metrics" aria-label="Organization overview">
@@ -270,9 +274,7 @@ export default function MyManagementComp() {
           </div>
         </div>
 
-        {loading ? (
-          <LoadingOverlay message="Loading managers..." />
-        ) : error ? (
+        {error ? (
           <p className="my-management-state" role="alert">
             Could not load managers: {error}
           </p>
