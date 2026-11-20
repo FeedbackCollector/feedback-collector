@@ -243,6 +243,11 @@
   width: 194px;
 }
 
+.management-projects-table th:last-child,
+.management-projects-table td:last-child {
+  width: 148px;
+}
+
 .management-area-select {
   width: min(100%, 164px);
   min-width: 130px;
