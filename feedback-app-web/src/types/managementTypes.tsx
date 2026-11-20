@@ -12,6 +12,8 @@ export interface ManagementRow {
   email?: string;
   areaId?: number;
   managerId?: number;
+  managerIds?: number[];
+  managerNames?: string;
   title?: string;
   feedbackEntries?: ManagerFeedback[];
 }
@@ -84,6 +86,7 @@ export interface APIC {
 export interface APIProject {
   id: number;
   name: string;
+  manager_ids: number[];
 }
 
 export interface APIFeedback {

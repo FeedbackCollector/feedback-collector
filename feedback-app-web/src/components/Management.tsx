@@ -7,6 +7,7 @@ import {
   saveManagementRow,
   updateManagerArea,
   updateICManager,
+  updateProjectManagers,
 } from '../service/ManagementApi';
 import type {
   ManagementData,
@@ -61,6 +62,7 @@ const COLUMNS: Record<ManagementTab, { label: string; key: keyof ManagementRow }
   Projects: [
     { label: 'Name', key: 'name' },
     { label: 'Entries', key: 'entries' },
+    { label: 'Managers', key: 'managerNames' },
   ],
 };
 
@@ -161,6 +163,9 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
   const [editingRow, setEditingRow] = useState<ManagementRow | null>(null);
   const [assigningManager, setAssigningManager] = useState<ManagementRow | null>(null);
   const [selectedICIds, setSelectedICIds] = useState<number[]>([]);
+  const [assigningProject, setAssigningProject] = useState<ManagementRow | null>(null);
+  const [selectedManagerIds, setSelectedManagerIds] = useState<number[]>([]);
+  const [managerSearch, setManagerSearch] = useState('');
   const [feedbackManager, setFeedbackManager] = useState<ManagementRow | null>(null);
   const [formValues, setFormValues] = useState<ManagementFormValues>(EMPTY_FORM);
   const [closingPopup, setClosingPopup] = useState<'feedback' | 'form' | 'delete' | null>(null);
@@ -478,6 +483,40 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
     }
   };
 
+  const openAssignProjectDialog = (project: ManagementRow) => {
+    setAssigningProject(project);
+    setSelectedManagerIds(project.managerIds ?? []);
+    setManagerSearch('');
+    setError(null);
+  };
+
+  const closeAssignProjectDialog = () => {
+    if (isMutating) return;
+    setAssigningProject(null);
+    setSelectedManagerIds([]);
+    setManagerSearch('');
+    setError(null);
+  };
+
+  const assignManagersToProject = async () => {
+    if (!token || !assigningProject) return;
+
+    setIsMutating(true);
+    setError(null);
+    try {
+      await updateProjectManagers(assigningProject.id, selectedManagerIds, token);
+      await refreshRows();
+      setAssigningProject(null);
+      setSelectedManagerIds([]);
+      setManagerSearch('');
+    } catch (reason: unknown) {
+      console.error('Could not assign managers to project:', reason);
+      setError(getErrorMessage(reason));
+    } finally {
+      setIsMutating(false);
+    }
+  };
+
   const renderCell = (row: ManagementRow, key: keyof ManagementRow) => {
     const value = row[key];
     if (key === 'name' && typeof value === 'string') {
@@ -515,6 +554,14 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
   const normalizedICSearch = normalizeSearchText(icSearch.trim());
   const filteredICs = individualContributors.filter((ic) =>
     normalizeSearchText(`${ic.name} ${ic.title}`).includes(normalizedICSearch)
+  );
+  const normalizedManagerSearch = normalizeSearchText(managerSearch.trim());
+  const filteredManagers = managers.filter((manager) =>
+    normalizeSearchText(manager.name).includes(normalizedManagerSearch)
+  );
+  const projectManagersChanged = assigningProject !== null && (
+    (assigningProject.managerIds ?? []).length !== selectedManagerIds.length ||
+    (assigningProject.managerIds ?? []).some((id) => !selectedManagerIds.includes(id))
   );
 
   return (
@@ -562,10 +609,10 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
             <div className="management-view-toggle-buttons">
                 <button
                   type="button"
-                  className={`management-view-button${viewMode === 'cards' ? ' is-active' : ''}`}
-                  aria-label="Card view"
-                  aria-pressed={viewMode === 'cards'}
-                  onClick={() => changeViewMode('cards')}
+                  className={`management-view-button${viewMode === 'table' ? ' is-active' : ''}`}
+                  aria-label="Table view"
+                  aria-pressed={viewMode === 'table'}
+                  onClick={() => changeViewMode('table')}
                 >
                   <svg aria-hidden="true" height="20" viewBox="0 -960 960 960" width="20" fill="currentColor">
                     <path d="M760-120H200q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120ZM200-640h560v-120H200v120Zm100 80H200v360h100v-360Zm360 0v360h100v-360H660Zm-80 0H380v360h200v-360Z" />
@@ -573,10 +620,10 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
                 </button>
                 <button
                   type="button"
-                  className={`management-view-button${viewMode === 'table' ? ' is-active' : ''}`}
-                  aria-label="Table view"
-                  aria-pressed={viewMode === 'table'}
-                  onClick={() => changeViewMode('table')}
+                  className={`management-view-button${viewMode === 'cards' ? ' is-active' : ''}`}
+                  aria-label="Card view"
+                  aria-pressed={viewMode === 'cards'}
+                  onClick={() => changeViewMode('cards')}
                 >
                   <svg aria-hidden="true" height="20" viewBox="0 -960 960 960" width="20" fill="currentColor">
                     <path d="M360-240h440v-107H360v107ZM160-613h120v-107H160v107Zm0 187h120v-107H160v107Zm0 186h120v-107H160v107Zm200-186h440v-107H360v107Zm0-187h440v-107H360v107ZM160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h640q33 0 56.5 23.5T880-720v480q0 33-23.5 56.5T800-160H160Z" />
@@ -671,7 +718,7 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
           <p className="management-empty-state">No {activeTab.toLowerCase()} to display.</p>
             ) : viewMode === 'table' ? (
           <div className={`management-table-wrap${activeTab === 'Managers' ? ' management-managers-table-wrap' : ''}`}>
-            <table className={`management-table${activeTab === 'Managers' ? ' management-managers-table' : ''}${activeTab === 'Areas' || activeTab === 'Projects' ? ' management-scroll-table' : ''}`}>
+            <table className={`management-table${activeTab === 'Managers' ? ' management-managers-table' : ''}${activeTab === 'Areas' || activeTab === 'Projects' ? ' management-scroll-table' : ''}${activeTab === 'Projects' ? ' management-projects-table' : ''}`}>
               <thead>
                 <tr>
                   {COLUMNS[activeTab].map(({ label, key }) => (
@@ -728,6 +775,18 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
                           <i className="fa-solid fa-user-plus" aria-hidden="true" />
                         </button>
                       )}
+                      {activeTab === 'Projects' && (
+                        <button
+                          type="button"
+                          className="management-row-action"
+                          aria-label={`Assign managers to ${row.name}`}
+                          title="Assign managers"
+                          onClick={() => openAssignProjectDialog(row)}
+                          disabled={isMutating}
+                        >
+                          <i className="fa-solid fa-user-plus" aria-hidden="true" />
+                        </button>
+                      )}
                       {activeTab === 'Managers' && (
                         <button
                           type="button"
@@ -778,6 +837,18 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
                         aria-label={`Assign ICs to ${formatManagementName(row.name, activeTab)}`}
                         title="Assign ICs"
                         onClick={() => openAssignDialog(row)}
+                        disabled={isMutating}
+                      >
+                        <i className="fa-solid fa-user-plus" aria-hidden="true" />
+                      </button>
+                    )}
+                    {activeTab === 'Projects' && (
+                      <button
+                        type="button"
+                        className="management-row-action"
+                        aria-label={`Assign managers to ${row.name}`}
+                        title="Assign managers"
+                        onClick={() => openAssignProjectDialog(row)}
                         disabled={isMutating}
                       >
                         <i className="fa-solid fa-user-plus" aria-hidden="true" />
@@ -980,6 +1051,84 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
                   disabled={isMutating || selectedICIds.length === 0}
                 >
                   {isMutating ? 'Assigning...' : 'Assign ICs'}
+                </button>
+              </div>
+            </section>
+          </div>
+        )}
+        {assigningProject && (
+          <div
+            className="management-dialog-backdrop management-assignment-backdrop"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) closeAssignProjectDialog();
+            }}
+          >
+            <section
+              className="management-dialog management-assignment-dialog"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="project-assignment-title"
+            >
+              <h2 id="project-assignment-title">Assign managers to {assigningProject.name}</h2>
+              <input
+                type="search"
+                className="management-assignment-search"
+                aria-label="Search managers"
+                placeholder="Search managers to assign."
+                value={managerSearch}
+                onChange={(event) => setManagerSearch(event.target.value)}
+              />
+              {managers.length === 0 ? (
+                <p className="management-empty-state">There are no managers to assign.</p>
+              ) : filteredManagers.length === 0 ? (
+                <p className="management-empty-state">No managers match your search.</p>
+              ) : (
+                <div className="management-assignment-list">
+                  {filteredManagers.map((manager) => {
+                    const isSelected = selectedManagerIds.includes(manager.id);
+                    return (
+                      <button
+                        type="button"
+                        className={`management-assignment-option${isSelected ? ' is-selected' : ''}`}
+                        key={manager.id}
+                        aria-pressed={isSelected}
+                        disabled={isMutating}
+                        onClick={() => {
+                          setSelectedManagerIds((current) =>
+                            current.includes(manager.id)
+                              ? current.filter((id) => id !== manager.id)
+                              : [...current, manager.id]
+                          );
+                        }}
+                      >
+                        <span className="management-assignment-option-info">
+                          <strong>{formatPersonName(manager.name)}</strong>
+                        </span>
+                        <span className="management-assignment-status">
+                          {isSelected ? 'Assigned' : 'Assign'}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+              {error && <p className="management-error" role="alert">{error}</p>}
+              <div className="management-dialog-actions">
+                <button
+                  type="button"
+                  className="management-cancel-button"
+                  onClick={closeAssignProjectDialog}
+                  disabled={isMutating}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="management-add-button"
+                  onClick={() => void assignManagersToProject()}
+                  disabled={isMutating || !projectManagersChanged}
+                >
+                  {isMutating ? 'Saving...' : 'Save managers'}
                 </button>
               </div>
             </section>

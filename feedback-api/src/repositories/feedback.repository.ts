@@ -1,6 +1,6 @@
 import { Feedback as FeedbackModel, ICs, Project } from "../models/Index.ts";
 import { Feedback, FeedbackFilters, NewFeedback, UpdateFeedback } from "../types/feedback.ts";
-import { Op, Sequelize, type WhereOptions, type Order } from 'sequelize';
+import { Op, Sequelize, type WhereOptions, type Order, type IncludeOptions } from 'sequelize';
 import { recalculateICScore } from './ic.repository.ts';
 
 const unaccentIlike = (column: string, value: string) =>
@@ -15,13 +15,23 @@ export async function getFeedbackByID(id: number): Promise<Feedback | null> {
 }
 
 
-export async function getAllFeedbacks(page: number, limit: number, filters: FeedbackFilters = {}) {
+async function buildFeedbackQuery(filters: FeedbackFilters) {
     const where: WhereOptions = {};
-    for (const key of ['project_id', 'ic_id', 'score'] as const) {
+    for (const key of ['ic_id', 'score'] as const) {
         if (filters[key] !== undefined) where[key] = filters[key];
     }
+    if (filters.project_ids !== undefined) {
+        where.project_id = filters.project_id === undefined
+            ? { [Op.in]: filters.project_ids }
+            : filters.project_ids.includes(filters.project_id)
+                ? filters.project_id
+                : { [Op.in]: [] };
+    } else if (filters.project_id !== undefined) {
+        where.project_id = filters.project_id;
+    }
     const contains = (value: string) => `%${value.replace(/[\\%_]/g, '\\$&')}%`;
-    if (filters.text) where[Op.and as unknown as string] = [unaccentIlike('Feedback.comment', contains(filters.text))];    const icWhere: WhereOptions = {};
+    if (filters.text) where[Op.and as unknown as string] = [unaccentIlike('Feedback.comment', contains(filters.text))];
+    const icWhere: WhereOptions = {};
     if (filters.ic_name) icWhere.name = { [Op.iLike]: contains(filters.ic_name) };
     if (filters.manager_id !== undefined) icWhere.manager_id = filters.manager_id;
     const order: Order = filters.sort
@@ -34,9 +44,17 @@ export async function getAllFeedbacks(page: number, limit: number, filters: Feed
         });
         where.ic_id = { [Op.in]: matchedICs.map((ic) => ic.IC_id) };
     }
+    const include: IncludeOptions[] | undefined = Reflect.ownKeys(icWhere).length > 0
+        ? [{ model: ICs, attributes: [], required: true, where: icWhere }]
+        : undefined;
+    return { where, include, order };
+}
+
+export async function getAllFeedbacks(page: number, limit: number, filters: FeedbackFilters = {}) {
+    const { where, include, order } = await buildFeedbackQuery(filters);
     const result = await FeedbackModel.findAndCountAll({
         where,
-        ...(Reflect.ownKeys(icWhere).length > 0 ? { include: [{ model: ICs, attributes: [], required: true, where: icWhere }] } : {}),
+        ...(include ? { include } : {}),
         limit,
         offset: (page - 1) * limit,
         order,
@@ -54,9 +72,8 @@ export async function getAllFeedbacks(page: number, limit: number, filters: Feed
 }
 
 // Only the requested entries (ids that do not exist are left out), with the IC and project names, newest first.
-export async function getFeedbacksForExport(ids: number[]) {
-    const [rows, ics, projects] = await Promise.all([
-        FeedbackModel.findAll({ where: { id: { [Op.in]: ids } }, order: [['date', 'DESC'], ['id', 'DESC']] }),
+async function withNames(rows: FeedbackModel[]) {
+    const [ics, projects] = await Promise.all([
         ICs.findAll({ attributes: ['IC_id', 'name'], raw: true }),
         Project.findAll({ attributes: ['id', 'name'], raw: true }),
     ]);
@@ -71,6 +88,18 @@ export async function getFeedbacksForExport(ids: number[]) {
             project_name: projectNames.get(feedback.project_id) ?? null,
         };
     });
+}
+
+export async function getFeedbacksForExport(ids: number[]) {
+    const rows = await FeedbackModel.findAll({ where: { id: { [Op.in]: ids } }, order: [['date', 'DESC'], ['id', 'DESC']] });
+    return withNames(rows);
+}
+
+// Every feedback that matches the list filters (no pagination), with the IC and project names.
+export async function getFeedbacksForFilteredExport(filters: FeedbackFilters) {
+    const { where, include, order } = await buildFeedbackQuery(filters);
+    const rows = await FeedbackModel.findAll({ where, ...(include ? { include } : {}), order });
+    return withNames(rows);
 }
 
 export async function insertFeedback(feedbackData: NewFeedback): Promise<Feedback[]> {
