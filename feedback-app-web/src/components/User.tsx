@@ -217,7 +217,7 @@ function clearPasswordFields() {
 
           <div>
             <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', color: '#9ca3af', fontWeight: 500, marginBottom: '4px' }}>Role</label>
-            <input type="text" value={user?.role} readOnly disabled style={{ width: '100%', padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '8px', backgroundColor: '#f9fafb', color: '#574b63', boxSizing: 'border-box' }} />
+            <input type="text" value={user?.role} readOnly disabled style={{ width: '100%', padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '8px', backgroundColor: '#f9fafb', color: '#574b63', boxSizing: 'border-box', textTransform: 'capitalize' }} />
           </div>
         </div>
 
@@ -247,11 +247,14 @@ function clearPasswordFields() {
             onClick={handleChangePassword}
             disabled={loading}
             style={{
-              padding: '8px 16px',
-              border: '1px solid #e5e7eb',
-              borderRadius: '8px',
-              color: '#374151',
-              backgroundColor: '#f9fafb',
+              alignSelf: 'flex-start',
+              padding: '10px 20px',
+              border: '1px solid #E5E7EB',
+              borderRadius: '100px',
+              color: '#6B7280',
+              backgroundColor: '#FFFFFF',
+              fontSize: '14px',
+              fontWeight: 500,
               cursor: 'pointer'
             }}
           >
@@ -260,8 +263,32 @@ function clearPasswordFields() {
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '16px', marginTop: '8px', borderTop: '1px solid #f3f4f6' }}>
-          <button type="button" onClick={handleLogout} style={{ padding: '8px 16px', backgroundColor: '#ef4444', color: '#ffffff', fontWeight: 500, borderRadius: '9999px', fontSize: '14px', border: 'none', cursor: 'pointer'}}>
-            {/* <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" height="24px" width="24px" fill="#e3e3e3"><path d="M5,21q-0.83,0-1.41-0.59T3,19V5Q3,4.17 3.59,3.59T5,3h7V5H5V19h7v2H5Zm11-4l-1.38-1.45L17.18,13H9V11h8.18L14.63,8.45L16,7l5,5l-5,5Z"/></svg> */}
+          <button
+            type="button"
+            onClick={handleLogout}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '8px 16px',
+              backgroundColor: '#ef4444',
+              color: '#ffffff',
+              fontWeight: 500,
+              borderRadius: '9999px',
+              fontSize: '14px',
+              border: 'none',
+              cursor: 'pointer',
+            }}
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              height="18px"
+              width="18px"
+              fill="currentColor"
+            >
+              <path d="M5,21q-0.83,0-1.41-0.59T3,19V5Q3,4.17 3.59,3.59T5,3h7V5H5V19h7v2H5Zm11-4l-1.38-1.45L17.18,13H9V11h8.18L14.63,8.45L16,7l5,5l-5,5Z" />
+            </svg>
             Log out
           </button>
 
