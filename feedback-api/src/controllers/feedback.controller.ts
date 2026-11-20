@@ -106,6 +106,7 @@ export async function create(req: Request, res: Response) {
     if (result === "AUTHOR_NOT_FOUND") return res.status(404).json({ error: "Author not found" });
     if (result === "IC_NOT_FOUND") return res.status(404).json({ error: "IC not found" });
     if (result === "PROJECT_NOT_FOUND") return res.status(404).json({ error: "Project not found" });
+    if (result === "PROJECT_NOT_ASSIGNED") return res.status(403).json({ error: "Project is not assigned to this manager" });
     res.status(201).json({ data: result });
 }
 
@@ -115,6 +116,7 @@ export async function replace(req: Request, res: Response) {
     if (result === "AUTHOR_NOT_FOUND") return res.status(404).json({ error: "Author not found" });
     if (result === "IC_NOT_FOUND") return res.status(404).json({ error: "IC not found" });
     if (result === "PROJECT_NOT_FOUND") return res.status(404).json({ error: "Project not found" });
+    if (result === "PROJECT_NOT_ASSIGNED") return res.status(403).json({ error: "Project is not assigned to this manager" });
     res.status(200).json({ data: result });
 }
 
@@ -124,6 +126,7 @@ export async function update(req: Request, res: Response) {
     if (result === "AUTHOR_NOT_FOUND") return res.status(404).json({ error: "Author not found" });
     if (result === "IC_NOT_FOUND") return res.status(404).json({ error: "IC not found" });
     if (result === "PROJECT_NOT_FOUND") return res.status(404).json({ error: "Project not found" });
+    if (result === "PROJECT_NOT_ASSIGNED") return res.status(403).json({ error: "Project is not assigned to this manager" });
     res.status(200).json({ data: result });
 }
 

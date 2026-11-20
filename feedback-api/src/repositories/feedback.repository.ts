@@ -17,8 +17,17 @@ export async function getFeedbackByID(id: number): Promise<Feedback | null> {
 
 async function buildFeedbackQuery(filters: FeedbackFilters) {
     const where: WhereOptions = {};
-    for (const key of ['project_id', 'ic_id', 'score'] as const) {
+    for (const key of ['ic_id', 'score'] as const) {
         if (filters[key] !== undefined) where[key] = filters[key];
+    }
+    if (filters.project_ids !== undefined) {
+        where.project_id = filters.project_id === undefined
+            ? { [Op.in]: filters.project_ids }
+            : filters.project_ids.includes(filters.project_id)
+                ? filters.project_id
+                : { [Op.in]: [] };
+    } else if (filters.project_id !== undefined) {
+        where.project_id = filters.project_id;
     }
     const contains = (value: string) => `%${value.replace(/[\\%_]/g, '\\$&')}%`;
     if (filters.text) where[Op.and as unknown as string] = [unaccentIlike('Feedback.comment', contains(filters.text))];
