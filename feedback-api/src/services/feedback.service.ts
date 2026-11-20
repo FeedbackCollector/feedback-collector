@@ -47,14 +47,25 @@ export async function getFeedbackByIdService(id: number, user: Caller): Promise<
 }
 
 
-export async function exportFeedbackCsvService(ids: number[]): Promise<string | "FEEDBACK_NOT_FOUND"> {
-    const feedbacks = await FeedbackRepository.getFeedbacksForExport(ids);
-    if (feedbacks.length === 0) return "FEEDBACK_NOT_FOUND";
+type ExportRow = Awaited<ReturnType<typeof FeedbackRepository.getFeedbacksForExport>>[number];
 
+function feedbackRowsToCsv(feedbacks: ExportRow[]): string {
     return toCsv(
         ['Date', 'Subject', 'Project', 'Source', 'Score', 'Excerpt', 'Attachment'],
         feedbacks.map(feedback => [feedback.date, feedback.ic_name, feedback.project_name, feedback.source_name, feedback.score, feedback.comment, feedback.screenshot_url]),
     );
+}
+
+export async function exportFeedbackCsvService(ids: number[]): Promise<string | "FEEDBACK_NOT_FOUND"> {
+    const feedbacks = await FeedbackRepository.getFeedbacksForExport(ids);
+    if (feedbacks.length === 0) return "FEEDBACK_NOT_FOUND";
+
+    return feedbackRowsToCsv(feedbacks);
+}
+
+export async function exportFilteredFeedbackCsvService(filters: FeedbackFilters): Promise<string> {
+    const feedbacks = await FeedbackRepository.getFeedbacksForFilteredExport(filters);
+    return feedbackRowsToCsv(feedbacks);
 }
 
 export async function createFeedbackService(feedbackData: NewFeedback, user: Caller): Promise<Feedback | ReferenceError> {
