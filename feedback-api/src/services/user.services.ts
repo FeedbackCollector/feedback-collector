@@ -1,8 +1,8 @@
 import bcrypt from 'bcryptjs';
-import { signToken } from '../utils/token.ts';
+import { signToken, signPasswordResetToken, verifyPasswordResetToken, passwordVersion } from '../utils/token.ts';
 import * as UsersRepository from '../repositories/user.repositories.ts';
 import { getAreaByID } from '../repositories/area.repository.ts';
-import { sendPendingApprovalEmail, sendAccountApprovedEmail } from './mail.service.ts';
+import { sendPendingApprovalEmail, sendAccountApprovedEmail, sendPasswordResetEmail } from './mail.service.ts';
 import { AccountStatus, User, CreateUser, UpdateUser, UserFilters, UsersPage } from '../types/user.ts';
 
 // Directors list every user; a manager only gets their own record.
@@ -55,7 +55,7 @@ export async function createUserService(data: CreateUser): Promise<User | Refere
     return user;
 }
 
-export async function registerService(email: string, password: string , name: string , area_id: number): Promise<"EMAIL_TAKEN" | "AREA_NOT_FOUND" | "REGISTERED"> {
+export async function registerService(email: string, password: string, name: string, area_id: number): Promise<"EMAIL_TAKEN" | "AREA_NOT_FOUND" | "REGISTERED"> {
     const invalid = await checkReferences({ email, area_id });
     if (invalid) return invalid;
 
@@ -134,4 +134,44 @@ export async function changePasswordService(userId: number, currentPassword: str
 
     // Tokens issued before the change stop working, so the caller gets a fresh one.
     return { token: signToken({ ...user, passwordHash }) };
+}
+
+export async function forgotPasswordService(email: string): Promise<"SENT"> {
+    const user = await UsersRepository.getUserByEmail(email);
+    if (!user || user.status !== "approved") return "SENT";
+
+    const resetToken = signPasswordResetToken(user);
+
+    sendPasswordResetEmail(user.email, user.name, resetToken).catch((err: unknown) =>
+        console.error('Could not send password reset email:', err instanceof Error ? err.message : err),
+    );
+
+    return "SENT";
+}
+
+export async function resetPasswordService(token: string, newPassword: string): Promise<"INVALID_TOKEN" | "RESET_OK"> {
+    let payload: { id?: unknown; pv?: unknown; purpose?: unknown };
+    try {
+        payload = verifyPasswordResetToken(token);
+    } catch {
+        return "INVALID_TOKEN";
+    }
+
+    if (typeof payload.id !== 'number' || typeof payload.pv !== 'string' || payload.purpose !== 'password-reset') {
+        return "INVALID_TOKEN";
+    }
+
+    const user = await UsersRepository.getUserByID(payload.id);
+    if (!user) return "INVALID_TOKEN";
+
+    // Verifica que la contraseña no haya sido cambiada después de emitir el enlace
+    if (passwordVersion(user.passwordHash) !== payload.pv) {
+        return "INVALID_TOKEN";
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    const updated = await UsersRepository.patchUserPassword(user.id, passwordHash);
+    if (!updated) return "INVALID_TOKEN";
+
+    return "RESET_OK";
 }
