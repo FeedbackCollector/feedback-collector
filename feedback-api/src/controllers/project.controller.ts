@@ -2,19 +2,22 @@ import { Request, Response } from "express";
 import { getAllProjectsService, getProjectByIdService, createProjectService, updateProjectService, deleteProjectService } from "../services/project.service.ts";
 
 export async function getAll(req: Request, res: Response) {
-    const result = await getAllProjectsService();
+    const result = await getAllProjectsService(res.locals.user);
+    if (result === "FORBIDDEN") return res.status(403).json({ error: "Forbidden" });
     return res.json({ data: result });
 }
 
 export async function getById(req: Request, res: Response) {
-    const result = await getProjectByIdService(Number(req.params.id));
+    const result = await getProjectByIdService(Number(req.params.id), res.locals.user);
     if (result === "PROJECT_NOT_FOUND") return res.status(404).json({ error: "Project not found" });
+    if (result === "FORBIDDEN") return res.status(403).json({ error: "Forbidden" });
     return res.json({ data: result });
 }
 
 export async function create(req: Request, res: Response) {
     const result = await createProjectService(req.body);
     if (result === "NAME_TAKEN") return res.status(409).json({ error: "Project name already exists" });
+    if (result === "MANAGER_NOT_FOUND") return res.status(400).json({ error: "One or more managers are not available" });
     return res.status(201).json({ data: result });
 }
 
@@ -22,6 +25,7 @@ export async function update(req: Request, res: Response) {
     const result = await updateProjectService(req.body, Number(req.params.id));
     if (result === "PROJECT_NOT_FOUND") return res.status(404).json({ error: "Project not found" });
     if (result === "NAME_TAKEN") return res.status(409).json({ error: "Project name already exists" });
+    if (result === "MANAGER_NOT_FOUND") return res.status(400).json({ error: "One or more managers are not available" });
     return res.json({ data: result });
 }
 
