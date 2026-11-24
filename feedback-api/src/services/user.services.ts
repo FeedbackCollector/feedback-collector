@@ -34,9 +34,13 @@ export async function getUserByIdService(id: number): Promise<User | "USER_NOT_F
     return user;
 }
 
-type ReferenceError = "AREA_NOT_FOUND" | "EMAIL_TAKEN";
+type ProfileReferenceError = "AREA_NOT_FOUND" | "EMAIL_TAKEN";
+type ReferenceError = ProfileReferenceError | "DIRECTOR_NOT_FOUND" | "USER_NOT_MANAGER";
 
-async function checkReferences(data: UpdateUser, id?: number): Promise<ReferenceError | null> {
+async function checkReferences(
+    data: Pick<UpdateUser, "area_id" | "email">,
+    id?: number,
+): Promise<ProfileReferenceError | null> {
     if (data.area_id !== undefined && !(await getAreaByID(data.area_id))) return "AREA_NOT_FOUND";
 
     if (data.email !== undefined) {
@@ -46,7 +50,7 @@ async function checkReferences(data: UpdateUser, id?: number): Promise<Reference
     return null;
 }
 
-export async function createUserService(data: CreateUser): Promise<User | ReferenceError> {
+export async function createUserService(data: CreateUser): Promise<User | ProfileReferenceError> {
     const invalid = await checkReferences(data);
     if (invalid) return invalid;
 
@@ -82,24 +86,35 @@ export async function registerService(email: string, password: string , name: st
 }
 
 export async function updateUserService(data: UpdateUser, id: number): Promise<User | "USER_NOT_FOUND" | ReferenceError> {
-    if (!(await UsersRepository.getPublicUserByID(id))) return "USER_NOT_FOUND";
+    const user = await UsersRepository.getPublicUserByID(id);
+    if (!user) return "USER_NOT_FOUND";
+    if (data.director_id !== undefined && (user.role !== "manager" || user.status !== "approved")) {
+        return "USER_NOT_MANAGER";
+    }
 
     const invalid = await checkReferences(data, id);
     if (invalid) return invalid;
+    if (data.director_id !== undefined && data.director_id !== null) {
+        const director = await UsersRepository.getPublicUserByID(data.director_id);
+        if (director?.role !== "director" || director.status !== "approved") return "DIRECTOR_NOT_FOUND";
+    }
 
     const updated = await UsersRepository.updateUser(id, data);
     return updated as User;
 }
 
-export async function deleteUserService(id: number, requesterId: number): Promise<"USER_NOT_FOUND" | "CANNOT_DELETE_SELF" | "USER_HAS_ICS" | "USER_HAS_FEEDBACK" | "DELETED"> {
+export async function deleteUserService(id: number, requesterId: number): Promise<"USER_NOT_FOUND" | "CANNOT_DELETE_SELF" | "MANAGER_HAS_NO_DIRECTOR" | "USER_HAS_ICS" | "USER_HAS_MANAGERS" | "USER_HAS_FEEDBACK" | "DELETED"> {
     const user = await UsersRepository.getPublicUserByID(id);
     if (!user) return "USER_NOT_FOUND";
     if (user.id === requesterId) return "CANNOT_DELETE_SELF";
-    if (await UsersRepository.userHasICs(id)) return "USER_HAS_ICS";
+    if (user.role === "manager" && user.director_id == null) return "MANAGER_HAS_NO_DIRECTOR";
     if (await UsersRepository.userHasFeedback(id)) return "USER_HAS_FEEDBACK";
+    if (user.role === "director") {
+        if (await UsersRepository.directorHasManagers(id)) return "USER_HAS_MANAGERS";
+        if (await UsersRepository.directorHasICs(id)) return "USER_HAS_ICS";
+    }
 
-    await UsersRepository.deleteUser(id);
-    return "DELETED";
+    return UsersRepository.deleteUser(id);
 }
 
 export async function loginService(email: string, password: string): Promise<string | "INVALID_CREDENTIALS" | "ACCOUNT_NOT_APPROVED"> {

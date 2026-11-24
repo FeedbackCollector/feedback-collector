@@ -100,7 +100,7 @@ export async function loadManagementData(
     const scoreTotalsByArea = new Map<number, { weighted: number; entries: number }>();
 
     for (const ic of ics) {
-      const areaId = managersById.get(ic.manager_id)?.area_id;
+      const areaId = ic.area_id ?? (ic.manager_id === null ? undefined : managersById.get(ic.manager_id)?.area_id);
       if (areaId === null || areaId === undefined) continue;
       icsByArea.set(areaId, (icsByArea.get(areaId) ?? 0) + 1);
       if (typeof ic.score === 'number' && ic.entries > 0) {
@@ -155,12 +155,13 @@ export async function loadManagementData(
     const managerFeedback = new Map<number, ManagerFeedback[]>();
 
     for (const ic of ics) {
+      if (ic.manager_id === null) continue;
       icCountsByManager.set(ic.manager_id, (icCountsByManager.get(ic.manager_id) ?? 0) + 1);
     }
 
     for (const item of feedback) {
       const ic = icsById.get(item.ic_id);
-      if (!ic) continue;
+      if (!ic || ic.manager_id === null) continue;
 
       const scores = managerScores.get(ic.manager_id) ?? [];
       scores.push(item.score);
@@ -202,7 +203,8 @@ export async function loadManagementData(
         name: ic.name,
         title: ic.title,
         managerId: ic.manager_id,
-        managerName: managersById.get(ic.manager_id)?.name ?? `Manager ${ic.manager_id}`,
+        managerName: ic.manager_id === null ? null : managersById.get(ic.manager_id)?.name ?? `Manager ${ic.manager_id}`,
+        directorId: ic.director_id,
       })),
     };
   }
@@ -219,13 +221,13 @@ export async function loadManagementData(
 
     return {
       rows: ics.map((ic) => {
-        const manager = managersById.get(ic.manager_id);
+        const manager = ic.manager_id === null ? undefined : managersById.get(ic.manager_id);
         return {
           id: ic.IC_id,
           name: ic.name,
           title: ic.title,
           managerId: ic.manager_id,
-          manager: manager?.name ?? `Manager ${ic.manager_id}`,
+          manager: manager?.name ?? (ic.director_id === null ? 'Unassigned' : 'Director-held'),
           area: manager?.area_id === null || manager?.area_id === undefined
             ? 'No area assigned'
             : areasById.get(manager.area_id) ?? `Area ${manager.area_id}`,
@@ -239,21 +241,64 @@ export async function loadManagementData(
   }
 
   if (tab === 'Directors') {
-    const [directorAccounts, managerAccounts] = await Promise.all([
+    const [directorAccounts, managerAccounts, ics] = await Promise.all([
       getAllPages<APIUser>(withQuery('/users', 'role=director'), token),
       getAllPages<APIUser>(withQuery('/users', 'role=manager'), token),
+      getAllPages<APIC>('/ics', token),
     ]);
     const directors = directorAccounts.filter((director) => director.status !== 'pending');
     const managers = managerAccounts.filter((manager) => manager.status !== 'pending');
+    const icsByManager = new Map<number, number>();
+    const icsByDirector = new Map<number, number>();
+    for (const ic of ics) {
+      if (ic.manager_id !== null) {
+        icsByManager.set(ic.manager_id, (icsByManager.get(ic.manager_id) ?? 0) + 1);
+      } else if (ic.director_id !== null) {
+        icsByDirector.set(ic.director_id, (icsByDirector.get(ic.director_id) ?? 0) + 1);
+      }
+    }
+
+    const managersByDirector = new Map<number, APIUser[]>();
+    for (const manager of managers) {
+      if (manager.director_id === null || manager.director_id === undefined) continue;
+      const assignedManagers = managersByDirector.get(manager.director_id) ?? [];
+      assignedManagers.push(manager);
+      managersByDirector.set(manager.director_id, assignedManagers);
+    }
+
     return {
-      rows: directors.map((director) => ({
-        id: director.id,
-        name: director.name,
-        email: director.email,
-      })),
+      rows: directors.map((director) => {
+        const assignedManagers = managersByDirector.get(director.id) ?? [];
+        return {
+          id: director.id,
+          name: director.name,
+          email: director.email,
+          managers: assignedManagers.length,
+          managerIds: assignedManagers.map((manager) => manager.id),
+          ics: assignedManagers.reduce(
+            (total, manager) => total + (icsByManager.get(manager.id) ?? 0),
+            0
+          ) + (icsByDirector.get(director.id) ?? 0),
+        };
+      }),
       areas: [],
-      managers: managers.map(({ id, name }) => ({ id, name })),
+      managers: managers.map(({ id, name, email, director_id }) => ({
+        id,
+        name,
+        email,
+        directorId: director_id,
+      })),
       pendingAccounts: [],
+      individualContributors: ics.map((ic) => ({
+        id: ic.IC_id,
+        name: ic.name,
+        title: ic.title,
+        managerId: ic.manager_id,
+        managerName: ic.manager_id === null
+          ? null
+          : managers.find((manager) => manager.id === ic.manager_id)?.name ?? `Manager ${ic.manager_id}`,
+        directorId: ic.director_id,
+      })),
     };
   }
 
@@ -340,6 +385,17 @@ export async function updateManagerArea(
   await request(`/users/${id}`, token, {
     method: 'PATCH',
     body: JSON.stringify({ area_id: areaId }),
+  });
+}
+
+export async function updateManagerDirector(
+  managerId: number,
+  directorId: number | null,
+  token: string
+): Promise<void> {
+  await request(`/users/${managerId}`, token, {
+    method: 'PATCH',
+    body: JSON.stringify({ director_id: directorId }),
   });
 }
 

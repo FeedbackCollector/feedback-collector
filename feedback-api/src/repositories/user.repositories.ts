@@ -76,6 +76,7 @@ export async function updateUser(id: number, data: UpdateUser): Promise<User | n
     if (data.name !== undefined) user.name = data.name;
     if (data.email !== undefined) user.email = data.email.trim().toLowerCase();
     if (data.area_id !== undefined) user.area_id = data.area_id;
+    if (data.director_id !== undefined) user.director_id = data.director_id;
 
     await sequelize.transaction(async (transaction) => {
         await user.save({ transaction });
@@ -88,14 +89,37 @@ export async function updateUser(id: number, data: UpdateUser): Promise<User | n
     return updated;
 }
 
-export async function userHasICs(id: number): Promise<boolean> {
-    return (await ICModel.count({ where: { manager_id: id } })) > 0;
+export async function directorHasICs(id: number): Promise<boolean> {
+    return (await ICModel.count({ where: { director_id: id } })) > 0;
 }
+
+export async function directorHasManagers(id: number): Promise<boolean> {
+    return (await UserModel.count({ where: { role: "manager", director_id: id } })) > 0;
+}
+
 export async function userHasFeedback(id: number): Promise<boolean> {
     return (await FeedbackModel.count({ where: { author_id: id } })) > 0
         || (await ManagerFeedbackModel.count({ where: { author_id: id } })) > 0;
 }
 
-export async function deleteUser(id: number): Promise<boolean> {
-    return (await UserModel.destroy({ where: { id } })) > 0;
+export async function deleteUser(
+    id: number,
+): Promise<"USER_NOT_FOUND" | "MANAGER_HAS_NO_DIRECTOR" | "DELETED"> {
+    return sequelize.transaction(async (transaction) => {
+        const user = await UserModel.findByPk(id, { transaction, lock: transaction.LOCK.UPDATE });
+        if (!user) return "USER_NOT_FOUND";
+
+        if (user.role === "manager") {
+            if (user.director_id === null) return "MANAGER_HAS_NO_DIRECTOR";
+            await ICModel.update(
+                {
+                    manager_id: null,
+                    director_id: user.director_id,
+                },
+                { where: { manager_id: id }, transaction },
+            );
+        }
+
+        return (await UserModel.destroy({ where: { id }, transaction })) > 0 ? "DELETED" : "USER_NOT_FOUND";
+    });
 }

@@ -30,7 +30,7 @@ export interface ManagerFeedback {
 export interface ManagementData {
   rows: ManagementRow[];
   areas: Array<{ id: number; name: string }>;
-  managers: Array<{ id: number; name: string }>;
+  managers: Array<{ id: number; name: string; email?: string; directorId?: number | null }>;
   pendingAccounts: PendingAccount[];
   individualContributors?: ManagementIC[];
 }
@@ -39,8 +39,9 @@ export interface ManagementIC {
   id: number;
   name: string;
   title: string;
-  managerId: number;
-  managerName: string;
+  managerId: number | null;
+  managerName: string | null;
+  directorId: number | null;
 }
 
 export interface PendingAccount {
@@ -66,6 +67,7 @@ export interface APIUser {
   email: string;
   role: string;
   area_id: number | null;
+  director_id?: number | null;
   status?: 'pending' | 'approved';
 }
 
@@ -78,7 +80,9 @@ export interface APIC {
   IC_id: number;
   name: string;
   title: string;
-  manager_id: number;
+  manager_id: number | null;
+  director_id: number | null;
+  area_id: number | null;
   entries: number;
   score?: number | null;
 }

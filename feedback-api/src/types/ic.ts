@@ -2,7 +2,8 @@ export interface IC {
     IC_id: number;
     name: string;
     title: string;
-    manager_id: number;
+    manager_id: number | null;
+    director_id: number | null;
     area_id: number | null;
     entries: number;
     score: number | null;

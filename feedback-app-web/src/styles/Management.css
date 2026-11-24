@@ -333,7 +333,9 @@
 .management-directors-table th:nth-child(2),
 .management-directors-table td:nth-child(2),
 .management-directors-table th:nth-child(3),
-.management-directors-table td:nth-child(3) {
+.management-directors-table td:nth-child(3),
+.management-directors-table th:nth-child(4),
+.management-directors-table td:nth-child(4) {
   text-align: center;
 }
 
