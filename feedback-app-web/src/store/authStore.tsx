@@ -175,9 +175,7 @@ export const useAuthStore = create<AuthState>()(
                     const datos = await respuesta.json();
 
                     if (respuesta.ok) {
-                        const successMessage = datos.status === 'approved'
-                            ? 'Account created, you can log in now'
-                            : 'Account created, please wait to be approved';
+                        const successMessage = 'Account created, please wait to be approved';
                         set({ 
                             activeForm: 'login', 
                             error: null,
