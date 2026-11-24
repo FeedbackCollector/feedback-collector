@@ -18,6 +18,7 @@ type IC = {
   name: string;
   title: string;
   entries: number;
+  manager_id:number;
   score: number | null;
 };
 
@@ -64,6 +65,7 @@ function ObtainICs() {
     name: string;
     title: string;
     entries: number;
+    manager_id: number;
   } | null>(null);
 
   function openICTimeline(item: IC) {

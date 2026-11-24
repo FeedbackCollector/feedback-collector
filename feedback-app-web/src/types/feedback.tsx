@@ -28,6 +28,7 @@ export type IC = {
   name: string;
   title: string;
   entries: number;
+  manager_id: number;
   score: number | null;
 };
 

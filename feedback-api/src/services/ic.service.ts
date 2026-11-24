@@ -19,6 +19,12 @@ export async function getAllICsService(filters: ICFilters, user: User) {
     }
     return "FORBIDDEN";
 }
+export async function viewAllICs(filters: ICFilters, user: User) {
+ if (user.role === "director" || "manager") {
+        return ICRepository.icFindAll(filters); // puede filtrar opcionalmente por manager_id
+    }
+    return "FORBIDDEN";
+}
 
 export async function getICByIdService(id: number, user: User): Promise<IC | "IC_NOT_FOUND" | "FORBIDDEN"> {
     const ic = await ICRepository.icFindByID(id);
