@@ -30,9 +30,19 @@ async function request<T>(
 
   if (!response.ok) {
     const body = payload && typeof payload === 'object'
-      ? payload as { message?: string; error?: string }
+      ? payload as {
+          message?: string;
+          error?: string;
+          errors?: Array<{ field?: string; message?: string }>;
+        }
       : undefined;
-    throw new Error(body?.message ?? body?.error ?? `Request failed (${response.status}).`);
+    const validationErrors = body?.errors
+      ?.map(({ field, message }) => [field, message].filter(Boolean).join(': '))
+      .filter(Boolean);
+    const message = validationErrors?.length
+      ? `${body?.message ?? body?.error ?? 'Request failed.'} ${validationErrors.join('; ')}`
+      : body?.message ?? body?.error ?? `Request failed (${response.status}).`;
+    throw new Error(message);
   }
 
   return payload as T;
@@ -228,18 +238,29 @@ export async function loadManagementData(
     };
   }
 
-  const [projects, feedback] = await Promise.all([
+  const [projects, feedback, managerAccounts] = await Promise.all([
     getList<APIProject>('/projects', token),
     getAllPages<APIFeedback>('/feedback', token),
+    getAllPages<APIUser>(withQuery('/users', 'role=manager'), token),
   ]);
+  const managers = managerAccounts.filter((manager) => manager.status !== 'pending');
+  const managersById = new Map(managers.map((manager) => [manager.id, manager.name]));
   return {
-    rows: projects.map((project) => ({
-      id: project.id,
-      name: project.name,
-      entries: feedback.filter((item) => item.project_id === project.id).length,
-    })),
+    rows: projects.map((project) => {
+      const managerIds = project.manager_ids ?? [];
+      return {
+        id: project.id,
+        name: project.name,
+        entries: feedback.filter((item) => item.project_id === project.id).length,
+        managerIds,
+        managerNames: managerIds
+          .map((managerId) => managersById.get(managerId))
+          .filter((name): name is string => name !== undefined)
+          .join(', ') || 'None assigned',
+      };
+    }),
     areas: [],
-    managers: [],
+    managers: managers.map(({ id, name }) => ({ id, name })),
     pendingAccounts: [],
   };
 }
@@ -307,6 +328,17 @@ export async function updateICManager(
   await request(`/ics/${icId}`, token, {
     method: 'PATCH',
     body: JSON.stringify({ manager_id: managerId }),
+  });
+}
+
+export async function updateProjectManagers(
+  projectId: number,
+  managerIds: number[],
+  token: string
+): Promise<void> {
+  await request(`/projects/${projectId}`, token, {
+    method: 'PATCH',
+    body: JSON.stringify({ manager_ids: managerIds }),
   });
 }
 

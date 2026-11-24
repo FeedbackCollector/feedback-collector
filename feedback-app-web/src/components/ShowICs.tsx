@@ -258,10 +258,10 @@ function ObtainICs() {
           <div className="team-view-toggle" role="group" aria-label="IC view">
             <button
               type="button"
-              className={viewMode === 'cards' ? 'is-active' : ''}
-              aria-label="Card view"
-              aria-pressed={viewMode === 'cards'}
-              onClick={() => changeViewMode('cards')}
+              className={viewMode === 'list' ? 'is-active' : ''}
+              aria-label="List view"
+              aria-pressed={viewMode === 'list'}
+              onClick={() => changeViewMode('list')}
             >
               <svg aria-hidden="true" height="20" viewBox="0 -960 960 960" width="20" fill="currentColor">
                 <path d="M760-120H200q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120ZM200-640h560v-120H200v120Zm100 80H200v360h100v-360Zm360 0v360h100v-360H660Zm-80 0H380v360h200v-360Z" />
@@ -269,10 +269,10 @@ function ObtainICs() {
             </button>
             <button
               type="button"
-              className={viewMode === 'list' ? 'is-active' : ''}
-              aria-label="List view"
-              aria-pressed={viewMode === 'list'}
-              onClick={() => changeViewMode('list')}
+              className={viewMode === 'cards' ? 'is-active' : ''}
+              aria-label="Card view"
+              aria-pressed={viewMode === 'cards'}
+              onClick={() => changeViewMode('cards')}
             >
               <i className="fa-solid fa-table-list" aria-hidden="true" />
             </button>
