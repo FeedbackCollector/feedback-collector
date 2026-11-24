@@ -1,15 +1,15 @@
-import { useAuthStore } from "../store/authStore";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
-// @ts-ignore CSS files are handled by the bundler.
-import "../styles/login.css";
+import { useAuthStore } from "../store/authStore";
 import { obtainAreas, type Area } from "../service/ObtainAreas";
-import DropdownSelect from '../components/DropdownSelect';
+import DropdownSelect from "../components/DropdownSelect";
+import "../styles/login.css";
 
 function Login() {
     const activeForm = useAuthStore((state) => state.activeForm);
     const error = useAuthStore((state) => state.error);
     const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+
     const switchForm = useAuthStore((state) => state.switchForm);
     const logout = useAuthStore((state) => state.logout);
     const clearError = useAuthStore((state) => state.clearError);
@@ -19,12 +19,14 @@ function Login() {
     const setLoginEmail = useAuthStore((state) => state.setLoginEmail);
     const setLoginPassword = useAuthStore((state) => state.setLoginPassword);
     const loginSubmit = useAuthStore((state) => state.loginSubmit);
+
     const regName = useAuthStore((state) => state.regName);
     const regEmail = useAuthStore((state) => state.regEmail);
     const regPassword = useAuthStore((state) => state.regPassword);
     const regConfirmPassword = useAuthStore((state) => state.regConfirmPassword);
     const regArea = useAuthStore((state) => state.regArea);
     const isRegEmailValid = useAuthStore((state) => state.isRegEmailValid);
+
     const setRegName = useAuthStore((state) => state.setRegName);
     const setRegEmail = useAuthStore((state) => state.setRegEmail);
     const setRegPassword = useAuthStore((state) => state.setRegPassword);
@@ -33,7 +35,10 @@ function Login() {
     const createAccount = useAuthStore((state) => state.createAccount);
 
     const [areas, setAreas] = useState<Area[]>([]);
-    const [isLoggingIn, setIsLoggingIn] = useState(false);
+    const [isLoadingAreas, setIsLoadingAreas] = useState(false);
+    const [areasError, setAreasError] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -43,54 +48,57 @@ function Login() {
     }, [isAuthenticated, navigate]);
 
     useEffect(() => {
+        let isMounted = true;
 
-        setRegArea('');
+        const loadAreas = async () => {
+            setIsLoadingAreas(true);
+            setAreasError(false);
 
-        Promise.allSettled([obtainAreas()])
-            .then(([areaResult]) => {
-                if (areaResult.status === 'fulfilled') {
-                    setAreas(areaResult.value);
-                } else {
-                    console.error('Could not load areas:', areaResult.reason);
-                }
-            })
-    }, [setRegArea])
-        Promise.allSettled([obtainAreas()])
-            .then(([areaResult]) => {
-                if (areaResult.status === 'fulfilled') {
-                    setAreas(areaResult.value);
-                    setSelectedArea(areaResult.value?.[0]?.name ?? '');
-                } else {
-                    const message = areaResult.reason instanceof Error
-                        ? areaResult.reason.message
-                        : String(areaResult.reason);
-                    console.error('Could not load areas:', message);
-                }
-            });
+            try {
+                const result = await obtainAreas();
+                if (isMounted) setAreas(result);
+            } catch (err) {
+                console.error("Could not load areas:", err);
+                if (isMounted) setAreasError(true);
+            } finally {
+                if (isMounted) setIsLoadingAreas(false);
+            }
+        };
+
+        loadAreas();
+
+        return () => {
+            isMounted = false;
+        };
     }, []);
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (activeForm === 'login') {
-            if (isLoggingIn) return;
-            setIsLoggingIn(true);
-            try {
+    const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        if (isSubmitting) return;
+
+        setIsSubmitting(true);
+        try {
+            if (activeForm === "login") {
                 await loginSubmit();
-            } finally {
-                setIsLoggingIn(false);
+            } else {
+                await createAccount();
             }
-        } else {
-            await createAccount();
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
-    const isLoginMode = activeForm === 'login';
-    const hasEmailError = isLoginMode ? error?.field === 'loginEmail' : error?.field === 'regEmail';
-    const showRegisterEmailValid = !isLoginMode && isRegEmailValid && !hasEmailError;
+    const isLoginMode = activeForm === "login";
 
+    const hasEmailError = isLoginMode
+        ? error?.field === "loginEmail"
+        : error?.field === "regEmail";
 
-    const hasAreaError = error?.field === 'regArea';
-    const showAreaValid = !isLoginMode && regArea !== '' && regArea !== undefined && !hasAreaError;
+    const showRegisterEmailValid =
+        !isLoginMode && isRegEmailValid && !hasEmailError;
+
+    const hasAreaError = error?.field === "regArea";
+    const showAreaValid = !isLoginMode && regArea !== "" && !hasAreaError;
 
     if (isAuthenticated) {
         return (
@@ -112,29 +120,31 @@ function Login() {
                 <div className="brand-header">
                     <div className="brand-icon">
                         <span className="material-symbols-outlined">chat</span>
-                        <span className="material-symbols-outlined">chat</span>
                     </div>
                     <h1 className="tittle">Feedback Collector</h1>
                 </div>
-                <label className="subtitle">Track feedback and performance for your team</label>
+
+                <label className="subtitle">
+                    Track feedback and performance for your team
+                </label>
 
                 <div className="switch-tabs">
                     <button
                         type="button"
-                        className={`tab-btn ${activeForm === 'login' ? 'active' : ''}`}
+                        className={`tab-btn ${isLoginMode ? "active" : ""}`}
                         onClick={() => {
                             clearError();
-                            switchForm('login');
+                            switchForm("login");
                         }}
                     >
                         Login
                     </button>
                     <button
                         type="button"
-                        className={`tab-btn ${activeForm === 'register' ? 'active' : ''}`}
+                        className={`tab-btn ${!isLoginMode ? "active" : ""}`}
                         onClick={() => {
                             clearError();
-                            switchForm('register');
+                            switchForm("register");
                         }}
                     >
                         Register
@@ -142,61 +152,78 @@ function Login() {
                 </div>
 
                 <form onSubmit={handleSubmit} className="auth-form" noValidate>
-                    <div className={`form-group ${activeForm === 'register' ? 'show' : ''}`}>
+                    <div className={`form-group ${!isLoginMode ? "show" : ""}`}>
                         <label className="label-field">Name</label>
                         <input
-                            className={`input-name ${error?.field === 'regName' ? 'input-invalid' : ''}`}
+                            className={`input-name ${error?.field === "regName" ? "input-invalid" : ""}`}
                             type="text"
                             value={regName}
-                            onChange={(e) => setRegName(e.target.value)}
+                            onChange={(event) => setRegName(event.target.value)}
+                            disabled={isSubmitting}
                         />
-                        {error?.field === 'regName' && <span className="field-error">{error.message}</span>}
+                        {error?.field === "regName" && (
+                            <span className="field-error">{error.message}</span>
+                        )}
                     </div>
-
 
                     <div className="form-group show">
                         <label className="label-field">Email</label>
                         <input
-                            className={`input-name ${hasEmailError ? 'input-invalid' : showRegisterEmailValid ? 'input-valid' : ''
-                                }`}
+                            className={`input-name ${
+                                hasEmailError
+                                    ? "input-invalid"
+                                    : showRegisterEmailValid
+                                      ? "input-valid"
+                                      : ""
+                            }`}
                             type="email"
                             value={isLoginMode ? loginEmail : regEmail}
-                            onChange={(e) => isLoginMode ? setLoginEmail(e.target.value) : setRegEmail(e.target.value)}
+                            onChange={(event) =>
+                                isLoginMode
+                                    ? setLoginEmail(event.target.value)
+                                    : setRegEmail(event.target.value)
+                            }
+                            disabled={isSubmitting}
                         />
-                        {isLoginMode && error?.field === 'loginEmail' && <span className="field-error">{error.message}</span>}
-                        {!isLoginMode && error?.field === 'regEmail' && <span className="field-error">{error.message}</span>}
+                        {hasEmailError && (
+                            <span className="field-error">{error?.message}</span>
+                        )}
                         {showRegisterEmailValid && (
-                            <span className="field-valid">
-                                Email is available
-                            </span>
+                            <span className="field-valid">Email format is valid</span>
                         )}
                     </div>
 
-
-                    <div className={activeForm === 'register' ? 'form-row' : ''}>
+                    <div className={!isLoginMode ? "form-row" : ""}>
                         <div className="form-group show">
                             <label className="label-field">Password</label>
                             <input
-                                className={`input-password ${(error?.field === 'loginPassword' || error?.field === 'regPassword') ? 'input-invalid' : ''
-                                    }`}
+                                className={`input-password ${
+                                    error?.field === "loginPassword" || error?.field === "regPassword"
+                                        ? "input-invalid"
+                                        : ""
+                                }`}
                                 type="password"
                                 value={isLoginMode ? loginPassword : regPassword}
-                                onChange={(e) => isLoginMode ? setLoginPassword(e.target.value) : setRegPassword(e.target.value)}
+                                onChange={(event) =>
+                                    isLoginMode
+                                        ? setLoginPassword(event.target.value)
+                                        : setRegPassword(event.target.value)
+                                }
+                                disabled={isSubmitting}
                             />
-                            {isLoginMode && error?.field === 'loginPassword' && <span className="field-error">{error.message}</span>}
-                            {!isLoginMode && error?.field === 'regPassword' && <span className="field-error">{error.message}</span>}
-                            {activeForm === 'login' && error?.field === 'loginPassword' && <span className="span field-error">{error.message}</span>}
-                            {activeForm === 'register' && error?.field === 'regPassword' && <span className="span field-error">{error.message}</span>}
+                            {(error?.field === "loginPassword" || error?.field === "regPassword") && (
+                                <span className="field-error">{error.message}</span>
+                            )}
                         </div>
 
-                        {activeForm === 'login' && (
+                        {isLoginMode && (
                             <div className="forgot-link-wrapper">
                                 <button
                                     type="button"
                                     className="btn-forgot-link"
                                     onClick={() => {
                                         clearError();
-                                        navigate('/forgot-password');
+                                        navigate("/forgot-password");
                                     }}
                                 >
                                     Forgot password?
@@ -204,71 +231,86 @@ function Login() {
                             </div>
                         )}
 
-                        <div className={`form-group ${activeForm === 'register' ? 'show' : ''}`}>
+                        <div className={`form-group ${!isLoginMode ? "show" : ""}`}>
                             <label className="label-field">Confirm Password</label>
                             <input
-                                className={`input-password ${error?.field === 'regConfirmPassword' ? 'input-invalid' : ''}`}
+                                className={`input-password ${
+                                    error?.field === "regConfirmPassword" ? "input-invalid" : ""
+                                }`}
                                 type="password"
                                 value={regConfirmPassword}
-                                onChange={(e) => setRegConfirmPassword(e.target.value)}
+                                onChange={(event) => setRegConfirmPassword(event.target.value)}
+                                disabled={isSubmitting}
                             />
-                            {error?.field === 'regConfirmPassword' && <span className="field-error">{error.message}</span>}
+                            {error?.field === "regConfirmPassword" && (
+                                <span className="field-error">{error.message}</span>
+                            )}
                         </div>
                     </div>
 
-
-                    <div className={`form-group ${activeForm === 'register' ? 'show' : ''}`}>
+                    <div className={`form-group ${!isLoginMode ? "show" : ""}`}>
                         <label className="label-field">Area</label>
-
-                        <div className={hasAreaError ? 'dropdown-invalid' : showAreaValid ? 'dropdown-valid' : ''}>
+                        <div
+                            className={
+                                hasAreaError
+                                    ? "dropdown-invalid"
+                                    : showAreaValid
+                                      ? "dropdown-valid"
+                                      : ""
+                            }
+                        >
                             <DropdownSelect
                                 id="register-area"
                                 label="Area"
                                 value={regArea}
                                 options={[
-                                    { value: '', label: 'Select an area' },
+                                    { value: "", label: "Select an area" },
                                     ...areas.map((area) => ({
-                                        value: area.name,
+                                        value: String(area.id),
                                         label: area.name,
-                                    }))
+                                    })),
                                 ]}
                                 onChange={setRegArea}
                             />
                         </div>
-                        {showAreaValid ? (
-                            <span className="field-valid">
-                                Area confirmed.
+
+                        {areasError && (
+                            <span className="field-error">
+                                Could not load areas. Please try again later.
                             </span>
-                        ) : (
-                            <>
-                                <label className="subtitle" style={{ marginBottom: '0', marginTop: '5px' }}>
-                                    Choose the area this IC belongs to.
-                                </label>
-                                {hasAreaError && <span className="field-error">{error?.message}</span>}
-                            </>
                         )}
-                        <DropdownSelect
-                            id="register-area"
-                            label="Area"
-                            value={selectedArea}
-                            options={areas.map((area) => ({
-                                value: area.name,
-                                label: area.name,
-                            }))}
-                            onChange={setSelectedArea}
-                        />
+                        {showAreaValid && (
+                            <span className="field-valid">Area selected.</span>
+                        )}
+                        {!showAreaValid && !areasError && (
+                            <label className="subtitle" style={{ marginBottom: "0", marginTop: "5px" }}>
+                                {isLoadingAreas
+                                    ? "Loading areas..."
+                                    : "Choose the area this IC belongs to."}
+                            </label>
+                        )}
+                        {hasAreaError && (
+                            <span className="field-error">{error?.message}</span>
+                        )}
                     </div>
 
                     <button
                         className="btn-get-into"
                         type="submit"
-                        disabled={isLoginMode && isLoggingIn}
+                        disabled={isSubmitting || (!isLoginMode && (isLoadingAreas || areas.length === 0))}
                     >
-                        {isLoginMode ? (isLoggingIn ? 'Signing In...' : 'Sign In') : 'Create Account'}
+                        {isSubmitting
+                            ? isLoginMode
+                                ? "Signing In..."
+                                : "Creating Account..."
+                            : isLoginMode
+                              ? "Sign In"
+                              : "Create Account"}
                     </button>
                 </form>
             </div>
         </div>
     );
 }
+
 export default Login;
