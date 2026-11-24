@@ -95,3 +95,24 @@ export async function sendAccountApprovedEmail(to: string, name: string): Promis
         ),
     );
 }
+
+export async function sendPasswordResetEmail(to: string, name: string, token: string): Promise<void> {
+const appUrl = (process.env.APP_URL ?? 'http://localhost:5173').replace(/\+$/, '');
+const resetUrl = `${appUrl}/reset-password?token=${encodeURIComponent(token)}`;
+
+await sendMail(
+    to,
+    name,
+    'Reset your Feedback Collector password',
+    `Hi ${name},\n\nWe received a request to reset your password. Use the link below to set a new one (valid for 1 hour):\n\n${resetUrl}\n\nIf you did not request this, you can safely ignore this email.\n\nFeedback Collector - TELUS Digital`,
+    renderLayout(
+        name,
+        [
+            'We received a request to reset your password for Feedback Collector.',
+            'Click the button below to choose a new password. This link will expire in 1 hour.',
+            '<span style="font-size:13px;color:#777777;">If you did not request a password reset, you can safely ignore this email.</span>',
+        ],
+        { label: 'Reset Password', url: resetUrl },
+    ),
+);
+}
