@@ -19,22 +19,21 @@ function Login() {
     const setLoginEmail = useAuthStore((state) => state.setLoginEmail);
     const setLoginPassword = useAuthStore((state) => state.setLoginPassword);
     const loginSubmit = useAuthStore((state) => state.loginSubmit);
-
     const regName = useAuthStore((state) => state.regName);
     const regEmail = useAuthStore((state) => state.regEmail);
     const regPassword = useAuthStore((state) => state.regPassword);
     const regConfirmPassword = useAuthStore((state) => state.regConfirmPassword);
-
+    const regArea = useAuthStore((state) => state.regArea);
+    const isRegEmailValid = useAuthStore((state) => state.isRegEmailValid);
     const setRegName = useAuthStore((state) => state.setRegName);
     const setRegEmail = useAuthStore((state) => state.setRegEmail);
     const setRegPassword = useAuthStore((state) => state.setRegPassword);
     const setRegConfirmPassword = useAuthStore((state) => state.setRegConfirmPassword);
+    const setRegArea = useAuthStore((state) => state.setRegArea);
     const createAccount = useAuthStore((state) => state.createAccount);
 
     const [areas, setAreas] = useState<Area[]>([]);
-    const [selectedArea, setSelectedArea] = useState('');
     const [isLoggingIn, setIsLoggingIn] = useState(false);
-
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -44,6 +43,18 @@ function Login() {
     }, [isAuthenticated, navigate]);
 
     useEffect(() => {
+
+        setRegArea('');
+
+        Promise.allSettled([obtainAreas()])
+            .then(([areaResult]) => {
+                if (areaResult.status === 'fulfilled') {
+                    setAreas(areaResult.value);
+                } else {
+                    console.error('Could not load areas:', areaResult.reason);
+                }
+            })
+    }, [setRegArea])
         Promise.allSettled([obtainAreas()])
             .then(([areaResult]) => {
                 if (areaResult.status === 'fulfilled') {
@@ -60,7 +71,6 @@ function Login() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-
         if (activeForm === 'login') {
             if (isLoggingIn) return;
             setIsLoggingIn(true);
@@ -73,6 +83,14 @@ function Login() {
             await createAccount();
         }
     };
+
+    const isLoginMode = activeForm === 'login';
+    const hasEmailError = isLoginMode ? error?.field === 'loginEmail' : error?.field === 'regEmail';
+    const showRegisterEmailValid = !isLoginMode && isRegEmailValid && !hasEmailError;
+
+
+    const hasAreaError = error?.field === 'regArea';
+    const showAreaValid = !isLoginMode && regArea !== '' && regArea !== undefined && !hasAreaError;
 
     if (isAuthenticated) {
         return (
@@ -93,6 +111,7 @@ function Login() {
             <div className="feedback-container">
                 <div className="brand-header">
                     <div className="brand-icon">
+                        <span className="material-symbols-outlined">chat</span>
                         <span className="material-symbols-outlined">chat</span>
                     </div>
                     <h1 className="tittle">Feedback Collector</h1>
@@ -134,18 +153,25 @@ function Login() {
                         {error?.field === 'regName' && <span className="field-error">{error.message}</span>}
                     </div>
 
+
                     <div className="form-group show">
                         <label className="label-field">Email</label>
                         <input
-                            className={`input-name ${(error?.field === 'loginEmail' || error?.field === 'regEmail') ? 'input-invalid' : ''
+                            className={`input-name ${hasEmailError ? 'input-invalid' : showRegisterEmailValid ? 'input-valid' : ''
                                 }`}
                             type="email"
-                            value={activeForm === 'login' ? loginEmail : regEmail}
-                            onChange={(e) => activeForm === 'login' ? setLoginEmail(e.target.value) : setRegEmail(e.target.value)}
+                            value={isLoginMode ? loginEmail : regEmail}
+                            onChange={(e) => isLoginMode ? setLoginEmail(e.target.value) : setRegEmail(e.target.value)}
                         />
-                        {activeForm === 'login' && error?.field === 'loginEmail' && <span className="field-error">{error.message}</span>}
-                        {activeForm === 'register' && error?.field === 'regEmail' && <span className="field-error">{error.message}</span>}
+                        {isLoginMode && error?.field === 'loginEmail' && <span className="field-error">{error.message}</span>}
+                        {!isLoginMode && error?.field === 'regEmail' && <span className="field-error">{error.message}</span>}
+                        {showRegisterEmailValid && (
+                            <span className="field-valid">
+                                Email is available
+                            </span>
+                        )}
                     </div>
+
 
                     <div className={activeForm === 'register' ? 'form-row' : ''}>
                         <div className="form-group show">
@@ -154,9 +180,11 @@ function Login() {
                                 className={`input-password ${(error?.field === 'loginPassword' || error?.field === 'regPassword') ? 'input-invalid' : ''
                                     }`}
                                 type="password"
-                                value={activeForm === 'login' ? loginPassword : regPassword}
-                                onChange={(e) => activeForm === 'login' ? setLoginPassword(e.target.value) : setRegPassword(e.target.value)}
+                                value={isLoginMode ? loginPassword : regPassword}
+                                onChange={(e) => isLoginMode ? setLoginPassword(e.target.value) : setRegPassword(e.target.value)}
                             />
+                            {isLoginMode && error?.field === 'loginPassword' && <span className="field-error">{error.message}</span>}
+                            {!isLoginMode && error?.field === 'regPassword' && <span className="field-error">{error.message}</span>}
                             {activeForm === 'login' && error?.field === 'loginPassword' && <span className="span field-error">{error.message}</span>}
                             {activeForm === 'register' && error?.field === 'regPassword' && <span className="span field-error">{error.message}</span>}
                         </div>
@@ -188,8 +216,37 @@ function Login() {
                         </div>
                     </div>
 
+
                     <div className={`form-group ${activeForm === 'register' ? 'show' : ''}`}>
                         <label className="label-field">Area</label>
+
+                        <div className={hasAreaError ? 'dropdown-invalid' : showAreaValid ? 'dropdown-valid' : ''}>
+                            <DropdownSelect
+                                id="register-area"
+                                label="Area"
+                                value={regArea}
+                                options={[
+                                    { value: '', label: 'Select an area' },
+                                    ...areas.map((area) => ({
+                                        value: area.name,
+                                        label: area.name,
+                                    }))
+                                ]}
+                                onChange={setRegArea}
+                            />
+                        </div>
+                        {showAreaValid ? (
+                            <span className="field-valid">
+                                Area confirmed.
+                            </span>
+                        ) : (
+                            <>
+                                <label className="subtitle" style={{ marginBottom: '0', marginTop: '5px' }}>
+                                    Choose the area this IC belongs to.
+                                </label>
+                                {hasAreaError && <span className="field-error">{error?.message}</span>}
+                            </>
+                        )}
                         <DropdownSelect
                             id="register-area"
                             label="Area"
@@ -202,8 +259,12 @@ function Login() {
                         />
                     </div>
 
-                    <button className="btn-get-into" type="submit" disabled={isLoggingIn} style={{ opacity: isLoggingIn ? 0.55 : 1 }}>
-                        {activeForm === 'login' ? (isLoggingIn ? 'Signing In...' : 'Sign In') : 'Create Account'}
+                    <button
+                        className="btn-get-into"
+                        type="submit"
+                        disabled={isLoginMode && isLoggingIn}
+                    >
+                        {isLoginMode ? (isLoggingIn ? 'Signing In...' : 'Sign In') : 'Create Account'}
                     </button>
                 </form>
             </div>

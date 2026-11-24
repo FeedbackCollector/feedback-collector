@@ -18,6 +18,10 @@ export interface TypeError {
     message: string;
 }
 
+export const isValidEmail = (email: string): boolean => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+};
+
 interface AuthState {
     activeForm: FormType;
     isAuthenticated: boolean;
@@ -28,17 +32,21 @@ interface AuthState {
     clearError: () => void;
     loginEmail: string;
     loginPassword: string;
+    isLoginEmailValid: boolean;
     setLoginEmail: (email: string) => void;
     setLoginPassword: (password: string) => void;
-    loginSubmit: () => Promise<boolean>;
+    loginSubmit: () => Promise<boolean>; 
     regName: string;
     regEmail: string;
     regPassword: string;
     regConfirmPassword: string;
+    regArea: string;
+    isRegEmailValid: boolean;
     setRegName: (name: string) => void;
     setRegEmail: (email: string) => void;
     setRegPassword: (password: string) => void;
     setRegConfirmPassword: (confirmPassword: string) => void;
+    setRegArea: (area: string) => void;
     createAccount: () => Promise<string | null>;
     forgotEmail: string;
     resetPassword: string;
@@ -61,6 +69,8 @@ export const useAuthStore = create<AuthState>()(
             error: null,
             loginEmail: '',
             loginPassword: '',
+            isLoginEmailValid: false,
+
             regName: '',
             regEmail: '',
             regPassword: '',
@@ -68,14 +78,27 @@ export const useAuthStore = create<AuthState>()(
             forgotEmail: '',
             resetPassword: '',
             resetConfirmPassword: '',
+            regArea: '',
+            isRegEmailValid: false,
+
             switchForm: (form) => set({ activeForm: form, error: null }),
             clearError: () => set({ error: null }),
-            setLoginEmail: (loginEmail) => set({ loginEmail, error: null }),
+
+            setLoginEmail: (loginEmail) => set({ 
+                loginEmail, 
+                isLoginEmailValid: isValidEmail(loginEmail), 
+                error: null 
+            }),
             setLoginPassword: (loginPassword) => set({ loginPassword, error: null }),
             setRegName: (regName) => set({ regName, error: null }),
-            setRegEmail: (regEmail) => set({ regEmail, error: null }),
+            setRegEmail: (regEmail) => set({ 
+                regEmail, 
+                isRegEmailValid: isValidEmail(regEmail), 
+                error: null 
+            }),
             setRegPassword: (regPassword) => set({ regPassword, error: null }),
             setRegConfirmPassword: (regConfirmPassword) => set({ regConfirmPassword, error: null }),
+            setRegArea: (regArea) => set({ regArea, error: null }),
             setForgotEmail: (forgotEmail) => set({ forgotEmail, error: null }),
             setResetPassword: (resetPassword) => set({ resetPassword, error: null }),
             setResetConfirmPassword: (resetConfirmPassword) => set({ resetConfirmPassword, error: null }),
@@ -90,7 +113,7 @@ export const useAuthStore = create<AuthState>()(
                     set({ error: { field: 'loginPassword', message: 'Enter your password.' } });
                     return false;
                 }
-                if (!loginEmail.includes('@')) {
+                if (!isValidEmail(loginEmail)) {
                     set({ error: { field: 'loginEmail', message: 'Enter a valid email address' } });
                     return false;
                 }
@@ -109,8 +132,11 @@ export const useAuthStore = create<AuthState>()(
                         ) as User;
                         let currentUser = decodedUser;
                         const usersResponse = await fetch(`${API_URL}/users`, {
-                            headers: { Authorization: `Bearer ${token}` }
+                            headers: {
+                                Authorization: `Bearer ${token}`
+                            }
                         });
+
                         if (usersResponse.ok) {
                             const usersData = await usersResponse.json();
                             const userFromList = Array.isArray(usersData.data)
@@ -118,6 +144,7 @@ export const useAuthStore = create<AuthState>()(
                                 : undefined;
                             if (userFromList) currentUser = { ...decodedUser, ...userFromList };
                         }
+
                         set({
                             token,
                             user: {
@@ -149,12 +176,13 @@ export const useAuthStore = create<AuthState>()(
             },
 
             createAccount: async () => {
-                const { regName, regEmail, regPassword, regConfirmPassword } = get();
+                const { regName, regEmail, regPassword, regConfirmPassword, regArea } = get();
+
                 if (!regName.trim()) {
                     set({ error: { field: 'regName', message: 'Enter your name' } });
                     return null;
                 }
-                if (!regEmail.includes('@')) {
+                if (!isValidEmail(regEmail)) {
                     set({ error: { field: 'regEmail', message: 'Enter a valid email address' } });
                     return null;
                 }
@@ -166,6 +194,11 @@ export const useAuthStore = create<AuthState>()(
                     set({ error: { field: 'regConfirmPassword', message: "Passwords don't match" } });
                     return null;
                 }
+                if (!regArea) {
+                    set({ error: { field: 'regArea', message: 'Area is required.' } });
+                    return null;
+                }
+
                 try {
                     const respuesta = await fetch(`${API_URL}/auth/register`, {
                         method: 'POST',
@@ -179,16 +212,13 @@ export const useAuthStore = create<AuthState>()(
                         useToastStore.getState().addToast(successMessage, 'success');
                         return successMessage;
                     } else {
-                        set({
-                            error: {
-                                field: 'regEmail',
-                                message: datos.message || datos.error || datos.mensaje || 'Error creating account.'
-                            }
+                        set({ 
+                            error: { field: 'regArea', message: datos.message || datos.error || 'Registration failed.' } 
                         });
                         return null;
                     }
                 } catch (error) {
-                    set({ error: { field: 'regName', message: 'Server connection error.' } });
+                    set({ error: { field: 'regArea', message: 'Server connection error.' } });
                     return null;
                 }
             },
