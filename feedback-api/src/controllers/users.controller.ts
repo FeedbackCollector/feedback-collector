@@ -49,6 +49,7 @@ export async function register(req: Request, res: Response) {
     const result = await registerService(req.body.email, req.body.password , req.body.name , req.body.area_id);
     if (result === "AREA_NOT_FOUND") return res.status(400).json({ error: "Area not found" });
     if (result === "EMAIL_TAKEN") return res.status(409).json({ error: "Email already registered" });
+    if (result === "APPROVED") return res.status(201).json({ message: "Account created and approved", status: "approved" });
     return res.status(201).json({ message: "Registration pending approval", status: "pending" });
 }
 

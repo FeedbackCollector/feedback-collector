@@ -1,49 +1,51 @@
-const BREVO_URL = 'https://api.brevo.com/v3/smtp/email';
+import { readFileSync } from 'node:fs';
+
+const RESEND_URL = 'https://api.resend.com/emails';
+const LOGO_CID = 'telus-digital-logo';
 
 const escapeHtml = (value: string) =>
     value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 async function sendMail(to: string, toName: string, subject: string, text: string, html: string): Promise<void> {
-    const apiKey = process.env.BREVO_API_KEY;
+    const apiKey = process.env.RESEND_API_KEY;
     const senderEmail = process.env.MAIL_FROM_EMAIL;
     if (!apiKey || !senderEmail) {
-        console.warn(`BREVO_API_KEY or MAIL_FROM_EMAIL is not set: skipping email "${subject}"`);
+        console.warn(`RESEND_API_KEY or MAIL_FROM_EMAIL is not set: skipping email "${subject}"`);
         return;
     }
 
-    const response = await fetch(BREVO_URL, {
+    const senderName = process.env.MAIL_FROM_NAME ?? 'Feedback Collector';
+    const response = await fetch(RESEND_URL, {
         method: 'POST',
-        headers: { 'api-key': apiKey, 'Content-Type': 'application/json', Accept: 'application/json' },
+        headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify({
-            sender: { name: process.env.MAIL_FROM_NAME ?? 'Feedback Collector', email: senderEmail },
-            to: [{ email: to, name: toName }],
+            from: `${senderName} <${senderEmail}>`,
+            to: [`${toName} <${to}>`],
             subject,
-            textContent: text,
-            htmlContent: html,
+            text,
+            html,
+            attachments: [
+                {
+                    filename: 'telus-digital-logo.jpg',
+                    content: readFileSync(new URL('../../assets/telus-digital-logo.jpg', import.meta.url)).toString('base64'),
+                    content_id: LOGO_CID,
+                },
+            ],
         }),
         signal: AbortSignal.timeout(10_000),
     });
 
     if (!response.ok) {
         const body = await response.json().catch(() => ({})) as { message?: string };
-        throw new Error(`Brevo responded ${response.status}: ${body.message ?? 'unknown error'}`);
+        throw new Error(`Resend responded ${response.status}: ${body.message ?? 'unknown error'}`);
     }
 }
 
 const BRAND_PURPLE = '#4B286D';
 const BRAND_GREEN = '#66CC00';
 
-// The logo is served by this API (/assets). It needs a public https URL to render in mail clients.
-function logoUrl(): string | undefined {
-    const base = (process.env.PUBLIC_API_URL ?? '').replace(/\/+$/, '');
-    return base ? `${base}/assets/telus-digital-logo.jpg` : undefined;
-}
-
 function renderLayout(name: string, paragraphs: string[], button?: { label: string; url: string }): string {
-    const logo = logoUrl();
-    const logoHtml = logo
-        ? `<img src="${escapeHtml(logo)}" width="160" alt="TELUS Digital" style="display:block;margin:0 auto;border:0;height:auto;">`
-        : `<span style="font-size:22px;font-weight:bold;color:${BRAND_PURPLE};">TELUS Digital</span>`;
+    const logoHtml = `<img src="cid:${LOGO_CID}" width="160" alt="TELUS Digital" style="display:block;margin:0 auto;border:0;height:auto;">`;
     const body = paragraphs.map((p) => `<p style="margin:0 0 16px;">${p}</p>`).join('');
     const buttonHtml = button
         ? `<p style="margin:24px 0;text-align:center;"><a href="${escapeHtml(button.url)}" style="display:inline-block;background:${BRAND_PURPLE};color:#ffffff;text-decoration:none;font-weight:bold;padding:12px 28px;border-radius:6px;">${escapeHtml(button.label)}</a></p>`
@@ -79,6 +81,23 @@ export async function sendPendingApprovalEmail(to: string, name: string): Promis
     );
 }
 
+export async function sendEmailPreApprovedEmail(to: string): Promise<void> {
+    const appUrl = process.env.APP_URL?.replace(/\/+$/, '');
+    const textLink = appUrl ? `\n\nCreate your account here: ${appUrl}` : '';
+
+    await sendMail(
+        to,
+        to,
+        'Your email has been approved',
+        `Hi,\n\nYour email has been approved to join Feedback Collector. Create your account with this email address to get started.${textLink}\n\nFeedback Collector - TELUS Digital`,
+        renderLayout(
+            'there',
+            ['Your email has been approved to join Feedback Collector. Create your account with this email address to get started.'],
+            appUrl ? { label: 'Create your account', url: appUrl } : undefined,
+        ),
+    );
+}
+
 export async function sendAccountApprovedEmail(to: string, name: string): Promise<void> {
     const appUrl = process.env.APP_URL?.replace(/\/+$/, '');
     const textLink = appUrl ? `\n\nLog in here: ${appUrl}` : '';
@@ -87,10 +106,10 @@ export async function sendAccountApprovedEmail(to: string, name: string): Promis
         to,
         name,
         'Your account has been approved',
-        `Hi ${name},\n\nGood news: your account has been approved and you can now log in.${textLink}\n\nFeedback Collector - TELUS Digital`,
+        `Hi ${name},\n\nYour account has been approved and you can now log in.${textLink}\n\nFeedback Collector - TELUS Digital`,
         renderLayout(
             name,
-            ['Good news: your account has been approved and you can now log in.'],
+            ['Your account has been approved and you can now log in.'],
             appUrl ? { label: 'Log in to Feedback Collector', url: appUrl } : undefined,
         ),
     );
