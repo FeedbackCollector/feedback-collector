@@ -7,6 +7,7 @@ const TAB_BY_SLUG: Record<string, ManagementTab> = {
   managers: 'Managers',
   ics: 'ICs',
   projects: 'Projects',
+  directors: 'Directors',
 };
 
 export default function Management() {

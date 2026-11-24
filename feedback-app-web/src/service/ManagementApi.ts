@@ -238,6 +238,25 @@ export async function loadManagementData(
     };
   }
 
+  if (tab === 'Directors') {
+    const [directorAccounts, managerAccounts] = await Promise.all([
+      getAllPages<APIUser>(withQuery('/users', 'role=director'), token),
+      getAllPages<APIUser>(withQuery('/users', 'role=manager'), token),
+    ]);
+    const directors = directorAccounts.filter((director) => director.status !== 'pending');
+    const managers = managerAccounts.filter((manager) => manager.status !== 'pending');
+    return {
+      rows: directors.map((director) => ({
+        id: director.id,
+        name: director.name,
+        email: director.email,
+      })),
+      areas: [],
+      managers: managers.map(({ id, name }) => ({ id, name })),
+      pendingAccounts: [],
+    };
+  }
+
   const [projects, feedback, managerAccounts] = await Promise.all([
     getList<APIProject>('/projects', token),
     getAllPages<APIFeedback>('/feedback', token),
@@ -271,6 +290,10 @@ export async function saveManagementRow(
   values: ManagementFormValues,
   token: string
 ): Promise<void> {
+  if (tab === 'Directors') {
+    throw new Error('Director assignments cannot be changed here.');
+  }
+
   const method = id === null ? 'POST' : 'PATCH';
   const path = tab === 'Areas'
     ? '/areas'
@@ -351,6 +374,10 @@ export async function deleteManagementRow(
   id: number,
   token: string
 ): Promise<void> {
+  if (tab === 'Directors') {
+    throw new Error('Directors cannot be deleted from Management.');
+  }
+
   const path = tab === 'Areas'
     ? '/areas'
     : tab === 'Managers'

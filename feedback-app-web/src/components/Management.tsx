@@ -16,7 +16,7 @@ import type {
   ManagementRow,
   ManagementTab,
 } from '../types/managementTypes';
-import { useAuthStore } from '../store/authStore';
+import { useAuthStore, type User } from '../store/authStore';
 import { normalizeSearchText } from '../utils/search';
 import '../styles/Management.css';
 import {useToastStore} from '../store/toastStore';
@@ -26,7 +26,7 @@ import DropdownSelect from './DropdownSelect';
 
 type ViewMode = 'table' | 'cards';
 
-const TABS: ManagementTab[] = ['Areas', 'Managers', 'ICs', 'Projects'];
+const TABS: ManagementTab[] = ['Areas', 'Managers', 'ICs', 'Projects', 'Directors'];
 
 function formatManagementName(name: string, tab: ManagementTab): string {
   return tab === 'Managers' || tab === 'ICs' ? formatPersonName(name) : name;
@@ -64,6 +64,11 @@ const COLUMNS: Record<ManagementTab, { label: string; key: keyof ManagementRow }
     { label: 'Entries', key: 'entries' },
     { label: 'Managers', key: 'managerNames' },
   ],
+  Directors: [
+    { label: 'Name', key: 'name' },
+    { label: 'Email', key: 'email' },
+    { label: 'Managers', key: 'managers' },
+  ],
 };
 
 const TAB_SINGULAR: Record<ManagementTab, string> = {
@@ -71,6 +76,7 @@ const TAB_SINGULAR: Record<ManagementTab, string> = {
   Managers: 'Manager',
   ICs: 'IC',
   Projects: 'Project',
+  Directors: 'Director',
 };
 
 const EMPTY_FORM: ManagementFormValues = {
@@ -91,6 +97,32 @@ function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+function getRowsForTab(data: ManagementData, tab: ManagementTab, user: User | null): ManagementRow[] {
+  if (tab !== 'Directors') return data.rows;
+
+  const directorRows = user?.role.toLowerCase() === 'director' && user.id !== undefined
+    ? [
+        ...data.rows.filter((row) => row.id !== user.id),
+        {
+          id: user.id,
+          name: user.name ?? user.email,
+          email: user.email,
+        },
+      ]
+    : data.rows;
+  const baseManagerCount = directorRows.length > 0
+    ? Math.floor(data.managers.length / directorRows.length)
+    : 0;
+  const remainingManagers = directorRows.length > 0
+    ? data.managers.length % directorRows.length
+    : 0;
+
+  return directorRows.map((row, index) => ({
+    ...row,
+    managers: baseManagerCount + (index < remainingManagers ? 1 : 0),
+  }));
+}
+
 type DeleteTarget = {
   id: number;
   name: string;
@@ -106,6 +138,7 @@ type ManagementCompProps = {
 
 function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
   const token = useAuthStore((state) => state.token);
+  const user = useAuthStore((state) => state.user);
   const [viewMode, setViewMode] = useState<ViewMode>('table');
   const viewContainerRef = useRef<HTMLDivElement>(null);
   const shouldAnimateViewChange = useRef(false);
@@ -212,7 +245,7 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
     loadManagementData(activeTab, token)
       .then((data) => {
         if (isCurrent) {
-          setRows(data.rows);
+          setRows(getRowsForTab(data, activeTab, user));
           setAreas(data.areas);
           setManagers(data.managers);
           setPendingAccounts(data.pendingAccounts);
@@ -231,7 +264,7 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
     return () => {
       isCurrent = false;
     };
-  }, [activeTab, token]);
+  }, [activeTab, token, user]);
 
   const openAddDialog = () => {
     setEditingRow(null);
@@ -291,7 +324,7 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
   const refreshRows = async () => {
     if (!token) throw new Error('You must be logged in to load management data.');
     const data = await loadManagementData(activeTab, token);
-    setRows(data.rows);
+    setRows(getRowsForTab(data, activeTab, user));
     setAreas(data.areas);
     setManagers(data.managers);
     setPendingAccounts(data.pendingAccounts);
@@ -595,7 +628,7 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
         <div className="management-toolbar">
 
           <div className="management-view-toggle" role="group" aria-label="Management view">
-            {activeTab !== 'Managers' && (
+            {activeTab !== 'Managers' && activeTab !== 'Directors' && (
             <button
               type="button"
               className="management-add-button"
@@ -718,7 +751,7 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
           <p className="management-empty-state">No {activeTab.toLowerCase()} to display.</p>
             ) : viewMode === 'table' ? (
           <div className={`management-table-wrap${activeTab === 'Managers' ? ' management-managers-table-wrap' : ''}`}>
-            <table className={`management-table${activeTab === 'Managers' ? ' management-managers-table' : ''}${activeTab === 'Areas' || activeTab === 'Projects' ? ' management-scroll-table' : ''}${activeTab === 'Projects' ? ' management-projects-table' : ''}`}>
+            <table className={`management-table${activeTab === 'Managers' ? ' management-managers-table' : ''}${activeTab === 'Areas' || activeTab === 'Projects' ? ' management-scroll-table' : ''}${activeTab === 'Projects' ? ' management-projects-table' : ''}${activeTab === 'Directors' ? ' management-directors-table' : ''}`}>
               <thead>
                 <tr>
                   {COLUMNS[activeTab].map(({ label, key }) => (
@@ -763,6 +796,25 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
                       </td>
                     ))}
                     <td className="management-actions-cell">
+                      {activeTab === 'Directors' && (
+                        <>
+                          <button
+                            type="button"
+                            className="management-director-action"
+                            aria-label={`Assign ICs to ${formatPersonName(row.name)}`}
+                          >
+                            <i className="fa-solid fa-user-plus" aria-hidden="true" />
+                            Assign ICs
+                          </button>
+                          <button
+                            type="button"
+                            className="management-director-action"
+                            aria-label={`Change managers for ${formatPersonName(row.name)}`}
+                          >
+                            Change managers
+                          </button>
+                        </>
+                      )}
                       {activeTab === 'Managers' && (
                         <button
                           type="button"
@@ -799,24 +851,28 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
                           <i className="fa-regular fa-message" aria-hidden="true" />
                         </button>
                       )}
-                      <button
-                        type="button"
-                        className="management-row-action"
-                        aria-label={`Edit ${formatManagementName(row.name, activeTab)}`}
-                        onClick={() => openEditDialog(row)}
-                        disabled={isMutating}
-                      >
-                        <i className="fa-solid fa-pen" aria-hidden="true" />
-                      </button>
-                      <button
-                        type="button"
-                        className="management-row-action"
-                        aria-label={`Delete ${row.name}`}
-                        onClick={() => requestDeleteRow(row)}
-                        disabled={isMutating}
-                      >
-                        <i className="fa-regular fa-trash-can" aria-hidden="true" />
-                      </button>
+                      {activeTab !== 'Directors' && (
+                        <>
+                          <button
+                            type="button"
+                            className="management-row-action"
+                            aria-label={`Edit ${formatManagementName(row.name, activeTab)}`}
+                            onClick={() => openEditDialog(row)}
+                            disabled={isMutating}
+                          >
+                            <i className="fa-solid fa-pen" aria-hidden="true" />
+                          </button>
+                          <button
+                            type="button"
+                            className="management-row-action"
+                            aria-label={`Delete ${row.name}`}
+                            onClick={() => requestDeleteRow(row)}
+                            disabled={isMutating}
+                          >
+                            <i className="fa-regular fa-trash-can" aria-hidden="true" />
+                          </button>
+                        </>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -830,6 +886,24 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
                 <div className="management-card-heading">
                   <h2>{formatManagementName(row.name, activeTab)}</h2>
                   <div className="management-card-actions">
+                    {activeTab === 'Directors' && (
+                      <>
+                        <button
+                          type="button"
+                          className="management-director-action"
+                          aria-label={`Assign ICs to ${formatPersonName(row.name)}`}
+                        >
+                          Assign ICs
+                        </button>
+                        <button
+                          type="button"
+                          className="management-director-action"
+                          aria-label={`Change managers for ${formatPersonName(row.name)}`}
+                        >
+                          Change managers
+                        </button>
+                      </>
+                    )}
                     {activeTab === 'Managers' && (
                       <button
                         type="button"
@@ -854,29 +928,36 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
                         <i className="fa-solid fa-user-plus" aria-hidden="true" />
                       </button>
                     )}
-                    <button
-                      type="button"
-                      className="management-row-action"
-                      aria-label={`Edit ${formatManagementName(row.name, activeTab)}`}
-                      onClick={() => openEditDialog(row)}
-                      disabled={isMutating}
-                    >
-                      <i className="fa-solid fa-pen" aria-hidden="true" />
-                    </button>
-                    <button
-                      type="button"
-                      className="management-row-action"
-                      aria-label={`Delete ${row.name}`}
-                      onClick={() => requestDeleteRow(row)}
-                      disabled={isMutating}
-                    >
-                      <i className="fa-regular fa-trash-can" aria-hidden="true" />
-                    </button>
+                    {activeTab !== 'Directors' && (
+                      <>
+                        <button
+                          type="button"
+                          className="management-row-action"
+                          aria-label={`Edit ${formatManagementName(row.name, activeTab)}`}
+                          onClick={() => openEditDialog(row)}
+                          disabled={isMutating}
+                        >
+                          <i className="fa-solid fa-pen" aria-hidden="true" />
+                        </button>
+                        <button
+                          type="button"
+                          className="management-row-action"
+                          aria-label={`Delete ${row.name}`}
+                          onClick={() => requestDeleteRow(row)}
+                          disabled={isMutating}
+                        >
+                          <i className="fa-regular fa-trash-can" aria-hidden="true" />
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
                 <dl>
                   {COLUMNS[activeTab].slice(1).map(({ label, key }) => (
-                    <div className="management-card-detail" key={key}>
+                    <div
+                      className={`management-card-detail${activeTab === 'Directors' && (key === 'email' || key === 'managers') ? ' management-director-centered-detail' : ''}`}
+                      key={key}
+                    >
                       <dt>{label}</dt>
                       <dd>{renderCell(row, key)}</dd>
                     </div>

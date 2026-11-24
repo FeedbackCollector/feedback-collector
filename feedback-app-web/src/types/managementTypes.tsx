@@ -1,4 +1,4 @@
-export type ManagementTab = 'Areas' | 'Managers' | 'ICs' | 'Projects';
+export type ManagementTab = 'Areas' | 'Managers' | 'ICs' | 'Projects' | 'Directors';
 
 export interface ManagementRow {
   id: number;
