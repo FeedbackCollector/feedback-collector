@@ -12,6 +12,7 @@ function Login() {
     const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
     const switchForm = useAuthStore((state) => state.switchForm);
     const logout = useAuthStore((state) => state.logout);
+    const clearError = useAuthStore((state) => state.clearError);
 
     const loginEmail = useAuthStore((state) => state.loginEmail);
     const loginPassword = useAuthStore((state) => state.loginPassword);
@@ -29,7 +30,7 @@ function Login() {
     const setRegPassword = useAuthStore((state) => state.setRegPassword);
     const setRegConfirmPassword = useAuthStore((state) => state.setRegConfirmPassword);
     const createAccount = useAuthStore((state) => state.createAccount);
-    
+
     const [areas, setAreas] = useState<Area[]>([]);
     const [selectedArea, setSelectedArea] = useState('');
     const [isLoggingIn, setIsLoggingIn] = useState(false);
@@ -43,36 +44,31 @@ function Login() {
     }, [isAuthenticated, navigate]);
 
     useEffect(() => {
-    Promise.allSettled([obtainAreas()])
-      .then(([areaResult]) => {
-
-        if (areaResult.status === 'fulfilled') {
-          setAreas(areaResult.value);
-          setSelectedArea(areaResult.value[0]?.name ?? '');
-        } else {
-          const message = areaResult.reason instanceof Error
-            ? areaResult.reason.message
-            : String(areaResult.reason);
-          console.error('Could not load areas:', areaResult.reason);
-
-        }
-      })
-    }, [])
+        Promise.allSettled([obtainAreas()])
+            .then(([areaResult]) => {
+                if (areaResult.status === 'fulfilled') {
+                    setAreas(areaResult.value);
+                    setSelectedArea(areaResult.value?.[0]?.name ?? '');
+                } else {
+                    const message = areaResult.reason instanceof Error
+                        ? areaResult.reason.message
+                        : String(areaResult.reason);
+                    console.error('Could not load areas:', message);
+                }
+            });
+    }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
         if (activeForm === 'login') {
             if (isLoggingIn) return;
-
             setIsLoggingIn(true);
-
             try {
                 await loginSubmit();
             } finally {
                 setIsLoggingIn(false);
             }
-
         } else {
             await createAccount();
         }
@@ -97,7 +93,7 @@ function Login() {
             <div className="feedback-container">
                 <div className="brand-header">
                     <div className="brand-icon">
-                       <span className="material-symbols-outlined">chat</span>
+                        <span className="material-symbols-outlined">chat</span>
                     </div>
                     <h1 className="tittle">Feedback Collector</h1>
                 </div>
@@ -108,6 +104,7 @@ function Login() {
                         type="button"
                         className={`tab-btn ${activeForm === 'login' ? 'active' : ''}`}
                         onClick={() => {
+                            clearError();
                             switchForm('login');
                         }}
                     >
@@ -117,6 +114,7 @@ function Login() {
                         type="button"
                         className={`tab-btn ${activeForm === 'register' ? 'active' : ''}`}
                         onClick={() => {
+                            clearError();
                             switchForm('register');
                         }}
                     >
@@ -125,7 +123,6 @@ function Login() {
                 </div>
 
                 <form onSubmit={handleSubmit} className="auth-form" noValidate>
-
                     <div className={`form-group ${activeForm === 'register' ? 'show' : ''}`}>
                         <label className="label-field">Name</label>
                         <input
@@ -140,9 +137,8 @@ function Login() {
                     <div className="form-group show">
                         <label className="label-field">Email</label>
                         <input
-                            className={`input-name ${
-                                (error?.field === 'loginEmail' || error?.field === 'regEmail') ? 'input-invalid' : ''
-                            }`}
+                            className={`input-name ${(error?.field === 'loginEmail' || error?.field === 'regEmail') ? 'input-invalid' : ''
+                                }`}
                             type="email"
                             value={activeForm === 'login' ? loginEmail : regEmail}
                             onChange={(e) => activeForm === 'login' ? setLoginEmail(e.target.value) : setRegEmail(e.target.value)}
@@ -155,16 +151,30 @@ function Login() {
                         <div className="form-group show">
                             <label className="label-field">Password</label>
                             <input
-                                className={`input-password ${
-                                    (error?.field === 'loginPassword' || error?.field === 'regPassword') ? 'input-invalid' : ''
-                                }`}
+                                className={`input-password ${(error?.field === 'loginPassword' || error?.field === 'regPassword') ? 'input-invalid' : ''
+                                    }`}
                                 type="password"
                                 value={activeForm === 'login' ? loginPassword : regPassword}
                                 onChange={(e) => activeForm === 'login' ? setLoginPassword(e.target.value) : setRegPassword(e.target.value)}
                             />
-                            {activeForm === 'login' && error?.field === 'loginPassword' && <span className="field-error">{error.message}</span>}
-                            {activeForm === 'register' && error?.field === 'regPassword' && <span className="field-error">{error.message}</span>}
+                            {activeForm === 'login' && error?.field === 'loginPassword' && <span className="span field-error">{error.message}</span>}
+                            {activeForm === 'register' && error?.field === 'regPassword' && <span className="span field-error">{error.message}</span>}
                         </div>
+
+                        {activeForm === 'login' && (
+                            <div className="forgot-link-wrapper">
+                                <button
+                                    type="button"
+                                    className="btn-forgot-link"
+                                    onClick={() => {
+                                        clearError();
+                                        navigate('/forgot-password');
+                                    }}
+                                >
+                                    Forgot password?
+                                </button>
+                            </div>
+                        )}
 
                         <div className={`form-group ${activeForm === 'register' ? 'show' : ''}`}>
                             <label className="label-field">Confirm Password</label>
@@ -180,28 +190,24 @@ function Login() {
 
                     <div className={`form-group ${activeForm === 'register' ? 'show' : ''}`}>
                         <label className="label-field">Area</label>
-                            <DropdownSelect
-                                id="register-area"
-                                label="Area"
-                                value={selectedArea}
-                                options={areas.map((area) => ({
-                                    value: area.name,
-                                    label: area.name,
-                                }))}
-                                onChange={setSelectedArea}
-                                />
+                        <DropdownSelect
+                            id="register-area"
+                            label="Area"
+                            value={selectedArea}
+                            options={areas.map((area) => ({
+                                value: area.name,
+                                label: area.name,
+                            }))}
+                            onChange={setSelectedArea}
+                        />
                     </div>
 
-                    <button className="btn-get-into" type="submit" disabled={activeForm === 'login' && isLoggingIn}>
-                        {activeForm === 'login' 
-                        ? isLoggingIn ? 'Signing In...' : 'Sign In'
-                        : 'Create Account'}
+                    <button className="btn-get-into" type="submit" disabled={isLoggingIn} style={{ opacity: isLoggingIn ? 0.55 : 1 }}>
+                        {activeForm === 'login' ? (isLoggingIn ? 'Signing In...' : 'Sign In') : 'Create Account'}
                     </button>
                 </form>
-
             </div>
         </div>
     );
 }
-
 export default Login;

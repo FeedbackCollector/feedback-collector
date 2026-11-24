@@ -150,7 +150,6 @@
 
 .label-field {
     font-size: 11px;
-    font-weight: 600;
     text-transform: uppercase;
     color: var(--text-muted);
     margin-bottom: 8px;
@@ -206,10 +205,11 @@
     text-align: left;
 }
 
+
 .btn-get-into {
     width: 100%;
     padding: 13px;
-    background-color: var(--primary);
+    background-color: #A796BD; 
     color: var(--surface);
     border: none;
     border-radius: 999px;
@@ -217,11 +217,95 @@
     font-weight: 600;
     cursor: pointer;
     margin-top: 10px;
-    transition: background-color 0.2s, opacity 0.2s;
-    opacity: 0.55; 
+    transition: background-color 0.2s ease, opacity 0.2s ease;
 }
 
+
 .btn-get-into:hover {
-    opacity: 0.9;
-    background-color: var(--primary-dk);
+    background-color: var(--primary);
+}
+
+.btn-get-into:disabled {
+    background-color: #D1C7BD;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.forgot-link-wrapper {
+    display: flex;
+    justify-content: flex-start;
+    margin-top: 4px;
+    margin-bottom: 16px;
+}
+
+
+.btn-forgot-link {
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: 12px;
+    color: var(--primary);
+    cursor: pointer;
+    text-align: left;
+    transition: color 0.2s ease;
+}
+
+.btn-forgot-link:hover {
+    color: var(--primary-dk);
+    text-decoration: underline;
+}
+
+.forgot-form {
+    text-align: left;
+}
+
+.forgot-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+    margin: 0 0 8px 0;
+}
+
+.forgot-description {
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.5;
+    margin: 0 0 24px 0;
+}
+
+.btn-back-login {
+    display: block;
+    width: 100%;
+    background: none;
+    border: none;
+    margin-top: 16px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+    cursor: pointer;
+    text-align: center;
+    transition: color 0.2s ease;
+}
+
+.btn-back-login:hover {
+    color: var(--text);
+    text-decoration: underline;
+}
+
+.btn-outline-secondary {
+    width: 100%;
+    padding: 12px;
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.btn-outline-secondary:hover {
+    background-color: var(--bg);
+    border-color: var(--text-muted);
 }
