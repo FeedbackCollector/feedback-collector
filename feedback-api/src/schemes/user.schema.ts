@@ -40,3 +40,12 @@ export const listUsersQueryScheme = Joi.object({
     page: Joi.number().integer().min(1),
     limit: Joi.number().integer().min(1).max(100),
 });
+
+export const forgotPasswordScheme = Joi.object({
+    email: Joi.string().trim().lowercase().email().required(),
+});
+
+export const resetPasswordScheme = Joi.object({
+    token: Joi.string().trim().required(),
+    password: Joi.string().min(8).max(72).required(),
+});
