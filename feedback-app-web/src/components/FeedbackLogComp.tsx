@@ -167,14 +167,20 @@ function FeedbackLogComp() {
               page,
               PAGE_SIZE,
               {
-                managerId: managerFilter ? Number(managerFilter) : undefined,
+                managerId: Number(managerFilter),
                 projectId: filters.projectId,
                 score: filters.score,
                 sortBy: filters.sortBy,
               },
               controller.signal,
             )
-          : await obtainFeedbackPage(page, PAGE_SIZE, filters, controller.signal);
+          : await obtainFeedbackPage(
+              page,
+              PAGE_SIZE,
+              // Managers only see the feedback of the ICs assigned to them.
+              { ...filters, managerId: isDirector ? undefined : user?.id },
+              controller.signal,
+            );
         if (cancelled) return;
         setFeedback(result.data ?? []);
         const lastPage = Math.max(result.pagination.totalPages, 1);
@@ -198,7 +204,7 @@ function FeedbackLogComp() {
       cancelled = true;
       controller.abort();
     };
-  }, [page, filters, target, managerFilter]);
+  }, [page, filters, target, managerFilter, isDirector, user?.id]);
 
   useEffect(() => {
     if (!shouldAnimateViewChange.current) return;
