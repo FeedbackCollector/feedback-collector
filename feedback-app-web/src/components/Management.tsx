@@ -20,6 +20,7 @@ import { useAuthStore, type User } from '../store/authStore';
 import { normalizeSearchText } from '../utils/search';
 import '../styles/Management.css';
 import {useToastStore} from '../store/toastStore';
+import PreApprovedEmails from './PreApprovedEmails';
 import LoadingOverlay from './LoadingOverlay';
 import { formatPersonName } from './formatPersonName';
 import DropdownSelect from './DropdownSelect';
@@ -692,6 +693,7 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
                 id="management-pending-requests"
                 aria-labelledby="management-requests-title"
               >
+                <PreApprovedEmails token={token} />
                 <h2 className="management-requests-title" id="management-requests-title">
                   Pending account requests ({pendingAccounts.length})
                 </h2>

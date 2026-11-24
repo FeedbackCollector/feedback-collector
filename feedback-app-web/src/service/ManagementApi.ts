@@ -369,6 +369,27 @@ export async function approvePendingAccount(id: number, token: string): Promise<
   await request(`/users/${id}/approve`, token, { method: 'PATCH' });
 }
 
+export interface PreApprovedEmail {
+  email: string;
+  created_at: string;
+}
+
+export async function listPreApprovedEmails(token: string): Promise<PreApprovedEmail[]> {
+  const result = await request<{ data: PreApprovedEmail[] }>('/pre-approvals', token);
+  return result.data;
+}
+
+export async function addPreApprovedEmail(email: string, token: string): Promise<void> {
+  await request('/pre-approvals', token, {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
+}
+
+export async function removePreApprovedEmail(email: string, token: string): Promise<void> {
+  await request(`/pre-approvals/${encodeURIComponent(email)}`, token, { method: 'DELETE' });
+}
+
 export async function deleteManagementRow(
   tab: ManagementTab,
   id: number,
