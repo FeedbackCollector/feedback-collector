@@ -1113,7 +1113,7 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
                 <dl>
                   {COLUMNS[activeTab].slice(1).map(({ label, key }) => (
                     <div
-                      className={`management-card-detail${activeTab === 'Directors' && (key === 'email' || key === 'managers' || key === 'ics') ? ' management-director-centered-detail' : ''}`}
+                      className={`management-card-detail${activeTab === 'Directors' ? ' management-director-card-detail' : ''}`}
                       key={key}
                     >
                       <dt>{label}</dt>

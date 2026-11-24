@@ -103,12 +103,11 @@ export async function updateUserService(data: UpdateUser, id: number): Promise<U
     return updated as User;
 }
 
-export async function deleteUserService(id: number, requesterId: number): Promise<"USER_NOT_FOUND" | "CANNOT_DELETE_SELF" | "MANAGER_HAS_NO_DIRECTOR" | "USER_HAS_ICS" | "USER_HAS_MANAGERS" | "USER_HAS_FEEDBACK" | "DELETED"> {
+export async function deleteUserService(id: number, requesterId: number): Promise<"USER_NOT_FOUND" | "CANNOT_DELETE_SELF" | "MANAGER_HAS_NO_DIRECTOR" | "USER_HAS_ICS" | "USER_HAS_MANAGERS" | "DELETED"> {
     const user = await UsersRepository.getPublicUserByID(id);
     if (!user) return "USER_NOT_FOUND";
     if (user.id === requesterId) return "CANNOT_DELETE_SELF";
     if (user.role === "manager" && user.director_id == null) return "MANAGER_HAS_NO_DIRECTOR";
-    if (await UsersRepository.userHasFeedback(id)) return "USER_HAS_FEEDBACK";
     if (user.role === "director") {
         if (await UsersRepository.directorHasManagers(id)) return "USER_HAS_MANAGERS";
         if (await UsersRepository.directorHasICs(id)) return "USER_HAS_ICS";

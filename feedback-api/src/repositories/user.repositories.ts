@@ -1,5 +1,11 @@
 import { fn, col, where } from "sequelize";
-import { User as UserModel, ICs as ICModel, Feedback as FeedbackModel, ManagerFeedback as ManagerFeedbackModel } from "../models/Index.ts";
+import {
+    User as UserModel,
+    ICs as ICModel,
+    Feedback as FeedbackModel,
+    ManagerFeedback as ManagerFeedbackModel,
+    ProjectManager as ProjectManagerModel,
+} from "../models/Index.ts";
 import { sequelize } from "../db/connection.ts";
 import { AccountStatus, User, UpdateUser, UserFilters, UsersPage } from "../types/user.ts";
 
@@ -111,6 +117,14 @@ export async function deleteUser(
 
         if (user.role === "manager") {
             if (user.director_id === null) return "MANAGER_HAS_NO_DIRECTOR";
+            await FeedbackModel.update(
+                { author_id: user.director_id },
+                { where: { author_id: id }, transaction },
+            );
+            await ManagerFeedbackModel.update(
+                { author_id: user.director_id },
+                { where: { author_id: id }, transaction },
+            );
             await ICModel.update(
                 {
                     manager_id: null,
@@ -118,6 +132,24 @@ export async function deleteUser(
                 },
                 { where: { manager_id: id }, transaction },
             );
+            await ProjectManagerModel.destroy({
+                where: { manager_id: id },
+                transaction,
+            });
+            await ManagerFeedbackModel.destroy({
+                where: { manager_id: id },
+                transaction,
+            });
+        }
+        if (user.role === "director") {
+            await FeedbackModel.destroy({
+                where: { author_id: id },
+                transaction,
+            });
+            await ManagerFeedbackModel.destroy({
+                where: { author_id: id },
+                transaction,
+            });
         }
 
         return (await UserModel.destroy({ where: { id }, transaction })) > 0 ? "DELETED" : "USER_NOT_FOUND";

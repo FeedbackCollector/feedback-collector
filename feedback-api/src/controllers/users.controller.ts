@@ -36,7 +36,6 @@ export async function remove(req: Request, res: Response) {
     if (result === "MANAGER_HAS_NO_DIRECTOR") return res.status(409).json({ error: "A manager must have a director before being deleted" });
     if (result === "USER_HAS_ICS") return res.status(409).json({ error: "User has ICs assigned" });
     if (result === "USER_HAS_MANAGERS") return res.status(409).json({ error: "User has managers assigned" });
-    if (result === "USER_HAS_FEEDBACK") return res.status(409).json({ error: "User has authored feedback" });
     return res.status(204).send();
 }
 

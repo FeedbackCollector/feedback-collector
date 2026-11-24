@@ -339,16 +339,19 @@
   text-align: center;
 }
 
-.management-director-centered-detail {
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  text-align: center;
+.management-director-card-detail {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  align-items: baseline;
+  justify-content: initial;
+  text-align: left;
 }
 
-.management-director-centered-detail dd {
+.management-director-card-detail dd {
+  min-width: 0;
   margin: 0;
+  overflow-wrap: anywhere;
+  text-align: left;
 }
 
 .management-director-action {
