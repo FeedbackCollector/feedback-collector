@@ -79,6 +79,23 @@ export async function sendPendingApprovalEmail(to: string, name: string): Promis
     );
 }
 
+export async function sendEmailPreApprovedEmail(to: string): Promise<void> {
+    const appUrl = process.env.APP_URL?.replace(/\/+$/, '');
+    const textLink = appUrl ? `\n\nCreate your account here: ${appUrl}` : '';
+
+    await sendMail(
+        to,
+        to,
+        'Your email has been approved',
+        `Hi,\n\nYour email has been approved to join Feedback Collector. Create your account with this email address to get started.${textLink}\n\nFeedback Collector - TELUS Digital`,
+        renderLayout(
+            'there',
+            ['Your email has been approved to join Feedback Collector. Create your account with this email address to get started.'],
+            appUrl ? { label: 'Create your account', url: appUrl } : undefined,
+        ),
+    );
+}
+
 export async function sendAccountApprovedEmail(to: string, name: string): Promise<void> {
     const appUrl = process.env.APP_URL?.replace(/\/+$/, '');
     const textLink = appUrl ? `\n\nLog in here: ${appUrl}` : '';
