@@ -11,6 +11,7 @@ import FeedbackLog from './pages/FeedbackLogPage.tsx'
 import ICTimeline from './pages/ICTimeline'
 import ManagerTimeline from './pages/ManagerTimeline'
 import Login from './pages/login'
+import ForgotPassword from './pages/ForgotPassword'
 import { ToastContainer } from './components/ToastContainer'
 
 const VALID_ROLES = ['manager', 'director']
@@ -81,6 +82,8 @@ function AppRoutes() {
       })()
     : [
       { path: '/', element: <Login /> },
+      { path: '/login', element: <Navigate to="/" replace /> }, 
+      { path: '/forgot-password', element: <ForgotPassword /> }, 
       { path: '*', element: <Navigate to="/" replace /> },
     ]
 
