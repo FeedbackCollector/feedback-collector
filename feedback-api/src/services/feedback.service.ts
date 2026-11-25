@@ -33,24 +33,15 @@ async function checkReferences(data: UpdateFeedback): Promise<ReferenceError | n
 }
 
 export async function getAllFeedbacksService(page: number, limit: number, filters: FeedbackFilters, user: Caller) {
-    if (user.role === "director") return FeedbackRepository.getAllFeedbacks(page, limit, filters);
-
-    if (user.role === "manager" && Number.isInteger(user.id)) {
-        const projectIds = await getProjectIdsForManager(user.id);
-        return FeedbackRepository.getAllFeedbacks(page, limit, {
-            ...filters,
-            manager_id: user.id,
-            project_ids: projectIds,
-        });
+    if (user.role === "director" || user.role === "manager"){
+        return FeedbackRepository.getAllFeedbacks(page, limit, filters);
     }
-    return "FORBIDDEN" as const;
+    return "FORBIDDEN"
 }
 
 export async function getFeedbackByIdService(id: number, user: Caller): Promise<Feedback | "FEEDBACK_NOT_FOUND"> {
     const feedback = await FeedbackRepository.getFeedbackByID(id);
     if (!feedback) return "FEEDBACK_NOT_FOUND";
-
-    if (!(await canManageFeedback(user, feedback))) return "FEEDBACK_NOT_FOUND";
     return feedback;
 }
 

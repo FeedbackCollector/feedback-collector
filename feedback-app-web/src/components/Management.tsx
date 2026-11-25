@@ -18,6 +18,7 @@ import type {
   ManagementTab,
 } from '../types/managementTypes';
 import { useAuthStore, type User } from '../store/authStore';
+import { usePendingStore } from '../store/pendingStore';
 import { normalizeSearchText } from '../utils/search';
 import '../styles/Management.css';
 import {useToastStore} from '../store/toastStore';
@@ -196,8 +197,14 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
   const [icSearch, setICSearch] = useState('');
   const [pendingAccounts, setPendingAccounts] = useState<PendingAccount[]>([]);
   const [showPendingRequests, setShowPendingRequests] = useState(false);
+  const pendingCount = usePendingStore((state) => state.pendingCount);
+  const setPendingCount = usePendingStore((state) => state.setPendingCount);
   const [loading, setLoading] = useState(true);
   const [isMutating, setIsMutating] = useState(false);
+
+  useEffect(() => {
+    if (activeTab === 'Managers' && !loading) setPendingCount(pendingAccounts.length);
+  }, [activeTab, loading, pendingAccounts, setPendingCount]);
   const [error, setError] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingRow, setEditingRow] = useState<ManagementRow | null>(null);
@@ -768,6 +775,14 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
             disabled={isMutating}
           >
             {tab}
+            {tab === 'Managers' && pendingCount > 0 && (
+              <span
+                className="nav-badge"
+                aria-label={`${pendingCount} pending manager approvals`}
+              >
+                {pendingCount}
+              </span>
+            )}
           </button>
         ))}
       </div>

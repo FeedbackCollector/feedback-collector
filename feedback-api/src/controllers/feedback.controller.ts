@@ -11,7 +11,7 @@ const positiveInt = (value: unknown): number | undefined => {
 
 function parseFeedbackFilters(query: Request['query']): FeedbackFilters | null {
     const filters: FeedbackFilters = {};
-    for (const key of ['project_id', 'ic_id', 'score'] as const) {
+    for (const key of ['project_id', 'ic_id', 'manager_id', 'score'] as const) {
         if (query[key] === undefined) continue;
         const value = positiveInt(query[key]);
         if (value === undefined || (key === 'score' && value > 5)) return null;

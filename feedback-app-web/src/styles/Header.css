@@ -25,6 +25,23 @@
 }
 
 
+.header-menu {
+  position: relative;
+  display: inline-flex;
+}
+
+.header-menu-dot {
+  display: none;
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #d92d20;
+  border: 2px solid #fff;
+}
+
 .fa-bars {
   display: none;
   padding: 10px;
@@ -33,6 +50,10 @@
 
 
 @media (max-width: 768px) {
+
+  .header-menu-dot {
+    display: block;
+  }
 
   .fa-bars {
     display: inline-table;

@@ -27,3 +27,19 @@ export function signToken(user: { id: number; email: string; role: string; passw
 export function verifyToken(token: string): { id?: unknown; pv?: unknown } {
     return jwt.verify(token, assertJwtSecret(), { algorithms: [ALGORITHM] }) as { id?: unknown; pv?: unknown };
 }
+
+export function signPasswordResetToken(user: { id: number; passwordHash: string }): string {
+    return jwt.sign(
+        { id: user.id, pv: passwordVersion(user.passwordHash), purpose: 'password-reset' },
+        assertJwtSecret(),
+        { algorithm: ALGORITHM, expiresIn: '1h' },
+    );
+}
+
+export function verifyPasswordResetToken(token: string): { id?: unknown; pv?: unknown; purpose?: unknown } {
+    return jwt.verify(token, assertJwtSecret(), { algorithms: [ALGORITHM] }) as {
+        id?: unknown;
+        pv?: unknown;
+        purpose?: unknown;
+    };
+}

@@ -20,6 +20,7 @@ type ICInfo = {
   name: string;
   title: string;
   entries: number;
+  manager_id: number;
 };
 
 type ICViewProps = {
@@ -99,6 +100,7 @@ function Sparkline({ scores }: { scores: number[] }) {
 
 function ICView({ ic, onBack }: ICViewProps) {
   const currentUserId = useAuthStore((state) => state.user?.id);
+  const currentUserRole = useAuthStore((state) => state.user?.role);
 
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
   const [timelineFeedbacks, setTimelineFeedbacks] = useState<Feedback[]>([]);
@@ -439,11 +441,14 @@ function ICView({ ic, onBack }: ICViewProps) {
           </button>
           <h1 className="icv-title">{formatPersonName(ic.name)}</h1>
         </div>
+            {currentUserRole === "director" || currentUserId === ic.manager_id ?
 
-        <button type="button" className="icv-primary-btn" onClick={openCreate}>
-          <i className="fa-solid fa-plus" />
-          New Entry
-        </button>
+                <button type="button" className="icv-primary-btn" onClick={openCreate}>
+                  <i className="fa-solid fa-plus" />
+                  New Entry
+                </button>
+                :  <div></div>
+            }
       </header>
 
       {error && <div role="alert" className="icv-alert is-error">{error}</div>}
@@ -509,6 +514,7 @@ function ICView({ ic, onBack }: ICViewProps) {
                   </span>
                 </div>
 
+        {currentUserRole === "director" || currentUserId === ic.manager_id ?
                 <div className="icv-entry-actions">
                   <button
                     type="button"
@@ -527,8 +533,9 @@ function ICView({ ic, onBack }: ICViewProps) {
                     <i className="fa-solid fa-trash-can" />
                   </button>
                 </div>
-              </div>
-
+              : <div></div>
+            }
+            </div>
               {item.comment && <p className="icv-entry-body">{truncateText(item.comment, MAX_BODY_LEN)}</p>}
 
               {item.screenshot_url && (

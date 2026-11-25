@@ -421,6 +421,11 @@ export async function updateProjectManagers(
   });
 }
 
+export async function countPendingManagers(token: string): Promise<number> {
+  const managers = await getAllPages<APIUser>(withQuery('/users', 'role=manager'), token);
+  return managers.filter((manager) => manager.status === 'pending').length;
+}
+
 export async function approvePendingAccount(id: number, token: string): Promise<void> {
   await request(`/users/${id}/approve`, token, { method: 'PATCH' });
 }

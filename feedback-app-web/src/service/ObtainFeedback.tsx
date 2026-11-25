@@ -2,7 +2,7 @@ import type { Feedback, FeedbackFilters, FeedbackPageResponse } from '../types/f
 import { API_URL } from './api';
 import { authHeaders } from './authHeaders';
 
-const URLEndpoint = `${API_URL}/feedback`;
+const URLEndpoint = `${API_URL}/feedback?`;
 const PAGE_LIMIT = 100;
 
 export async function obtainFeedbackPage(page: number, limit: number = PAGE_LIMIT, filters: Partial<FeedbackFilters> = {}, signal?: AbortSignal): Promise<FeedbackPageResponse> {
@@ -13,6 +13,7 @@ export async function obtainFeedbackPage(page: number, limit: number = PAGE_LIMI
 
   if (icName) params.set('ic_name', icName);
   if (filters.icId !== undefined) params.set('ic_id', String(filters.icId));
+  if (filters.managerId !== undefined) params.set('manager_id', String(filters.managerId));
   if (filters.projectId) params.set('project_id', filters.projectId);
   if (filters.score) params.set('score', filters.score);
   if (text) params.set('text', text);
