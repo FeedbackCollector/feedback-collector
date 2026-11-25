@@ -8,6 +8,7 @@ export interface Manager {
   role: string;
   area_id: number | null;
   icCount: number;
+  entryCount: number;
   averageScore: number | null;
 }
 
@@ -22,7 +23,7 @@ interface Feedback {
 }
 
 interface UsersResponse {
-  data?: Omit<Manager, 'icCount' | 'averageScore'>[];
+  data?: Omit<Manager, 'icCount' | 'entryCount' | 'averageScore'>[];
   pagination?: {
     totalPages?: number;
   };
@@ -138,6 +139,7 @@ export async function obtainManagers(token: string | null): Promise<{
       return {
         ...manager,
         icCount: managerICs.get(manager.id)?.length ?? 0,
+        entryCount: scores.length,
         averageScore: scores.length > 0
           ? scores.reduce((sum, score) => sum + score, 0) / scores.length
           : null,

@@ -1,8 +1,14 @@
-import {Op, QueryTypes} from "sequelize"
+import {Op, QueryTypes, literal} from "sequelize"
 import {sequelize} from "../db/connection.ts"
 import {ICs} from "../models/ic.ts"
 import type {IC, CreateICRecord, UpdateIC, ICFilters} from "../types/ic.ts"
 
+
+// `entries` is always read from the feedback table so it can't drift from the real count.
+const liveEntries = {
+    exclude: ["entries"],
+    include: [[literal('(SELECT COUNT(*) FROM feedback WHERE feedback.ic_id = "ICs"."IC_id")::int'), "entries"]],
+} as never;
 
 export async function icFindAll(filters: ICFilters){
 
@@ -33,7 +39,7 @@ export async function icFindAll(filters: ICFilters){
     } 
     
     const result = await ICs.findAndCountAll({
-        where, limit,
+        where, limit, attributes: liveEntries,
         offset: (page - 1) * limit,
         order: [["IC_id", "ASC"]]
     });
@@ -47,7 +53,7 @@ export async function icFindAll(filters: ICFilters){
 }
 
 export async function icFindByID(id: number): Promise<IC | null> {
-    const ic = await ICs.findByPk(id);
+    const ic = await ICs.findByPk(id, { attributes: liveEntries });
     return ic ? ic.toJSON() : null;
 }
 

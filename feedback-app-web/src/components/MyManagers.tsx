@@ -305,6 +305,7 @@ export default function MyManagementComp() {
                     </span>
                     <span className="my-management-comparison-score">
                       {score === null ? '—' : score.toFixed(1)}
+                      {score !== null && <span className="my-management-out-of">out of {manager.entryCount}</span>}
                     </span>
                   </div>
                 );
@@ -353,6 +354,7 @@ export default function MyManagementComp() {
                           </span>
                         )}
                         <span>{manager.icCount} ICs</span>
+                        <span>{manager.entryCount} entries</span>
                       </div>
                     </div>
                   </article>
@@ -367,6 +369,7 @@ export default function MyManagementComp() {
                       <th>Area</th>
                       <th>Score</th>
                       <th>ICs</th>
+                      <th>Entries</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -389,6 +392,7 @@ export default function MyManagementComp() {
                             : Math.round(manager.averageScore)}
                         </td>
                         <td>{manager.icCount}</td>
+                        <td>{manager.entryCount}</td>
                       </tr>
                     ))}
                   </tbody>
