@@ -41,7 +41,6 @@ export interface FeedbackFilters {
     ic_id?: number;
     author_id?: number;
     project_id?: number;
-    project_ids?: number[];
     ic_name?: string;
     manager_id?: number;
     score?: number;

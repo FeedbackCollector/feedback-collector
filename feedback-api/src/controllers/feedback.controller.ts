@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import type { FeedbackFilters } from '../types/feedback.ts';
-import { exportFeedbackCsvService, exportFilteredFeedbackCsvService, getAllFeedbacksService, createFeedbackService, deleteFeedbackService, getFeedbackByIdService, replaceFeedbackService, updateFeedbackService } from '../services/feedback.service.ts';
+import { exportFeedbackCsvService, getAllFeedbacksService, createFeedbackService, deleteFeedbackService, getFeedbackByIdService, replaceFeedbackService, updateFeedbackService } from '../services/feedback.service.ts';
 const MAX_EXPORT_IDS = 20;
 
 const positiveInt = (value: unknown): number | undefined => {
@@ -8,27 +8,6 @@ const positiveInt = (value: unknown): number | undefined => {
     const parsed = Number(value);
     return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : undefined;
 };
-
-function parseFeedbackFilters(query: Request['query']): FeedbackFilters | null {
-    const filters: FeedbackFilters = {};
-    for (const key of ['project_id', 'ic_id', 'score'] as const) {
-        if (query[key] === undefined) continue;
-        const value = positiveInt(query[key]);
-        if (value === undefined || (key === 'score' && value > 5)) return null;
-        filters[key] = value;
-    }
-    for (const key of ['ic_name', 'text'] as const) {
-        const value = query[key];
-        if (value === undefined) continue;
-        if (typeof value !== 'string') return null;
-        const trimmed = value.trim().replace(/\s+/g, ' ');
-        if (trimmed !== '') filters[key] = trimmed;
-    }
-    const sort = query.sort;
-    if (sort !== undefined && sort !== 'newest' && sort !== 'oldest') return null;
-    filters.sort = sort;
-    return filters;
-}
 
 export async function getAll(req: Request, res: Response) {
     try {
@@ -40,8 +19,29 @@ export async function getAll(req: Request, res: Response) {
             return;
         }
 
-        const filters = parseFeedbackFilters(req.query);
-        if (filters === null) return res.status(400).json({ message: 'Invalid search parameters' });
+        const filters: FeedbackFilters = {};
+        for (const key of ['project_id', 'ic_id', 'score'] as const) {
+            if (req.query[key] === undefined) continue;
+            const value = positiveInt(req.query[key]);
+            if (value === undefined || (key === 'score' && value > 5)) {
+                return res.status(400).json({ message: 'Invalid search parameters' });
+            }
+            filters[key] = value;
+        }
+        for (const key of ['ic_name', 'text'] as const) {
+            const value = req.query[key];
+            if (value === undefined) continue;
+            if (typeof value !== 'string') {
+                return res.status(400).json({ message: 'Invalid search parameters' });
+            }
+            const trimmed = value.trim().replace(/\s+/g, ' ');
+            if (trimmed !== '') filters[key] = trimmed;
+        }
+        const sort = req.query.sort;
+        if (sort !== undefined && sort !== 'newest' && sort !== 'oldest') {
+            return res.status(400).json({ message: 'Invalid search parameters' });
+        }
+        filters.sort = sort;
 
         const result = await getAllFeedbacksService(page, limit, filters, res.locals.user);
         if (result === "FORBIDDEN") return res.status(403).json({ message: "Forbidden" });
@@ -62,27 +62,17 @@ function parseExportIds(value: unknown): number[] | null {
 }
 
 export async function exportCsv(req: Request, res: Response) {
+    const ids = parseExportIds(req.query.ids);
+    if (ids === null) {
+        res.status(400).json({ message: `ids is required: a comma-separated list of up to ${MAX_EXPORT_IDS} positive integers` });
+        return;
+    }
+
     try {
-        let csv: string;
-        if (req.query.ids === undefined) {
-            const filters = parseFeedbackFilters(req.query);
-            if (filters === null) {
-                res.status(400).json({ message: 'Invalid search parameters' });
-                return;
-            }
-            csv = await exportFilteredFeedbackCsvService(filters);
-        } else {
-            const ids = parseExportIds(req.query.ids);
-            if (ids === null) {
-                res.status(400).json({ message: `ids must be a comma-separated list of up to ${MAX_EXPORT_IDS} positive integers` });
-                return;
-            }
-            const result = await exportFeedbackCsvService(ids);
-            if (result === "FEEDBACK_NOT_FOUND") {
-                res.status(404).json({ error: "Feedback not found" });
-                return;
-            }
-            csv = result;
+        const csv = await exportFeedbackCsvService(ids);
+        if (csv === "FEEDBACK_NOT_FOUND") {
+            res.status(404).json({ error: "Feedback not found" });
+            return;
         }
 
         res.setHeader('Content-Type', 'text/csv; charset=utf-8');
@@ -106,7 +96,6 @@ export async function create(req: Request, res: Response) {
     if (result === "AUTHOR_NOT_FOUND") return res.status(404).json({ error: "Author not found" });
     if (result === "IC_NOT_FOUND") return res.status(404).json({ error: "IC not found" });
     if (result === "PROJECT_NOT_FOUND") return res.status(404).json({ error: "Project not found" });
-    if (result === "PROJECT_NOT_ASSIGNED") return res.status(403).json({ error: "Project is not assigned to this manager" });
     res.status(201).json({ data: result });
 }
 
@@ -116,7 +105,6 @@ export async function replace(req: Request, res: Response) {
     if (result === "AUTHOR_NOT_FOUND") return res.status(404).json({ error: "Author not found" });
     if (result === "IC_NOT_FOUND") return res.status(404).json({ error: "IC not found" });
     if (result === "PROJECT_NOT_FOUND") return res.status(404).json({ error: "Project not found" });
-    if (result === "PROJECT_NOT_ASSIGNED") return res.status(403).json({ error: "Project is not assigned to this manager" });
     res.status(200).json({ data: result });
 }
 
@@ -126,7 +114,6 @@ export async function update(req: Request, res: Response) {
     if (result === "AUTHOR_NOT_FOUND") return res.status(404).json({ error: "Author not found" });
     if (result === "IC_NOT_FOUND") return res.status(404).json({ error: "IC not found" });
     if (result === "PROJECT_NOT_FOUND") return res.status(404).json({ error: "Project not found" });
-    if (result === "PROJECT_NOT_ASSIGNED") return res.status(403).json({ error: "Project is not assigned to this manager" });
     res.status(200).json({ data: result });
 }
 

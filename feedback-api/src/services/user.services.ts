@@ -1,7 +1,6 @@
 import bcrypt from 'bcryptjs';
 import { signToken } from '../utils/token.ts';
 import * as UsersRepository from '../repositories/user.repositories.ts';
-import * as PreApprovalRepository from '../repositories/preApproval.repository.ts';
 import { getAreaByID } from '../repositories/area.repository.ts';
 import { sendPendingApprovalEmail, sendAccountApprovedEmail } from './mail.service.ts';
 import { AccountStatus, User, CreateUser, UpdateUser, UserFilters, UsersPage } from '../types/user.ts';
@@ -56,23 +55,11 @@ export async function createUserService(data: CreateUser): Promise<User | Refere
     return user;
 }
 
-export async function registerService(email: string, password: string , name: string , area_id: number): Promise<"EMAIL_TAKEN" | "AREA_NOT_FOUND" | "REGISTERED" | "APPROVED"> {
+export async function registerService(email: string, password: string , name: string , area_id: number): Promise<"EMAIL_TAKEN" | "AREA_NOT_FOUND" | "REGISTERED"> {
     const invalid = await checkReferences({ email, area_id });
     if (invalid) return invalid;
 
-    const normalizedEmail = email.trim().toLowerCase();
     const passwordHash = await bcrypt.hash(password, 10);
-
-    if (await PreApprovalRepository.findPreApprovedEmail(normalizedEmail)) {
-        await UsersRepository.insertUser(email, passwordHash, "manager", area_id, name, "approved");
-        await PreApprovalRepository.deletePreApprovedEmail(normalizedEmail);
-
-        sendAccountApprovedEmail(normalizedEmail, name).catch((err: unknown) =>
-            console.error('Could not send account approved email:', err instanceof Error ? err.message : err),
-        );
-        return "APPROVED";
-    }
-
     await UsersRepository.insertUser(email, passwordHash, "manager", area_id, name, "pending");
 
     sendPendingApprovalEmail(email, name).catch((err: unknown) =>
