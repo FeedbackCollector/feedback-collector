@@ -25,6 +25,7 @@ import PreApprovedEmails from './PreApprovedEmails';
 import LoadingOverlay from './LoadingOverlay';
 import { formatPersonName } from './formatPersonName';
 import DropdownSelect from './DropdownSelect';
+import AutocompleteSearch from './AutocompleteSearch';
 
 type ViewMode = 'table' | 'cards';
 
@@ -212,6 +213,7 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
   const [assigningDirectorICs, setAssigningDirectorICs] = useState<ManagementRow | null>(null);
   const [selectedDirectorICIds, setSelectedDirectorICIds] = useState<number[]>([]);
   const [directorICManagerId, setDirectorICManagerId] = useState('');
+  const [directorICManagerSearch, setDirectorICManagerSearch] = useState('');
   const [directorICAssignmentError, setDirectorICAssignmentError] = useState<string | null>(null);
   const [feedbackManager, setFeedbackManager] = useState<ManagementRow | null>(null);
   const [formValues, setFormValues] = useState<ManagementFormValues>(EMPTY_FORM);
@@ -602,6 +604,7 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
     setAssigningDirectorICs(director);
     setSelectedDirectorICIds([]);
     setDirectorICManagerId('');
+    setDirectorICManagerSearch('');
     setDirectorICAssignmentError(null);
   };
 
@@ -610,6 +613,7 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
     setAssigningDirectorICs(null);
     setSelectedDirectorICIds([]);
     setDirectorICManagerId('');
+    setDirectorICManagerSearch('');
     setDirectorICAssignmentError(null);
   };
 
@@ -638,6 +642,7 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
       setAssigningDirectorICs(null);
       setSelectedDirectorICIds([]);
       setDirectorICManagerId('');
+      setDirectorICManagerSearch('');
     } catch (reason: unknown) {
       console.error('Could not assign Director-held ICs:', reason);
       setDirectorICAssignmentError(getErrorMessage(reason));
@@ -949,23 +954,23 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
                         <>
                           <button
                             type="button"
-                            className="management-director-action"
+                            className="management-row-action"
                             aria-label={`Assign managers to ${formatPersonName(row.name)}`}
+                            title="Assign managers"
                             onClick={() => openDirectorManagerDialog(row)}
                             disabled={isMutating}
                           >
-                            <i className="fa-solid fa-user-plus" aria-hidden="true" />
-                            Assign managers
+                            <i className="fa-solid fa-user-tie" aria-hidden="true" />
                           </button>
                           <button
                             type="button"
-                            className="management-director-action"
+                            className="management-row-action"
                             aria-label={`Assign Director-held ICs to managers of ${formatPersonName(row.name)}`}
+                            title="Assign ICs"
                             onClick={() => openDirectorICDialog(row)}
                             disabled={isMutating}
                           >
-                            <i className="fa-solid fa-user-plus" aria-hidden="true" />
-                            Assign ICs
+                            <i className="fa-solid fa-user-group" aria-hidden="true" />
                           </button>
                         </>
                       )}
@@ -978,7 +983,7 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
                           onClick={() => openAssignDialog(row)}
                           disabled={isMutating}
                         >
-                          <i className="fa-solid fa-user-plus" aria-hidden="true" />
+                          <i className="fa-solid fa-user-group" aria-hidden="true" />
                         </button>
                       )}
                       {activeTab === 'Projects' && (
@@ -990,7 +995,7 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
                           onClick={() => openAssignProjectDialog(row)}
                           disabled={isMutating}
                         >
-                          <i className="fa-solid fa-user-plus" aria-hidden="true" />
+                          <i className="fa-solid fa-user-tie" aria-hidden="true" />
                         </button>
                       )}
                       {activeTab === 'Managers' && (
@@ -1044,21 +1049,23 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
                       <>
                         <button
                           type="button"
-                          className="management-director-action"
+                          className="management-row-action"
                           aria-label={`Assign managers to ${formatPersonName(row.name)}`}
+                          title="Assign managers"
                           onClick={() => openDirectorManagerDialog(row)}
                           disabled={isMutating}
                         >
-                          Assign managers
+                          <i className="fa-solid fa-user-tie" aria-hidden="true" />
                         </button>
                         <button
                           type="button"
-                          className="management-director-action"
+                          className="management-row-action"
                           aria-label={`Assign Director-held ICs to managers of ${formatPersonName(row.name)}`}
+                          title="Assign ICs"
                           onClick={() => openDirectorICDialog(row)}
                           disabled={isMutating}
                         >
-                          Assign ICs
+                          <i className="fa-solid fa-user-group" aria-hidden="true" />
                         </button>
                       </>
                     )}
@@ -1071,7 +1078,7 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
                         onClick={() => openAssignDialog(row)}
                         disabled={isMutating}
                       >
-                        <i className="fa-solid fa-user-plus" aria-hidden="true" />
+                        <i className="fa-solid fa-user-group" aria-hidden="true" />
                       </button>
                     )}
                     {activeTab === 'Projects' && (
@@ -1083,7 +1090,7 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
                         onClick={() => openAssignProjectDialog(row)}
                         disabled={isMutating}
                       >
-                        <i className="fa-solid fa-user-plus" aria-hidden="true" />
+                        <i className="fa-solid fa-user-tie" aria-hidden="true" />
                       </button>
                     )}
                     {activeTab !== 'Directors' && (
@@ -1415,20 +1422,33 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
                   <label className="management-form-label" htmlFor="director-ic-manager">
                     Assign selected ICs to
                   </label>
-                  <select
+                  <AutocompleteSearch
                     id="director-ic-manager"
                     className="management-assignment-search"
-                    value={directorICManagerId}
-                    onChange={(event) => setDirectorICManagerId(event.target.value)}
-                    disabled={isMutating}
-                  >
-                    <option value="">Select a manager</option>
-                    {directorManagers.map((manager) => (
-                      <option key={manager.id} value={manager.id}>
-                        {formatPersonName(manager.name)}
-                      </option>
-                    ))}
-                  </select>
+                    label="Choose a manager"
+                    placeholder="Search or select a manager"
+                    inputClassName="management-assignment-search"
+                    value={directorICManagerSearch}
+                    suggestions={directorManagers.map((manager) => ({
+                      id: String(manager.id),
+                      label: formatPersonName(manager.name),
+                      value: String(manager.id),
+                      searchText: manager.email ?? '',
+                    }))}
+                    onChange={(value) => {
+                      const selectedManager = directorManagers.find(
+                        (manager) => String(manager.id) === value
+                      );
+                      if (selectedManager) {
+                        setDirectorICManagerId(String(selectedManager.id));
+                        setDirectorICManagerSearch(formatPersonName(selectedManager.name));
+                        return;
+                      }
+
+                      setDirectorICManagerSearch(value);
+                      setDirectorICManagerId('');
+                    }}
+                  />
                 </>
               )}
               {directorHeldICs.length === 0 ? (
