@@ -19,6 +19,7 @@ export default function Management() {
     return <Navigate to="/management/areas" replace />;
   }
 
+  
   return (
     <ManagementComp
       activeTab={activeTab}
