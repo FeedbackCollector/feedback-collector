@@ -138,6 +138,48 @@ paths:
                     items:
                       $ref: "#/components/schemas/User"
 
+  /users/{id}:
+    patch:
+      tags: [Users]
+      summary: Update a user or assign a manager to a director
+      description: Set `director_id` to a director ID to assign a manager, or `null` to remove the assignment.
+      operationId: updateUser
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUser"
+      responses:
+        "200":
+          description: User updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/User"
+        "400":
+          description: Invalid update or director assignment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Only directors can update user assignments
+        "404":
+          description: User does not exist
+
   /users/{id}/approve:
     patch:
       tags: [Users]
@@ -496,8 +538,28 @@ components:
         area_id:
           type: integer
           nullable: true
+        director_id:
+          type: integer
+          nullable: true
         status:
           $ref: "#/components/schemas/AccountStatus"
+    UpdateUser:
+      type: object
+      minProperties: 1
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 100
+        email:
+          type: string
+          format: email
+        area_id:
+          type: integer
+          minimum: 1
+        director_id:
+          type: integer
+          nullable: true
     ValidationError:
       type: object
       properties:
@@ -573,6 +635,13 @@ components:
           maxLength: 200
         manager_id:
           type: integer
+          nullable: true
+        director_id:
+          type: integer
+          nullable: true
+        area_id:
+          type: integer
+          nullable: true
         entries:
           type: integer
     NewIC:

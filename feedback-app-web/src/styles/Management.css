@@ -59,12 +59,26 @@
   display: flex;
   min-height: auto;
   flex-direction: column;
-  align-items: flex-end;
-  justify-content: flex-start;
+  align-items: space-around;
+  justify-content: center;
   gap: 5px;
   margin-top: 20px;
   margin-bottom: 20px;
 }
+
+.management-view-toggle {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.management-view-toggle-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
 
 .management-add-button {
   display: inline-flex;
@@ -150,11 +164,6 @@
 .management-request-delete:disabled {
   cursor: not-allowed;
   opacity: 0.6;
-}
-
-.management-view-toggle {
-  display: flex;
-  gap: 6px;
 }
 
 .management-view-button {
@@ -243,6 +252,11 @@
   width: 194px;
 }
 
+.management-projects-table th:last-child,
+.management-projects-table td:last-child {
+  width: 148px;
+}
+
 .management-area-select {
   width: min(100%, 164px);
   min-width: 130px;
@@ -309,6 +323,53 @@
 
 .management-actions-cell {
   white-space: nowrap;
+}
+
+.management-directors-table th:last-child,
+.management-directors-table td:last-child {
+  width: 300px;
+}
+
+.management-directors-table th:nth-child(2),
+.management-directors-table td:nth-child(2),
+.management-directors-table th:nth-child(3),
+.management-directors-table td:nth-child(3),
+.management-directors-table th:nth-child(4),
+.management-directors-table td:nth-child(4) {
+  text-align: center;
+}
+
+.management-director-card-detail {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  align-items: baseline;
+  justify-content: initial;
+  text-align: left;
+}
+
+.management-director-card-detail dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+
+.management-director-action {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin-left: 6px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: #f4f4f8;
+  color: var(--text-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .management-row-action {
@@ -403,6 +464,9 @@
 
 .management-card-actions {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
 }
 
 .management-card-detail {

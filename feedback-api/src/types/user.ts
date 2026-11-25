@@ -11,9 +11,9 @@ export interface User {
     email: string;
     role: string;
     area_id: number | null;
+    director_id: number | null;
     status: AccountStatus;
 }
-
 export type UserRole = "manager" | "director";
 export type AccountStatus = "pending" | "approved";
 
@@ -29,6 +29,7 @@ export interface UpdateUser {
     name?: string;
     email?: string;
     area_id?: number;
+    director_id?: number | null;
 }
 
 export interface UserFilters {

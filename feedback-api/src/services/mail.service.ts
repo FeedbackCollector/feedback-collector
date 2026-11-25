@@ -1,32 +1,43 @@
-const BREVO_URL = 'https://api.brevo.com/v3/smtp/email';
+import { readFileSync } from 'node:fs';
+
+const RESEND_URL = 'https://api.resend.com/emails';
+const LOGO_CID = 'telus-digital-logo';
 
 const escapeHtml = (value: string) =>
     value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 async function sendMail(to: string, toName: string, subject: string, text: string, html: string): Promise<void> {
-    const apiKey = process.env.BREVO_API_KEY;
+    const apiKey = process.env.RESEND_API_KEY;
     const senderEmail = process.env.MAIL_FROM_EMAIL;
     if (!apiKey || !senderEmail) {
-        console.warn(`BREVO_API_KEY or MAIL_FROM_EMAIL is not set: skipping email "${subject}"`);
+        console.warn(`RESEND_API_KEY or MAIL_FROM_EMAIL is not set: skipping email "${subject}"`);
         return;
     }
 
-    const response = await fetch(BREVO_URL, {
+    const senderName = process.env.MAIL_FROM_NAME ?? 'Feedback Collector';
+    const response = await fetch(RESEND_URL, {
         method: 'POST',
-        headers: { 'api-key': apiKey, 'Content-Type': 'application/json', Accept: 'application/json' },
+        headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify({
-            sender: { name: process.env.MAIL_FROM_NAME ?? 'Feedback Collector', email: senderEmail },
-            to: [{ email: to, name: toName }],
+            from: `${senderName} <${senderEmail}>`,
+            to: [`${toName} <${to}>`],
             subject,
-            textContent: text,
-            htmlContent: html,
+            text,
+            html,
+            attachments: [
+                {
+                    filename: 'telus-digital-logo.jpg',
+                    content: readFileSync(new URL('../../assets/telus-digital-logo.jpg', import.meta.url)).toString('base64'),
+                    content_id: LOGO_CID,
+                },
+            ],
         }),
         signal: AbortSignal.timeout(10_000),
     });
 
     if (!response.ok) {
         const body = await response.json().catch(() => ({})) as { message?: string };
-        throw new Error(`Brevo responded ${response.status}: ${body.message ?? 'unknown error'}`);
+        throw new Error(`Resend responded ${response.status}: ${body.message ?? 'unknown error'}`);
     }
 }
 

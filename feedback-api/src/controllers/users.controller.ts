@@ -24,6 +24,8 @@ export async function update(req: Request, res: Response) {
     if (result === "USER_NOT_FOUND") return res.status(404).json({ error: "User not found" });
     if (result === "AREA_NOT_FOUND") return res.status(400).json({ error: "Area not found" });
     if (result === "EMAIL_TAKEN") return res.status(409).json({ error: "Email already registered" });
+    if (result === "DIRECTOR_NOT_FOUND") return res.status(400).json({ error: "Director not found" });
+    if (result === "USER_NOT_MANAGER") return res.status(400).json({ error: "Only approved managers can be assigned to a director" });
     return res.json({ data: result });
 }
 
@@ -31,8 +33,9 @@ export async function remove(req: Request, res: Response) {
     const result = await deleteUserService(Number(req.params.id), res.locals.user.id);
     if (result === "USER_NOT_FOUND") return res.status(404).json({ error: "User not found" });
     if (result === "CANNOT_DELETE_SELF") return res.status(409).json({ error: "You cannot delete your own user" });
+    if (result === "MANAGER_HAS_NO_DIRECTOR") return res.status(409).json({ error: "A manager must have a director before being deleted" });
     if (result === "USER_HAS_ICS") return res.status(409).json({ error: "User has ICs assigned" });
-    if (result === "USER_HAS_FEEDBACK") return res.status(409).json({ error: "User has authored feedback" });
+    if (result === "USER_HAS_MANAGERS") return res.status(409).json({ error: "User has managers assigned" });
     return res.status(204).send();
 }
 
@@ -49,6 +52,7 @@ export async function register(req: Request, res: Response) {
     const result = await registerService(req.body.email, req.body.password , req.body.name , req.body.area_id);
     if (result === "AREA_NOT_FOUND") return res.status(400).json({ error: "Area not found" });
     if (result === "EMAIL_TAKEN") return res.status(409).json({ error: "Email already registered" });
+    if (result === "APPROVED") return res.status(201).json({ message: "Account created and approved", status: "approved" });
     return res.status(201).json({ message: "Registration pending approval", status: "pending" });
 }
 
