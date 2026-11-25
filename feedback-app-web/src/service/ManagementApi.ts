@@ -30,9 +30,19 @@ async function request<T>(
 
   if (!response.ok) {
     const body = payload && typeof payload === 'object'
-      ? payload as { message?: string; error?: string }
+      ? payload as {
+          message?: string;
+          error?: string;
+          errors?: Array<{ field?: string; message?: string }>;
+        }
       : undefined;
-    throw new Error(body?.message ?? body?.error ?? `Request failed (${response.status}).`);
+    const validationErrors = body?.errors
+      ?.map(({ field, message }) => [field, message].filter(Boolean).join(': '))
+      .filter(Boolean);
+    const message = validationErrors?.length
+      ? `${body?.message ?? body?.error ?? 'Request failed.'} ${validationErrors.join('; ')}`
+      : body?.message ?? body?.error ?? `Request failed (${response.status}).`;
+    throw new Error(message);
   }
 
   return payload as T;
@@ -90,7 +100,7 @@ export async function loadManagementData(
     const scoreTotalsByArea = new Map<number, { weighted: number; entries: number }>();
 
     for (const ic of ics) {
-      const areaId = managersById.get(ic.manager_id)?.area_id;
+      const areaId = ic.area_id ?? (ic.manager_id === null ? undefined : managersById.get(ic.manager_id)?.area_id);
       if (areaId === null || areaId === undefined) continue;
       icsByArea.set(areaId, (icsByArea.get(areaId) ?? 0) + 1);
       if (typeof ic.score === 'number' && ic.entries > 0) {
@@ -145,12 +155,13 @@ export async function loadManagementData(
     const managerFeedback = new Map<number, ManagerFeedback[]>();
 
     for (const ic of ics) {
+      if (ic.manager_id === null) continue;
       icCountsByManager.set(ic.manager_id, (icCountsByManager.get(ic.manager_id) ?? 0) + 1);
     }
 
     for (const item of feedback) {
       const ic = icsById.get(item.ic_id);
-      if (!ic) continue;
+      if (!ic || ic.manager_id === null) continue;
 
       const scores = managerScores.get(ic.manager_id) ?? [];
       scores.push(item.score);
@@ -192,7 +203,8 @@ export async function loadManagementData(
         name: ic.name,
         title: ic.title,
         managerId: ic.manager_id,
-        managerName: managersById.get(ic.manager_id)?.name ?? `Manager ${ic.manager_id}`,
+        managerName: ic.manager_id === null ? null : managersById.get(ic.manager_id)?.name ?? `Manager ${ic.manager_id}`,
+        directorId: ic.director_id,
       })),
     };
   }
@@ -209,13 +221,13 @@ export async function loadManagementData(
 
     return {
       rows: ics.map((ic) => {
-        const manager = managersById.get(ic.manager_id);
+        const manager = ic.manager_id === null ? undefined : managersById.get(ic.manager_id);
         return {
           id: ic.IC_id,
           name: ic.name,
           title: ic.title,
           managerId: ic.manager_id,
-          manager: manager?.name ?? `Manager ${ic.manager_id}`,
+          manager: manager?.name ?? (ic.director_id === null ? 'Unassigned' : 'Director-held'),
           area: manager?.area_id === null || manager?.area_id === undefined
             ? 'No area assigned'
             : areasById.get(manager.area_id) ?? `Area ${manager.area_id}`,
@@ -228,25 +240,93 @@ export async function loadManagementData(
     };
   }
 
-  const [projects, feedback] = await Promise.all([
+  if (tab === 'Directors') {
+    const [directorAccounts, managerAccounts, ics] = await Promise.all([
+      getAllPages<APIUser>(withQuery('/users', 'role=director'), token),
+      getAllPages<APIUser>(withQuery('/users', 'role=manager'), token),
+      getAllPages<APIC>('/ics', token),
+    ]);
+    const directors = directorAccounts.filter((director) => director.status !== 'pending');
+    const managers = managerAccounts.filter((manager) => manager.status !== 'pending');
+    const icsByManager = new Map<number, number>();
+    const icsByDirector = new Map<number, number>();
+    for (const ic of ics) {
+      if (ic.manager_id !== null) {
+        icsByManager.set(ic.manager_id, (icsByManager.get(ic.manager_id) ?? 0) + 1);
+      } else if (ic.director_id !== null) {
+        icsByDirector.set(ic.director_id, (icsByDirector.get(ic.director_id) ?? 0) + 1);
+      }
+    }
+
+    const managersByDirector = new Map<number, APIUser[]>();
+    for (const manager of managers) {
+      if (manager.director_id === null || manager.director_id === undefined) continue;
+      const assignedManagers = managersByDirector.get(manager.director_id) ?? [];
+      assignedManagers.push(manager);
+      managersByDirector.set(manager.director_id, assignedManagers);
+    }
+
+    return {
+      rows: directors.map((director) => {
+        const assignedManagers = managersByDirector.get(director.id) ?? [];
+        return {
+          id: director.id,
+          name: director.name,
+          email: director.email,
+          managers: assignedManagers.length,
+          managerIds: assignedManagers.map((manager) => manager.id),
+          ics: assignedManagers.reduce(
+            (total, manager) => total + (icsByManager.get(manager.id) ?? 0),
+            0
+          ) + (icsByDirector.get(director.id) ?? 0),
+        };
+      }),
+      areas: [],
+      managers: managers.map(({ id, name, email, director_id }) => ({
+        id,
+        name,
+        email,
+        directorId: director_id,
+      })),
+      pendingAccounts: [],
+      individualContributors: ics.map((ic) => ({
+        id: ic.IC_id,
+        name: ic.name,
+        title: ic.title,
+        managerId: ic.manager_id,
+        managerName: ic.manager_id === null
+          ? null
+          : managers.find((manager) => manager.id === ic.manager_id)?.name ?? `Manager ${ic.manager_id}`,
+        directorId: ic.director_id,
+      })),
+    };
+  }
+
+  const [projects, feedback, managerAccounts] = await Promise.all([
     getList<APIProject>('/projects', token),
     getAllPages<APIFeedback>('/feedback', token),
+    getAllPages<APIUser>(withQuery('/users', 'role=manager'), token),
   ]);
+  const managers = managerAccounts.filter((manager) => manager.status !== 'pending');
+  const managersById = new Map(managers.map((manager) => [manager.id, manager.name]));
   return {
-    rows: projects.map((project) => ({
-      id: project.id,
-      name: project.name,
-      entries: feedback.filter((item) => item.project_id === project.id).length,
-    })),
+    rows: projects.map((project) => {
+      const managerIds = project.manager_ids ?? [];
+      return {
+        id: project.id,
+        name: project.name,
+        entries: feedback.filter((item) => item.project_id === project.id).length,
+        managerIds,
+        managerNames: managerIds
+          .map((managerId) => managersById.get(managerId))
+          .filter((name): name is string => name !== undefined)
+          .join(', ') || 'None assigned',
+      };
+    }),
     areas: [],
-    managers: [],
+    managers: managers.map(({ id, name }) => ({ id, name })),
     pendingAccounts: [],
   };
-}
-
-export async function countPendingManagers(token: string): Promise<number> {
-  const managers = await getAllPages<APIUser>(withQuery('/users', 'role=manager'), token);
-  return managers.filter((manager) => manager.status === 'pending').length;
 }
 
 export async function saveManagementRow(
@@ -255,6 +335,10 @@ export async function saveManagementRow(
   values: ManagementFormValues,
   token: string
 ): Promise<void> {
+  if (tab === 'Directors') {
+    throw new Error('Director assignments cannot be changed here.');
+  }
+
   const method = id === null ? 'POST' : 'PATCH';
   const path = tab === 'Areas'
     ? '/areas'
@@ -304,6 +388,17 @@ export async function updateManagerArea(
   });
 }
 
+export async function updateManagerDirector(
+  managerId: number,
+  directorId: number | null,
+  token: string
+): Promise<void> {
+  await request(`/users/${managerId}`, token, {
+    method: 'PATCH',
+    body: JSON.stringify({ director_id: directorId }),
+  });
+}
+
 export async function updateICManager(
   icId: number,
   managerId: number,
@@ -315,8 +410,40 @@ export async function updateICManager(
   });
 }
 
+export async function updateProjectManagers(
+  projectId: number,
+  managerIds: number[],
+  token: string
+): Promise<void> {
+  await request(`/projects/${projectId}`, token, {
+    method: 'PATCH',
+    body: JSON.stringify({ manager_ids: managerIds }),
+  });
+}
+
 export async function approvePendingAccount(id: number, token: string): Promise<void> {
   await request(`/users/${id}/approve`, token, { method: 'PATCH' });
+}
+
+export interface PreApprovedEmail {
+  email: string;
+  created_at: string;
+}
+
+export async function listPreApprovedEmails(token: string): Promise<PreApprovedEmail[]> {
+  const result = await request<{ data: PreApprovedEmail[] }>('/pre-approvals', token);
+  return result.data;
+}
+
+export async function addPreApprovedEmail(email: string, token: string): Promise<void> {
+  await request('/pre-approvals', token, {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
+}
+
+export async function removePreApprovedEmail(email: string, token: string): Promise<void> {
+  await request(`/pre-approvals/${encodeURIComponent(email)}`, token, { method: 'DELETE' });
 }
 
 export async function deleteManagementRow(
@@ -324,6 +451,10 @@ export async function deleteManagementRow(
   id: number,
   token: string
 ): Promise<void> {
+  if (tab === 'Directors') {
+    throw new Error('Directors cannot be deleted from Management.');
+  }
+
   const path = tab === 'Areas'
     ? '/areas'
     : tab === 'Managers'
