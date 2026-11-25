@@ -63,7 +63,10 @@ export async function icCreate(data: CreateICRecord): Promise<IC> {
     return ic.toJSON();
 }
 
-export async function icUpdate(data: UpdateIC & { area_id?: number | null }, id: number): Promise<IC | null> {
+export async function icUpdate(
+    data: UpdateIC & { area_id?: number | null; director_id?: number | null },
+    id: number,
+): Promise<IC | null> {
     await ICs.update(data, { where: { IC_id: id } });
     return icFindByID(id);
 }

@@ -19,6 +19,12 @@ export async function getAllICsService(filters: ICFilters, user: User) {
     }
     return "FORBIDDEN";
 }
+export async function viewAllICs(filters: ICFilters, user: User) {
+ if (user.role === "director" || "manager") {
+        return ICRepository.icFindAll(filters); // puede filtrar opcionalmente por manager_id
+    }
+    return "FORBIDDEN";
+}
 
 export async function getICByIdService(id: number, user: User): Promise<IC | "IC_NOT_FOUND" | "FORBIDDEN"> {
     const ic = await ICRepository.icFindByID(id);
@@ -47,8 +53,11 @@ export async function updateICService(icData: UpdateIC, id: number): Promise<IC 
     const invalid = await checkReferences(icData);
     if (invalid) return invalid;
 
-    const data: UpdateIC & { area_id?: number | null } = { ...icData };
-    if (icData.manager_id !== undefined) data.area_id = await ICRepository.managerAreaId(icData.manager_id);
+    const data: UpdateIC & { area_id?: number | null; director_id?: number | null } = { ...icData };
+    if (icData.manager_id !== undefined) {
+        data.area_id = await ICRepository.managerAreaId(icData.manager_id);
+        data.director_id = null;
+    }
 
     const updated = await ICRepository.icUpdate(data, id);
     return updated as IC;

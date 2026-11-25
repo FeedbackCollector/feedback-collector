@@ -66,9 +66,9 @@ router.get('/',  authorizeRole("director","manager"),getAll);
 
 router.get('/export.csv', authorizeRole("director"), exportCsv);
 
-router.get('/:id',  authorizeRole("director","manager"),getById);
+router.get('/:id',  authorizeRole("director","manager"), getById);
 
-router.post('/', authorizeRole("director","manager"),validate(createFeedbackScheme), create);
+router.post('/', authorizeRole("director","manager"), validate(createFeedbackScheme), create);
 
 router.put('/:id', authorizeRole("director","manager"), validate(createFeedbackScheme), replace);
 

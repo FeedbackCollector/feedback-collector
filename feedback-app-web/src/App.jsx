@@ -14,12 +14,14 @@ import Login from './pages/login'
 import ForgotPassword from './pages/ForgotPassword'
 import ResetPassword from './pages/ResetPassword'
 import { ToastContainer } from './components/ToastContainer'
+import ViewICs from './components/ViewICs'
 
 const VALID_ROLES = ['manager', 'director']
 
 const managerRoutes = [
-    { path: '/my-ics', title: 'My ICs', element: <MyICs /> },
-    { path: '/feedback-log', title: 'FeedBack Log', element: <FeedbackLog /> },
+  { path: '/my-ics', title: 'My ICs', element: <MyICs /> },
+  { path: '/all-ics', title: 'All ICs', element: <ViewICs /> },
+  { path: '/feedback-log', title: 'Feedback Log', element: <FeedbackLog /> },
 ]
 
 const directorRoutes = [
