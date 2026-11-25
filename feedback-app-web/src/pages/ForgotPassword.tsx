@@ -71,7 +71,6 @@ export function ForgotPassword() {
                 </div>
                 <label className="subtitle">Track feedback and performance for your team</label>
 
-                {/* PANTALLA 3: Restablecer contraseña con Token */}
                 {resetToken ? (
                     <form onSubmit={handleResetPassword} className="auth-form forgot-form" noValidate>
                         <h2 className="forgot-title">Create a new password</h2>
@@ -114,7 +113,6 @@ export function ForgotPassword() {
                         </button>
                     </form>
                 ) : emailSent ? (
-                    /* PANTALLA 2: Correo enviado con éxito */
                     <div className="auth-form forgot-form">
                         <h2 className="forgot-title">Check your email</h2>
                         <p className="forgot-description">

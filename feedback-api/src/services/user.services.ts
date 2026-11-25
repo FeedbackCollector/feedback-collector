@@ -149,6 +149,7 @@ export async function changePasswordService(userId: number, currentPassword: str
     return { token: signToken({ ...user, passwordHash }) };
 }
 
+//esto es de prueba cambiar cuando el sender funcione
 export async function forgotPasswordService(email: string): Promise<"SENT"> {
     const user = await UsersRepository.getUserByEmail(email);
 
