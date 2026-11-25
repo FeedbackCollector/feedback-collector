@@ -1,0 +1,393 @@
+import { useMemo, useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuthStore } from '../store/authStore';
+import { viewAllICS } from '../service/ObtainICs';
+import { ICsMetricsRow, ICsComparisonCard } from './FeedbackDashboard';
+import { useToastStore } from '../store/toastStore';
+import ICView from './IcView';
+import LoadingOverlay from './LoadingOverlay';
+import '../styles/ShowICs.css';
+import AutocompleteSearch from './AutocompleteSearch';
+import type { SearchSuggestion } from '../types/autoComplete';
+import { normalizeSearchText } from '../utils/search';
+import { formatPersonName } from './formatPersonName';
+import { UserAvatar } from './UserAvatar';
+
+type IC = {
+  IC_id: number;
+  name: string;
+  title: string;
+  entries: number;
+  manager_id: number;
+  score: number | null;
+};
+
+type ViewMode = 'cards' | 'list';
+
+const PAGE_SIZE_DESKTOP = 15;
+const PAGE_SIZE_MOBILE = 8;
+const MOBILE_QUERY = '(max-width: 768px)';
+const arrowForward = <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" height="10px" width="10px" fill="#1f1f1f"><path d="M8.03,22L6.25,20.23L14.48,12L6.25,3.77L8.03,2l10,10l-10,10Z"/></svg>
+const arrowBack = <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" height="10px" width="10px" fill="#1f1f1f"><path d="M15.97,22L17.75,20.23L9.52,12L17.75,3.77L15.97,2l-10,10l10,10Z"/></svg>
+
+function ViewICs() {
+  const [ics, setIcs] = useState<IC[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(() =>
+    window.matchMedia(MOBILE_QUERY).matches ? PAGE_SIZE_MOBILE : PAGE_SIZE_DESKTOP
+  );
+  const [gridCols, setGridCols] = useState(0);
+  const [viewMode, setViewMode] = useState<ViewMode>('cards');
+  const [animateBars, setAnimateBars] = useState(false);
+
+  useEffect(() => {
+    if (!loading && ics.length > 0) {
+      setAnimateBars(false);
+      const frame = requestAnimationFrame(() => setAnimateBars(true));
+      return () => cancelAnimationFrame(frame);
+    }
+    setAnimateBars(false);
+  }, [loading, ics, search]);
+
+  const viewContainerRef = useRef<HTMLDivElement>(null);
+  const shouldAnimateViewChange = useRef(false);
+
+  const changeViewMode = (nextMode: ViewMode) => {
+    if (nextMode === viewMode) return;
+
+    shouldAnimateViewChange.current = true;
+    setViewMode(nextMode);
+  };
+    const [selectedIC, setSelectedIC] = useState<{
+    IC_id: number;
+    name: string;
+    title: string;
+    entries: number;
+    manager_id: number;
+  } | null>(null);
+
+  function openICTimeline(item: IC) {
+      const ic = ics.find((entry) => entry.IC_id === item.IC_id);
+  
+      if (!ic) {
+        alert('Could not find the IC associated with this card.');
+        return;
+      }
+  
+      setSelectedIC(ic);
+    }
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(max-width: 768px)');
+
+    if (mediaQuery.matches) {
+      setViewMode('cards');
+    }
+
+    const handleMediaChange = (event: MediaQueryListEvent) => {
+      if (event.matches) {
+        setViewMode('cards');
+      }
+    };
+
+    mediaQuery.addEventListener('change', handleMediaChange);
+    return () => mediaQuery.removeEventListener('change', handleMediaChange);
+  }, []);
+
+  useEffect(() => {
+    if (!shouldAnimateViewChange.current) return;
+
+    shouldAnimateViewChange.current = false;
+    viewContainerRef.current?.animate(
+      [
+        { opacity: 0, transform: 'translateY(16px)' },
+        { opacity: 1, transform: 'translateY(0)' },
+      ],
+      { duration: 300, easing: 'ease-out' }
+    );
+  }, [viewMode]);
+
+  const user = useAuthStore((state) => state.user);
+  const token = useAuthStore((state) => state.token);
+
+  useEffect(() => {
+    let isCurrent = true;
+    const managerId = user?.role.toLowerCase() === 'director' ? undefined : user?.id;
+
+    if (!token || (managerId === undefined && user?.role.toLowerCase() !== 'director')) {
+      setIcs([]);
+      setLoading(false);
+      return () => {
+        isCurrent = false;
+      };
+    }
+
+    setLoading(true);
+    setIcs([]);
+
+    viewAllICS(managerId)
+      .then((data) => {
+        if (isCurrent) setIcs(data);
+      })
+      .catch((error) => {
+        if (!isCurrent) return;
+
+        console.error('Could not load My ICs data:', error);
+        useToastStore.getState().addToast('Could not load My ICs. Please try again later.', 'error');
+      })
+      .finally(() => {
+        if (isCurrent) setLoading(false);
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [token, user?.id, user?.role]);
+
+  const getBadgeColor = (score: number | null) => {
+    switch (score === null ? null : Math.round(score)) {
+      case 1: return '#d31c37';
+      case 2: return '#e65100';
+      case 3: return '#e07b00';
+      case 4: return '#55a613';
+      case 5: return '#1b7800';
+      default: return '#94a3b8';
+    }
+  };
+
+  const visibleICs = useMemo(() => {
+    const query = normalizeSearchText(search.trim());
+    const matched = query
+      ? ics.filter((ic) => normalizeSearchText(`${ic.name} ${ic.title}`).includes(query))
+      : ics;
+    return [...matched].sort((a, b) => Number(a.score === null) - Number(b.score === null));
+  }, [ics, search]);
+
+  const searchSuggestions = useMemo<SearchSuggestion[]>(
+    () => ics.map((ic) => ({
+      id: String(ic.IC_id),
+      label: formatPersonName(ic.name),
+      value: formatPersonName(ic.name),
+    })),
+    [ics]
+  );
+
+  const gridColumns = viewMode === 'cards' ? gridCols : 0;
+  const effectivePageSize = gridColumns > 0
+    ? Math.max(gridColumns, Math.floor(pageSize / gridColumns) * gridColumns)
+    : pageSize;
+
+  const totalPages = Math.max(1, Math.ceil(visibleICs.length / effectivePageSize));
+  const currentPage = Math.min(page, totalPages);
+
+  const pagedICs = useMemo(
+    () => visibleICs.slice((currentPage - 1) * effectivePageSize, currentPage * effectivePageSize),
+    [visibleICs, currentPage, effectivePageSize]
+  );
+
+  useEffect(() => {
+    const container = viewContainerRef.current;
+    if (!container) return;
+    const updateColumns = () => {
+      const columns = getComputedStyle(container).gridTemplateColumns.split(' ').filter(Boolean).length;
+      setGridCols(columns);
+    };
+    updateColumns();
+    const observer = new ResizeObserver(updateColumns);
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [loading, viewMode, visibleICs.length]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search]);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia(MOBILE_QUERY);
+    const handleChange = (event: MediaQueryListEvent) => {
+      setPageSize(event.matches ? PAGE_SIZE_MOBILE : PAGE_SIZE_DESKTOP);
+      setPage(1);
+    };
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, []);
+
+  if (selectedIC) {
+  return <ICView ic={selectedIC} onBack={() => setSelectedIC(null)} />;
+}
+
+  if (loading) {
+    return <LoadingOverlay message="Loading ICs..." />;
+  }
+
+  if (ics.length === 0) {
+    return (
+      <div className="MyICs-containers">
+        <div className="show-ics-empty">
+          <i className="fa-solid fa-user-group"></i>
+          <p>You don't have any Individual Contributors assigned yet. The Director assigns ICs to each manager.</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="MyICs-containers">
+      <section className="team-page">
+        <ICsMetricsRow
+          teamICs={ics.map(({ IC_id, name, score, entries }) => ({
+            id: IC_id,
+            name,
+            score,
+            entries,
+          }))}
+        />
+
+        <h2>Your Team</h2>
+        <div className="team-toolbar">
+          <AutocompleteSearch
+            id="my-ics-search"
+            className="team-search"
+            label="Search individual contributors"
+            placeholder="Search ICs..."
+            value={search}
+            suggestions={searchSuggestions}
+            onChange={setSearch}
+          />
+          <div className="team-view-toggle" role="group" aria-label="IC view">
+            <button
+              type="button"
+              className={viewMode === 'cards' ? 'is-active' : ''}
+              aria-label="Card view"
+              aria-pressed={viewMode === 'cards'}
+              onClick={() => changeViewMode('cards')}
+            >
+              <svg aria-hidden="true" height="20" viewBox="0 -960 960 960" width="20" fill="currentColor">
+                <path d="M760-120H200q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120ZM200-640h560v-120H200v120Zm100 80H200v360h100v-360Zm360 0v360h100v-360H660Zm-80 0H380v360h200v-360Z" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              className={viewMode === 'list' ? 'is-active' : ''}
+              aria-label="List view"
+              aria-pressed={viewMode === 'list'}
+              onClick={() => changeViewMode('list')}
+            >
+              <i className="fa-solid fa-table-list" aria-hidden="true" />
+            </button>
+          </div>
+        </div>
+
+        <ICsComparisonCard
+          icComparisonData={pagedICs.map(({ IC_id, name, score, entries }) => ({
+            id: IC_id,
+            name,
+            score,
+            entries,
+          }))}
+        />
+
+        {visibleICs.length === 0 ? (
+          <p className="team-empty">No ICs match your search.</p>
+        ) : viewMode === 'cards' ? (
+          <div className="team-metrics" ref={viewContainerRef}>
+            {pagedICs.map((item) => (
+              <article
+                className="team-metric-card"
+                key={item.IC_id}
+                onClick={() => openICTimeline(item)}
+                style={{ cursor: 'pointer', transition: 'background-color 0.2s' }}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f3f4f6')}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'white')}
+              >
+                <UserAvatar
+                  name={item.name}
+                  id={item.IC_id}
+                  entityType="ic"
+                  size={48}
+                  className="team-metric-avatar"
+                />
+                <div className="team-metric-info">
+                  <h3>{formatPersonName(item.name)}</h3>
+                  <p className="team-metric-role">{item.title}</p>
+
+                  <div className="team-metric-badge-row">
+                    {item.score === null ? (
+                      <span className="team-no-score">No data</span>
+                    ) : (
+                      <span
+                        className="team-metric-badge"
+                        style={{ backgroundColor: getBadgeColor(item.score) }}
+                      >
+                        {Math.round(item.score)}
+                      </span>
+                    )}
+                    <span className="team-metric-detail">{item.entries} entries</span>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="team-table-wrap" ref={viewContainerRef}>
+            <table className="team-table">
+              <thead>
+                <tr>
+                  <th>IC</th>
+                  <th>Title</th>
+                  <th>Score</th>
+                  <th>Entries</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pagedICs.map((item) => (
+                    <tr
+                    key={item.IC_id}
+                    onClick={() => openICTimeline(item)}
+                    style={{ cursor: 'pointer', transition: 'background-color 0.2s' }}
+                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f3f4f6')}
+                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                  >
+                    <td style={{ textDecoration: 'underline' }}>{formatPersonName(item.name)}</td>
+                    <td>{item.title}</td>
+                    <td>
+                      {item.score === null
+                        ? <span className="team-no-score">No data</span>
+                        : Math.round(item.score)}
+                    </td>
+                    <td>{item.entries}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {visibleICs.length > pageSize && (
+          <nav className="team-pagination" aria-label="ICs pagination">
+            <button
+              type="button"
+              onClick={() => setPage(currentPage - 1)}
+              disabled={currentPage === 1}
+            >
+              {arrowBack}
+            </button>
+            <span>
+              Page {currentPage} of {totalPages}
+            </span>
+            <button
+              type="button"
+              onClick={() => setPage(currentPage + 1)}
+              disabled={currentPage === totalPages}
+            >
+              {arrowForward}
+            </button>
+          </nav>
+        )}
+      </section>
+    </div>
+  );
+}
+
+export default ViewICs;

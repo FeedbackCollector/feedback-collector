@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getAll, getById, create, update, remove } from "../controllers/ic.controller.ts";
+import { getAll, viewAll, getById, create, update, remove } from "../controllers/ic.controller.ts";
 import { authenticateToken, authorizeRole } from "../middleware/auth.ts";
 import { validate, validateQuery } from "../middleware/validate.ts";
 import { createICScheme, updateICScheme, listICsQueryScheme } from "../schemes/ic.schema.ts";
@@ -16,6 +16,7 @@ router.param("id", (req, res, next, value) => {
 });
 
 router.get("/", authenticateToken, validateQuery(listICsQueryScheme), getAll);
+router.get("/view", authenticateToken, validateQuery(listICsQueryScheme), viewAll);
 router.get("/:id", authenticateToken, getById);
 router.post("/", authenticateToken, authorizeRole("director"), validate(createICScheme), create);
 router.patch("/:id", authenticateToken, authorizeRole("director"), validate(updateICScheme), update);

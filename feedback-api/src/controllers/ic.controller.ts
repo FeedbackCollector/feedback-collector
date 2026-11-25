@@ -1,8 +1,13 @@
 import { Request, Response } from "express";
-import { getAllICsService, getICByIdService, createICService, updateICService, deleteICService } from "../services/ic.service.ts";
+import { getAllICsService, viewAllICs, getICByIdService, createICService, updateICService, deleteICService } from "../services/ic.service.ts";
 
 export async function getAll(req: Request, res: Response) {
     const result = await getAllICsService(res.locals.query, res.locals.user);
+    if (result === "FORBIDDEN") return res.status(401).json({ error: "UNAUTHORIZED" });
+    return res.json(result);
+}
+export async function viewAll(req: Request, res: Response) {
+    const result = await viewAllICs(res.locals.query, res.locals.user);
     if (result === "FORBIDDEN") return res.status(401).json({ error: "UNAUTHORIZED" });
     return res.json(result);
 }
