@@ -1,9 +1,9 @@
 import bcrypt from 'bcryptjs';
-import { signToken } from '../utils/token.ts';
+import { signToken, signPasswordResetToken, verifyPasswordResetToken, passwordVersion } from '../utils/token.ts';
 import * as UsersRepository from '../repositories/user.repositories.ts';
 import * as PreApprovalRepository from '../repositories/preApproval.repository.ts';
 import { getAreaByID } from '../repositories/area.repository.ts';
-import { sendPendingApprovalEmail, sendAccountApprovedEmail } from './mail.service.ts';
+import { sendPendingApprovalEmail, sendAccountApprovedEmail, sendPasswordResetEmail } from './mail.service.ts';
 import { AccountStatus, User, CreateUser, UpdateUser, UserFilters, UsersPage } from '../types/user.ts';
 
 // Directors list every user; a manager only gets their own record.
@@ -161,4 +161,93 @@ export async function changePasswordService(userId: number, currentPassword: str
 
     // Tokens issued before the change stop working, so the caller gets a fresh one.
     return { token: signToken({ ...user, passwordHash }) };
+}
+
+//esto es de prueba cambiar cuando el sender funcione
+export async function forgotPasswordService(email: string): Promise<"SENT"> {
+    const user = await UsersRepository.getUserByEmail(email);
+
+    if (!user || user.status !== "approved") return "SENT";
+
+    const resetToken = signPasswordResetToken(user);
+
+    const appUrl = process.env.APP_URL ?? "http://localhost:5173";
+    const resetUrl = `${appUrl}/reset-password?token=${encodeURIComponent(resetToken)}`;
+
+    if (process.env.NODE_ENV !== "production") {
+        console.log("\n========== PASSWORD RESET ==========");
+        console.log(`Usuario: ${user.email}`);
+        console.log(`Enlace: ${resetUrl}`);
+        console.log("====================================\n");
+    } else {
+        await sendPasswordResetEmail(user.email, user.name, resetToken);
+    }
+
+    return "SENT";
+}
+
+
+export async function resetPasswordService(
+    token: string,
+    newPassword: string
+): Promise<"INVALID_TOKEN" | "RESET_OK"> {
+
+    let payload: { id?: unknown; pv?: unknown; purpose?: unknown };
+
+    try {
+        payload = verifyPasswordResetToken(token);
+    } catch {
+        console.log("[RESET] Token inválido o expirado");
+        return "INVALID_TOKEN";
+    }
+
+    if (
+        typeof payload.id !== 'number' ||
+        typeof payload.pv !== 'string' ||
+        payload.purpose !== 'password-reset'
+    ) {
+        console.log("[RESET] Datos del token incorrectos");
+        return "INVALID_TOKEN";
+    }
+
+    const user = await UsersRepository.getUserByID(payload.id);
+
+    if (!user) {
+        console.log("[RESET] Usuario no encontrado");
+        return "INVALID_TOKEN";
+    }
+
+    console.log("\n========== RESET PASSWORD DEBUG ==========");
+    console.log("Usuario encontrado:", user.id);
+
+
+    if (passwordVersion(user.passwordHash) !== payload.pv) {
+        console.log("[RESET] La versión de contraseña no coincide");
+        console.log("==========================================\n");
+        return "INVALID_TOKEN";
+    }
+
+    const oldHash = user.passwordHash;
+
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+
+    const updated = await UsersRepository.patchUserPassword(
+        user.id,
+        passwordHash
+    );
+
+    console.log("¿Se actualizó?:", updated);
+
+    const userAfterUpdate = await UsersRepository.getUserByID(user.id);
+
+    console.log(
+        "¿Cambió el hash?:",
+        userAfterUpdate?.passwordHash !== oldHash
+    );
+
+    console.log("==========================================\n");
+
+    if (!updated) return "INVALID_TOKEN";
+
+    return "RESET_OK";
 }

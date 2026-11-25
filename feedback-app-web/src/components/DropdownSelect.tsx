@@ -24,53 +24,40 @@ export default function DropdownSelect({
 }: DropdownSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({});
-  
+
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLUListElement>(null);
 
-  const selectedOption = options.find((opt) => opt.value === value);
+  const selectedOption = options.find((option) => option.value === value);
 
   useLayoutEffect(() => {
-  if (!isOpen || !triggerRef.current || !menuRef.current) return;
+    if (!isOpen || !triggerRef.current || !menuRef.current) return;
 
-  const triggerRect = triggerRef.current.getBoundingClientRect();
-  const menu = menuRef.current;
-  const gap = 6;
-  const maxMenuHeight = 240;
-  const desiredHeight = Math.min(menu.scrollHeight, maxMenuHeight);
+    const triggerRect = triggerRef.current.getBoundingClientRect();
+    const menu = menuRef.current;
+    const gap = 6;
+    const maxMenuHeight = 240;
+    const desiredHeight = Math.min(menu.scrollHeight, maxMenuHeight);
 
-  const spaceBelow = Math.max(
-    0,
-    window.innerHeight - triggerRect.bottom - gap
-  );
-  const spaceAbove = Math.max(0, triggerRect.top - gap);
+    const spaceBelow = Math.max(0, window.innerHeight - triggerRect.bottom - gap);
+    const spaceAbove = Math.max(0, triggerRect.top - gap);
+    const openAbove = spaceBelow < desiredHeight && spaceAbove > spaceBelow;
+    const availableSpace = openAbove ? spaceAbove : spaceBelow;
+    const menuHeight = Math.min(desiredHeight, availableSpace);
 
-  const openAbove =
-    spaceBelow < desiredHeight && spaceAbove > spaceBelow;
-
-  const availableSpace = openAbove ? spaceAbove : spaceBelow;
-  const menuHeight = Math.min(desiredHeight, availableSpace);
-
-  setMenuStyle({
-    top: `${
-      openAbove
-        ? triggerRect.top - gap - menuHeight
-        : triggerRect.bottom + gap
-    }px`,
-    left: `${triggerRect.left}px`,
-    width: `${triggerRect.width}px`,
-    maxHeight: `${availableSpace}px`,
-  });
-}, [isOpen, options.length]);
+    setMenuStyle({
+      top: `${openAbove ? triggerRect.top - gap - menuHeight : triggerRect.bottom + gap}px`,
+      left: `${triggerRect.left}px`,
+      width: `${triggerRect.width}px`,
+      maxHeight: `${availableSpace}px`,
+    });
+  }, [isOpen, options.length]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
-      if (
-        !rootRef.current?.contains(target) &&
-        !menuRef.current?.contains(target)
-      ) {
+      if (!rootRef.current?.contains(target) && !menuRef.current?.contains(target)) {
         setIsOpen(false);
       }
     };
@@ -81,14 +68,16 @@ export default function DropdownSelect({
       }
     };
 
+    const handleResize = () => setIsOpen(false);
+
     document.addEventListener('mousedown', handleClickOutside);
     window.addEventListener('scroll', handleScroll, true);
-    window.addEventListener('resize', () => setIsOpen(false));
+    window.addEventListener('resize', handleResize);
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
       window.removeEventListener('scroll', handleScroll, true);
-      window.removeEventListener('resize', () => setIsOpen(false));
+      window.removeEventListener('resize', handleResize);
     };
   }, [isOpen]);
 
@@ -105,9 +94,10 @@ export default function DropdownSelect({
         type="button"
         aria-label={label}
         aria-expanded={isOpen}
+        aria-controls={`${id}-menu`}
         className="dropdown-select__trigger"
         disabled={options.length === 0}
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => setIsOpen((open) => !open)}
       >
         <span>{selectedOption?.label ?? 'Select...'}</span>
         <svg className="dropdown-select__arrow" aria-hidden="true" viewBox="0 0 24 24">
@@ -119,23 +109,32 @@ export default function DropdownSelect({
         createPortal(
           <ul
             ref={menuRef}
+            id={`${id}-menu`}
             className="dropdown-select__menu"
             style={menuStyle}
+            role="listbox"
+            aria-label={label}
           >
             {options.map((option) => (
               <li
                 key={option.value}
+                role="option"
                 aria-selected={option.value === value}
-                className={`dropdown-select__option${
-                  option.value === value ? ' is-active' : ''
-                }`}
+                tabIndex={0}
+                className={`dropdown-select__option${option.value === value ? ' is-active' : ''}`}
                 onClick={() => handleSelect(option.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    handleSelect(option.value);
+                  }
+                }}
               >
                 {option.label}
               </li>
             ))}
           </ul>,
-          document.body
+          document.body,
         )}
     </div>
   );
