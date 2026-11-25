@@ -41,6 +41,7 @@ const MetricCard: React.FC<MetricCardProps> = ({ title, value }) => (
 const ICComparisonRow: React.FC<ICData & { animate: boolean }> = ({
   name,
   score,
+  entries,
   animate,
 }) => {
   const percentage = score === null ? 0 : (score / 5) * 100;
@@ -59,6 +60,9 @@ const ICComparisonRow: React.FC<ICData & { animate: boolean }> = ({
       </div>
       <div className="icScore">
         {score === null ? '—' : score.toFixed(1)}
+        {score !== null && (
+          <span className="scoreOutOf">out of {entries}</span>
+        )}
       </div>
     </div>
   );

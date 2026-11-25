@@ -147,7 +147,7 @@
 
 .my-management-comparison-row {
   display: grid;
-  grid-template-columns: 140px minmax(0, 1fr) 45px;
+  grid-template-columns: 140px minmax(0, 1fr) 110px;
   align-items: center;
   gap: 1rem;
   width: 100%;
@@ -184,6 +184,14 @@
   font-weight: 600;
   text-align: right;
   color: #111827;
+  white-space: nowrap;
+}
+
+.my-management-out-of {
+  margin-left: 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: #6b7280;
 }
 
 .my-management-manager-grid {
@@ -325,7 +333,7 @@
 
 @media (max-width: 480px) {
   .my-management-comparison-row {
-    grid-template-columns: 100px minmax(0, 1fr) 38px;
+    grid-template-columns: 90px minmax(0, 1fr) 92px;
     gap: 0.65rem;
   }
 
