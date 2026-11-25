@@ -7,6 +7,7 @@ import managerFeedbackRoutes from "./routes/managerFeedback.routes.ts";
 import usersRoutes from "./routes/users.routes.ts";
 import areaRoutes from "./routes/area.routes.ts";
 import projectRoutes from "./routes/project.routes.ts";
+import preApprovalRoutes from "./routes/preApprovals.routes.ts";
 import swaggerUi from "swagger-ui-express";
 import YAML from "yaml";
 import { readFileSync } from "node:fs";
@@ -48,5 +49,6 @@ app.use("/manager-feedback", managerFeedbackRoutes);
 app.use("/users", usersRoutes);
 app.use("/areas", areaRoutes);
 app.use("/projects", projectRoutes);
+app.use("/pre-approvals", preApprovalRoutes);
 
 export default app;
