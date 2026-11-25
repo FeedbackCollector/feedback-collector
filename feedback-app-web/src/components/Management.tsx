@@ -8,6 +8,7 @@ import {
   updateManagerArea,
   updateManagerDirector,
   updateICManager,
+  updateProjectManagers,
 } from '../service/ManagementApi';
 import type {
   ManagementData,
@@ -792,8 +793,6 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
         aria-labelledby={`management-tab-${activeTab}`}
       >
         <div className="management-toolbar">
-
-          <div className="management-view-toggle" role="group" aria-label="Management view">
             {activeTab !== 'Managers' && activeTab !== 'Directors' && (
             <button
               type="button"
@@ -1093,24 +1092,6 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
                         <i className="fa-solid fa-user-group" aria-hidden="true" />
                       </button>
                     )}
-                    <button
-                      type="button"
-                      className="management-row-action"
-                      aria-label={`Edit ${formatManagementName(row.name, activeTab)}`}
-                      onClick={() => openEditDialog(row)}
-                      disabled={isMutating}
-                    >
-                      <i className="fa-solid fa-pen" aria-hidden="true" />
-                    </button>
-                    <button
-                      type="button"
-                      className="management-row-action"
-                      aria-label={`Delete ${row.name}`}
-                      onClick={() => requestDeleteRow(row)}
-                      disabled={isMutating}
-                    >
-                      <i className="fa-regular fa-trash-can" aria-hidden="true" />
-                    </button>
                     {activeTab === 'Projects' && (
                       <button
                         type="button"

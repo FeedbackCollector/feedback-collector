@@ -12,6 +12,7 @@ export interface ManagementRow {
   email?: string;
   areaId?: number;
   managerId?: number;
+  managerIds?: number[];
   title?: string;
   feedbackEntries?: ManagerFeedback[];
 }
