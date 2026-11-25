@@ -325,6 +325,53 @@
   white-space: nowrap;
 }
 
+.management-directors-table th:last-child,
+.management-directors-table td:last-child {
+  width: 300px;
+}
+
+.management-directors-table th:nth-child(2),
+.management-directors-table td:nth-child(2),
+.management-directors-table th:nth-child(3),
+.management-directors-table td:nth-child(3),
+.management-directors-table th:nth-child(4),
+.management-directors-table td:nth-child(4) {
+  text-align: center;
+}
+
+.management-director-card-detail {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  align-items: baseline;
+  justify-content: initial;
+  text-align: left;
+}
+
+.management-director-card-detail dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+
+.management-director-action {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin-left: 6px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: #f4f4f8;
+  color: var(--text-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+}
+
 .management-row-action {
   display: inline-grid;
   width: 36px;
@@ -417,6 +464,9 @@
 
 .management-card-actions {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
 }
 
 .management-card-detail {

@@ -33,6 +33,7 @@ export const updateUserScheme = Joi.object({
     name: userName,
     email: userEmail,
     area_id: areaId,
+    director_id: Joi.number().integer().positive().allow(null),
 }).min(1);
 
 export const listUsersQueryScheme = Joi.object({

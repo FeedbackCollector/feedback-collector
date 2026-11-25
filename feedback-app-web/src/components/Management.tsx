@@ -6,6 +6,7 @@ import {
   loadManagementData,
   saveManagementRow,
   updateManagerArea,
+  updateManagerDirector,
   updateICManager,
   updateProjectManagers,
 } from '../service/ManagementApi';
@@ -16,7 +17,7 @@ import type {
   ManagementRow,
   ManagementTab,
 } from '../types/managementTypes';
-import { useAuthStore } from '../store/authStore';
+import { useAuthStore, type User } from '../store/authStore';
 import { normalizeSearchText } from '../utils/search';
 import '../styles/Management.css';
 import {useToastStore} from '../store/toastStore';
@@ -24,10 +25,11 @@ import PreApprovedEmails from './PreApprovedEmails';
 import LoadingOverlay from './LoadingOverlay';
 import { formatPersonName } from './formatPersonName';
 import DropdownSelect from './DropdownSelect';
+import AutocompleteSearch from './AutocompleteSearch';
 
 type ViewMode = 'table' | 'cards';
 
-const TABS: ManagementTab[] = ['Areas', 'Managers', 'ICs', 'Projects'];
+const TABS: ManagementTab[] = ['Areas', 'Managers', 'ICs', 'Projects', 'Directors'];
 
 function formatManagementName(name: string, tab: ManagementTab): string {
   return tab === 'Managers' || tab === 'ICs' ? formatPersonName(name) : name;
@@ -65,6 +67,12 @@ const COLUMNS: Record<ManagementTab, { label: string; key: keyof ManagementRow }
     { label: 'Entries', key: 'entries' },
     { label: 'Managers', key: 'managerNames' },
   ],
+  Directors: [
+    { label: 'Name', key: 'name' },
+    { label: 'Email', key: 'email' },
+    { label: 'Managers', key: 'managers' },
+    { label: 'ICs', key: 'ics' },
+  ],
 };
 
 const TAB_SINGULAR: Record<ManagementTab, string> = {
@@ -72,6 +80,7 @@ const TAB_SINGULAR: Record<ManagementTab, string> = {
   Managers: 'Manager',
   ICs: 'IC',
   Projects: 'Project',
+  Directors: 'Director',
 };
 
 const EMPTY_FORM: ManagementFormValues = {
@@ -92,6 +101,35 @@ function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+function getRowsForTab(data: ManagementData, tab: ManagementTab, user: User | null): ManagementRow[] {
+  if (tab !== 'Directors') return data.rows;
+
+  if (
+    user?.role.toLowerCase() !== 'director' ||
+    user.id === undefined ||
+    data.rows.some((row) => row.id === user.id)
+  ) {
+    return data.rows;
+  }
+
+  const assignedManagers = data.managers.filter((manager) => manager.directorId === user.id);
+  const managerIds = new Set(assignedManagers.map((manager) => manager.id));
+  const assignedICs = data.individualContributors?.filter(
+    (ic) => (ic.managerId !== null && managerIds.has(ic.managerId)) || ic.directorId === user.id
+  ).length ?? 0;
+  return [
+    ...data.rows,
+    {
+      id: user.id,
+      name: user.name ?? user.email,
+      email: user.email,
+      managers: assignedManagers.length,
+      managerIds: assignedManagers.map((manager) => manager.id),
+      ics: assignedICs,
+    },
+  ];
+}
+
 type DeleteTarget = {
   id: number;
   name: string;
@@ -107,6 +145,7 @@ type ManagementCompProps = {
 
 function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
   const token = useAuthStore((state) => state.token);
+  const user = useAuthStore((state) => state.user);
   const [viewMode, setViewMode] = useState<ViewMode>('table');
   const viewContainerRef = useRef<HTMLDivElement>(null);
   const shouldAnimateViewChange = useRef(false);
@@ -167,6 +206,15 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
   const [assigningProject, setAssigningProject] = useState<ManagementRow | null>(null);
   const [selectedManagerIds, setSelectedManagerIds] = useState<number[]>([]);
   const [managerSearch, setManagerSearch] = useState('');
+  const [assigningDirector, setAssigningDirector] = useState<ManagementRow | null>(null);
+  const [selectedDirectorManagerIds, setSelectedDirectorManagerIds] = useState<number[]>([]);
+  const [directorManagerSearch, setDirectorManagerSearch] = useState('');
+  const [directorAssignmentError, setDirectorAssignmentError] = useState<string | null>(null);
+  const [assigningDirectorICs, setAssigningDirectorICs] = useState<ManagementRow | null>(null);
+  const [selectedDirectorICIds, setSelectedDirectorICIds] = useState<number[]>([]);
+  const [directorICManagerId, setDirectorICManagerId] = useState('');
+  const [directorICManagerSearch, setDirectorICManagerSearch] = useState('');
+  const [directorICAssignmentError, setDirectorICAssignmentError] = useState<string | null>(null);
   const [feedbackManager, setFeedbackManager] = useState<ManagementRow | null>(null);
   const [formValues, setFormValues] = useState<ManagementFormValues>(EMPTY_FORM);
   const [closingPopup, setClosingPopup] = useState<'feedback' | 'form' | 'delete' | null>(null);
@@ -213,7 +261,7 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
     loadManagementData(activeTab, token)
       .then((data) => {
         if (isCurrent) {
-          setRows(data.rows);
+          setRows(getRowsForTab(data, activeTab, user));
           setAreas(data.areas);
           setManagers(data.managers);
           setPendingAccounts(data.pendingAccounts);
@@ -232,7 +280,7 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
     return () => {
       isCurrent = false;
     };
-  }, [activeTab, token]);
+  }, [activeTab, token, user]);
 
   const openAddDialog = () => {
     setEditingRow(null);
@@ -292,7 +340,7 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
   const refreshRows = async () => {
     if (!token) throw new Error('You must be logged in to load management data.');
     const data = await loadManagementData(activeTab, token);
-    setRows(data.rows);
+    setRows(getRowsForTab(data, activeTab, user));
     setAreas(data.areas);
     setManagers(data.managers);
     setPendingAccounts(data.pendingAccounts);
@@ -484,6 +532,125 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
     }
   };
 
+  const openDirectorManagerDialog = (director: ManagementRow) => {
+    setAssigningDirector(director);
+    setSelectedDirectorManagerIds(
+      managers
+        .filter((manager) => manager.directorId === director.id)
+        .map((manager) => manager.id)
+    );
+    setDirectorManagerSearch('');
+    setDirectorAssignmentError(null);
+  };
+
+  const closeDirectorManagerDialog = () => {
+    if (isMutating) return;
+    setAssigningDirector(null);
+    setSelectedDirectorManagerIds([]);
+    setDirectorManagerSearch('');
+    setDirectorAssignmentError(null);
+  };
+
+  const assignManagersToDirector = async () => {
+    if (!token || !assigningDirector) return;
+
+    const selectedIds = new Set(selectedDirectorManagerIds);
+    const changedManagers = managers.filter((manager) =>
+      selectedIds.has(manager.id)
+        ? manager.directorId !== assigningDirector.id
+        : manager.directorId === assigningDirector.id
+    );
+    if (changedManagers.length === 0) return;
+
+    setIsMutating(true);
+    setDirectorAssignmentError(null);
+    try {
+      const results = await Promise.allSettled(
+        changedManagers.map((manager) =>
+          updateManagerDirector(
+            manager.id,
+            selectedIds.has(manager.id) ? assigningDirector.id : null,
+            token
+          )
+        )
+      );
+      await refreshRows();
+
+      const failures = results.filter((result) => result.status === 'rejected');
+      if (failures.length > 0) {
+        const firstFailure = failures[0];
+        setDirectorAssignmentError(
+          firstFailure.status === 'rejected'
+            ? `Could not update ${failures.length} manager assignment${failures.length === 1 ? '' : 's'}: ${getErrorMessage(firstFailure.reason)}`
+            : 'Could not update manager assignments.'
+        );
+        return;
+      }
+
+      setAssigningDirector(null);
+      setSelectedDirectorManagerIds([]);
+      setDirectorManagerSearch('');
+      setDirectorAssignmentError(null);
+      useToastStore.getState().addToast('Manager assignments updated successfully!', 'success');
+    } catch (reason: unknown) {
+      console.error('Could not update director manager assignments:', reason);
+      setDirectorAssignmentError(getErrorMessage(reason));
+    } finally {
+      setIsMutating(false);
+    }
+  };
+
+  const openDirectorICDialog = (director: ManagementRow) => {
+    setAssigningDirectorICs(director);
+    setSelectedDirectorICIds([]);
+    setDirectorICManagerId('');
+    setDirectorICManagerSearch('');
+    setDirectorICAssignmentError(null);
+  };
+
+  const closeDirectorICDialog = () => {
+    if (isMutating) return;
+    setAssigningDirectorICs(null);
+    setSelectedDirectorICIds([]);
+    setDirectorICManagerId('');
+    setDirectorICManagerSearch('');
+    setDirectorICAssignmentError(null);
+  };
+
+  const assignDirectorICs = async () => {
+    if (!token || !assigningDirectorICs || selectedDirectorICIds.length === 0 || !directorICManagerId) return;
+
+    setIsMutating(true);
+    setDirectorICAssignmentError(null);
+    try {
+      const results = await Promise.allSettled(
+        selectedDirectorICIds.map((icId) => updateICManager(icId, Number(directorICManagerId), token))
+      );
+      await refreshRows();
+
+      const failures = results.filter((result) => result.status === 'rejected');
+      if (failures.length > 0) {
+        const firstFailure = failures[0];
+        setDirectorICAssignmentError(
+          firstFailure.status === 'rejected'
+            ? `Could not assign ${failures.length} IC${failures.length === 1 ? '' : 's'}: ${getErrorMessage(firstFailure.reason)}`
+            : 'Could not assign ICs.'
+        );
+        return;
+      }
+
+      setAssigningDirectorICs(null);
+      setSelectedDirectorICIds([]);
+      setDirectorICManagerId('');
+      setDirectorICManagerSearch('');
+    } catch (reason: unknown) {
+      console.error('Could not assign Director-held ICs:', reason);
+      setDirectorICAssignmentError(getErrorMessage(reason));
+    } finally {
+      setIsMutating(false);
+    }
+  };
+
   const openAssignProjectDialog = (project: ManagementRow) => {
     setAssigningProject(project);
     setSelectedManagerIds(project.managerIds ?? []);
@@ -560,6 +727,24 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
   const filteredManagers = managers.filter((manager) =>
     normalizeSearchText(manager.name).includes(normalizedManagerSearch)
   );
+  const normalizedDirectorManagerSearch = normalizeSearchText(directorManagerSearch.trim());
+  const filteredDirectorManagers = managers.filter((manager) =>
+    normalizeSearchText(`${manager.name} ${manager.email ?? ''}`).includes(normalizedDirectorManagerSearch)
+  );
+  const selectedDirectorManagerSet = new Set(selectedDirectorManagerIds);
+  const directorHeldICs = assigningDirectorICs
+    ? individualContributors.filter(
+      (ic) => ic.managerId === null && ic.directorId === assigningDirectorICs.id
+    )
+    : [];
+  const directorManagers = assigningDirectorICs
+    ? managers.filter((manager) => manager.directorId === assigningDirectorICs.id)
+    : [];
+  const directorManagerAssignmentsChanged = assigningDirector !== null && managers.some((manager) =>
+    selectedDirectorManagerSet.has(manager.id)
+      ? manager.directorId !== assigningDirector.id
+      : manager.directorId === assigningDirector.id
+  );
   const projectManagersChanged = assigningProject !== null && (
     (assigningProject.managerIds ?? []).length !== selectedManagerIds.length ||
     (assigningProject.managerIds ?? []).some((id) => !selectedManagerIds.includes(id))
@@ -596,7 +781,7 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
         <div className="management-toolbar">
 
           <div className="management-view-toggle" role="group" aria-label="Management view">
-            {activeTab !== 'Managers' && (
+            {activeTab !== 'Managers' && activeTab !== 'Directors' && (
             <button
               type="button"
               className="management-add-button"
@@ -720,7 +905,7 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
           <p className="management-empty-state">No {activeTab.toLowerCase()} to display.</p>
             ) : viewMode === 'table' ? (
           <div className={`management-table-wrap${activeTab === 'Managers' ? ' management-managers-table-wrap' : ''}`}>
-            <table className={`management-table${activeTab === 'Managers' ? ' management-managers-table' : ''}${activeTab === 'Areas' || activeTab === 'Projects' ? ' management-scroll-table' : ''}${activeTab === 'Projects' ? ' management-projects-table' : ''}`}>
+            <table className={`management-table${activeTab === 'Managers' ? ' management-managers-table' : ''}${activeTab === 'Areas' || activeTab === 'Projects' ? ' management-scroll-table' : ''}${activeTab === 'Projects' ? ' management-projects-table' : ''}${activeTab === 'Directors' ? ' management-directors-table' : ''}`}>
               <thead>
                 <tr>
                   {COLUMNS[activeTab].map(({ label, key }) => (
@@ -765,6 +950,30 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
                       </td>
                     ))}
                     <td className="management-actions-cell">
+                      {activeTab === 'Directors' && (
+                        <>
+                          <button
+                            type="button"
+                            className="management-row-action"
+                            aria-label={`Assign managers to ${formatPersonName(row.name)}`}
+                            title="Assign managers"
+                            onClick={() => openDirectorManagerDialog(row)}
+                            disabled={isMutating}
+                          >
+                            <i className="fa-solid fa-user-tie" aria-hidden="true" />
+                          </button>
+                          <button
+                            type="button"
+                            className="management-row-action"
+                            aria-label={`Assign Director-held ICs to managers of ${formatPersonName(row.name)}`}
+                            title="Assign ICs"
+                            onClick={() => openDirectorICDialog(row)}
+                            disabled={isMutating}
+                          >
+                            <i className="fa-solid fa-user-group" aria-hidden="true" />
+                          </button>
+                        </>
+                      )}
                       {activeTab === 'Managers' && (
                         <button
                           type="button"
@@ -774,7 +983,7 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
                           onClick={() => openAssignDialog(row)}
                           disabled={isMutating}
                         >
-                          <i className="fa-solid fa-user-plus" aria-hidden="true" />
+                          <i className="fa-solid fa-user-group" aria-hidden="true" />
                         </button>
                       )}
                       {activeTab === 'Projects' && (
@@ -786,7 +995,7 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
                           onClick={() => openAssignProjectDialog(row)}
                           disabled={isMutating}
                         >
-                          <i className="fa-solid fa-user-plus" aria-hidden="true" />
+                          <i className="fa-solid fa-user-tie" aria-hidden="true" />
                         </button>
                       )}
                       {activeTab === 'Managers' && (
@@ -801,24 +1010,28 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
                           <i className="fa-regular fa-message" aria-hidden="true" />
                         </button>
                       )}
-                      <button
-                        type="button"
-                        className="management-row-action"
-                        aria-label={`Edit ${formatManagementName(row.name, activeTab)}`}
-                        onClick={() => openEditDialog(row)}
-                        disabled={isMutating}
-                      >
-                        <i className="fa-solid fa-pen" aria-hidden="true" />
-                      </button>
-                      <button
-                        type="button"
-                        className="management-row-action"
-                        aria-label={`Delete ${row.name}`}
-                        onClick={() => requestDeleteRow(row)}
-                        disabled={isMutating}
-                      >
-                        <i className="fa-regular fa-trash-can" aria-hidden="true" />
-                      </button>
+                      {activeTab !== 'Directors' && (
+                        <>
+                          <button
+                            type="button"
+                            className="management-row-action"
+                            aria-label={`Edit ${formatManagementName(row.name, activeTab)}`}
+                            onClick={() => openEditDialog(row)}
+                            disabled={isMutating}
+                          >
+                            <i className="fa-solid fa-pen" aria-hidden="true" />
+                          </button>
+                          <button
+                            type="button"
+                            className="management-row-action"
+                            aria-label={`Delete ${row.name}`}
+                            onClick={() => requestDeleteRow(row)}
+                            disabled={isMutating}
+                          >
+                            <i className="fa-regular fa-trash-can" aria-hidden="true" />
+                          </button>
+                        </>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -832,6 +1045,30 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
                 <div className="management-card-heading">
                   <h2>{formatManagementName(row.name, activeTab)}</h2>
                   <div className="management-card-actions">
+                    {activeTab === 'Directors' && (
+                      <>
+                        <button
+                          type="button"
+                          className="management-row-action"
+                          aria-label={`Assign managers to ${formatPersonName(row.name)}`}
+                          title="Assign managers"
+                          onClick={() => openDirectorManagerDialog(row)}
+                          disabled={isMutating}
+                        >
+                          <i className="fa-solid fa-user-tie" aria-hidden="true" />
+                        </button>
+                        <button
+                          type="button"
+                          className="management-row-action"
+                          aria-label={`Assign Director-held ICs to managers of ${formatPersonName(row.name)}`}
+                          title="Assign ICs"
+                          onClick={() => openDirectorICDialog(row)}
+                          disabled={isMutating}
+                        >
+                          <i className="fa-solid fa-user-group" aria-hidden="true" />
+                        </button>
+                      </>
+                    )}
                     {activeTab === 'Managers' && (
                       <button
                         type="button"
@@ -841,7 +1078,7 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
                         onClick={() => openAssignDialog(row)}
                         disabled={isMutating}
                       >
-                        <i className="fa-solid fa-user-plus" aria-hidden="true" />
+                        <i className="fa-solid fa-user-group" aria-hidden="true" />
                       </button>
                     )}
                     {activeTab === 'Projects' && (
@@ -853,32 +1090,39 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
                         onClick={() => openAssignProjectDialog(row)}
                         disabled={isMutating}
                       >
-                        <i className="fa-solid fa-user-plus" aria-hidden="true" />
+                        <i className="fa-solid fa-user-tie" aria-hidden="true" />
                       </button>
                     )}
-                    <button
-                      type="button"
-                      className="management-row-action"
-                      aria-label={`Edit ${formatManagementName(row.name, activeTab)}`}
-                      onClick={() => openEditDialog(row)}
-                      disabled={isMutating}
-                    >
-                      <i className="fa-solid fa-pen" aria-hidden="true" />
-                    </button>
-                    <button
-                      type="button"
-                      className="management-row-action"
-                      aria-label={`Delete ${row.name}`}
-                      onClick={() => requestDeleteRow(row)}
-                      disabled={isMutating}
-                    >
-                      <i className="fa-regular fa-trash-can" aria-hidden="true" />
-                    </button>
+                    {activeTab !== 'Directors' && (
+                      <>
+                        <button
+                          type="button"
+                          className="management-row-action"
+                          aria-label={`Edit ${formatManagementName(row.name, activeTab)}`}
+                          onClick={() => openEditDialog(row)}
+                          disabled={isMutating}
+                        >
+                          <i className="fa-solid fa-pen" aria-hidden="true" />
+                        </button>
+                        <button
+                          type="button"
+                          className="management-row-action"
+                          aria-label={`Delete ${row.name}`}
+                          onClick={() => requestDeleteRow(row)}
+                          disabled={isMutating}
+                        >
+                          <i className="fa-regular fa-trash-can" aria-hidden="true" />
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
                 <dl>
                   {COLUMNS[activeTab].slice(1).map(({ label, key }) => (
-                    <div className="management-card-detail" key={key}>
+                    <div
+                      className={`management-card-detail${activeTab === 'Directors' ? ' management-director-card-detail' : ''}`}
+                      key={key}
+                    >
                       <dt>{label}</dt>
                       <dd>{renderCell(row, key)}</dd>
                     </div>
@@ -1051,6 +1295,217 @@ function ManagementComp({ activeTab, onTabChange }: ManagementCompProps) {
                   className="management-add-button"
                   onClick={() => void assignSelectedICs()}
                   disabled={isMutating || selectedICIds.length === 0}
+                >
+                  {isMutating ? 'Assigning...' : 'Assign ICs'}
+                </button>
+              </div>
+            </section>
+          </div>
+        )}
+        {assigningDirector && (
+          <div
+            className="management-dialog-backdrop management-assignment-backdrop"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) closeDirectorManagerDialog();
+            }}
+          >
+            <section
+              className="management-dialog management-assignment-dialog"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="director-manager-assignment-title"
+            >
+              <h2 id="director-manager-assignment-title">
+                Assign managers to {formatPersonName(assigningDirector.name)}
+              </h2>
+              <p className="management-form-hint">
+                Selecting a manager moves them from their current Director. Their ICs remain assigned to that manager.
+              </p>
+              <input
+                type="search"
+                className="management-assignment-search"
+                aria-label="Search managers"
+                placeholder="Search managers to assign."
+                value={directorManagerSearch}
+                onChange={(event) => setDirectorManagerSearch(event.target.value)}
+              />
+              {managers.length === 0 ? (
+                <p className="management-empty-state">There are no managers to assign.</p>
+              ) : filteredDirectorManagers.length === 0 ? (
+                <p className="management-empty-state">No managers match your search.</p>
+              ) : (
+                <div className="management-assignment-list">
+                  {filteredDirectorManagers.map((manager) => {
+                    const isSelected = selectedDirectorManagerSet.has(manager.id);
+                    const assignedDirector = rows.find((row) => row.id === manager.directorId);
+                    const assignmentStatus = manager.directorId === assigningDirector.id
+                      ? isSelected ? 'Assigned' : 'Remove'
+                      : isSelected
+                        ? manager.directorId === null || manager.directorId === undefined
+                          ? 'Assign'
+                          : `Move from ${formatPersonName(assignedDirector?.name ?? 'another Director')}`
+                        : manager.directorId === null || manager.directorId === undefined
+                          ? 'Available'
+                          : `Assigned to ${formatPersonName(assignedDirector?.name ?? 'another Director')}`;
+
+                    return (
+                      <button
+                        type="button"
+                        className={`management-assignment-option${isSelected ? ' is-selected' : ''}`}
+                        key={manager.id}
+                        aria-pressed={isSelected}
+                        disabled={isMutating}
+                        onClick={() => {
+                          setSelectedDirectorManagerIds((current) =>
+                            current.includes(manager.id)
+                              ? current.filter((id) => id !== manager.id)
+                              : [...current, manager.id]
+                          );
+                        }}
+                      >
+                        <span className="management-assignment-option-info">
+                          <strong>{formatPersonName(manager.name)}</strong>
+                          {manager.email && <small>{manager.email}</small>}
+                        </span>
+                        <span className="management-assignment-status">{assignmentStatus}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+              {directorAssignmentError && (
+                <p className="management-error" role="alert">{directorAssignmentError}</p>
+              )}
+              <div className="management-dialog-actions">
+                <button
+                  type="button"
+                  className="management-cancel-button"
+                  onClick={closeDirectorManagerDialog}
+                  disabled={isMutating}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="management-add-button"
+                  onClick={() => void assignManagersToDirector()}
+                  disabled={isMutating || !directorManagerAssignmentsChanged}
+                >
+                  {isMutating ? 'Saving...' : 'Save managers'}
+                </button>
+              </div>
+            </section>
+          </div>
+        )}
+        {assigningDirectorICs && (
+          <div
+            className="management-dialog-backdrop management-assignment-backdrop"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) closeDirectorICDialog();
+            }}
+          >
+            <section
+              className="management-dialog management-assignment-dialog"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="director-ic-assignment-title"
+            >
+              <h2 id="director-ic-assignment-title">
+                Assign ICs held by {formatPersonName(assigningDirectorICs.name)}
+              </h2>
+              {directorManagers.length === 0 ? (
+                <p className="management-empty-state">
+                  Assign a manager to this Director before assigning these ICs.
+                </p>
+              ) : (
+                <>
+                  <label className="management-form-label" htmlFor="director-ic-manager">
+                    Assign selected ICs to
+                  </label>
+                  <AutocompleteSearch
+                    id="director-ic-manager"
+                    className="management-assignment-search"
+                    label="Choose a manager"
+                    placeholder="Search or select a manager"
+                    inputClassName="management-assignment-search"
+                    value={directorICManagerSearch}
+                    suggestions={directorManagers.map((manager) => ({
+                      id: String(manager.id),
+                      label: formatPersonName(manager.name),
+                      value: String(manager.id),
+                      searchText: manager.email ?? '',
+                    }))}
+                    onChange={(value) => {
+                      const selectedManager = directorManagers.find(
+                        (manager) => String(manager.id) === value
+                      );
+                      if (selectedManager) {
+                        setDirectorICManagerId(String(selectedManager.id));
+                        setDirectorICManagerSearch(formatPersonName(selectedManager.name));
+                        return;
+                      }
+
+                      setDirectorICManagerSearch(value);
+                      setDirectorICManagerId('');
+                    }}
+                  />
+                </>
+              )}
+              {directorHeldICs.length === 0 ? (
+                <p className="management-empty-state">There are no ICs waiting to be assigned.</p>
+              ) : (
+                <div className="management-assignment-list">
+                  {directorHeldICs.map((ic) => {
+                    const isSelected = selectedDirectorICIds.includes(ic.id);
+                    return (
+                      <button
+                        type="button"
+                        className={`management-assignment-option${isSelected ? ' is-selected' : ''}`}
+                        key={ic.id}
+                        aria-pressed={isSelected}
+                        disabled={isMutating || directorManagers.length === 0}
+                        onClick={() => {
+                          setSelectedDirectorICIds((current) =>
+                            current.includes(ic.id)
+                              ? current.filter((id) => id !== ic.id)
+                              : [...current, ic.id]
+                          );
+                        }}
+                      >
+                        <span className="management-assignment-option-info">
+                          <strong>{formatPersonName(ic.name)}</strong>
+                          <small>{ic.title}</small>
+                        </span>
+                        <span className="management-assignment-status">
+                          {isSelected ? 'Selected' : 'Select'}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+              {directorICAssignmentError && (
+                <p className="management-error" role="alert">{directorICAssignmentError}</p>
+              )}
+              <div className="management-dialog-actions">
+                <button
+                  type="button"
+                  className="management-cancel-button"
+                  onClick={closeDirectorICDialog}
+                  disabled={isMutating}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="management-add-button"
+                  onClick={() => void assignDirectorICs()}
+                  disabled={
+                    isMutating ||
+                    selectedDirectorICIds.length === 0 ||
+                    !directorICManagerId ||
+                    directorManagers.length === 0
+                  }
                 >
                   {isMutating ? 'Assigning...' : 'Assign ICs'}
                 </button>

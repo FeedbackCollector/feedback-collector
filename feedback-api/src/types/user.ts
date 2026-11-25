@@ -29,6 +29,7 @@ export interface UpdateUser {
     name?: string;
     email?: string;
     area_id?: number;
+    director_id?: number | null;
 }
 
 export interface UserFilters {
