@@ -151,39 +151,87 @@ export async function changePasswordService(userId: number, currentPassword: str
 
 export async function forgotPasswordService(email: string): Promise<"SENT"> {
     const user = await UsersRepository.getUserByEmail(email);
+
     if (!user || user.status !== "approved") return "SENT";
 
     const resetToken = signPasswordResetToken(user);
 
-    sendPasswordResetEmail(user.email, user.name, resetToken).catch((err: unknown) =>
-        console.error('Could not send password reset email:', err instanceof Error ? err.message : err),
-    );
+    const appUrl = process.env.APP_URL ?? "http://localhost:5173";
+    const resetUrl = `${appUrl}/reset-password?token=${encodeURIComponent(resetToken)}`;
+
+    if (process.env.NODE_ENV !== "production") {
+        console.log("\n========== PASSWORD RESET ==========");
+        console.log(`Usuario: ${user.email}`);
+        console.log(`Enlace: ${resetUrl}`);
+        console.log("====================================\n");
+    } else {
+        await sendPasswordResetEmail(user.email, user.name, resetToken);
+    }
 
     return "SENT";
 }
 
-export async function resetPasswordService(token: string, newPassword: string): Promise<"INVALID_TOKEN" | "RESET_OK"> {
+
+export async function resetPasswordService(
+    token: string,
+    newPassword: string
+): Promise<"INVALID_TOKEN" | "RESET_OK"> {
+
     let payload: { id?: unknown; pv?: unknown; purpose?: unknown };
+
     try {
         payload = verifyPasswordResetToken(token);
     } catch {
+        console.log("[RESET] Token inválido o expirado");
         return "INVALID_TOKEN";
     }
 
-    if (typeof payload.id !== 'number' || typeof payload.pv !== 'string' || payload.purpose !== 'password-reset') {
+    if (
+        typeof payload.id !== 'number' ||
+        typeof payload.pv !== 'string' ||
+        payload.purpose !== 'password-reset'
+    ) {
+        console.log("[RESET] Datos del token incorrectos");
         return "INVALID_TOKEN";
     }
 
     const user = await UsersRepository.getUserByID(payload.id);
-    if (!user) return "INVALID_TOKEN";
 
-    // Verifica que la contraseña no haya sido cambiada después de emitir el enlace
-    if (passwordVersion(user.passwordHash) !== payload.pv) {
+    if (!user) {
+        console.log("[RESET] Usuario no encontrado");
         return "INVALID_TOKEN";
     }
 
+    console.log("\n========== RESET PASSWORD DEBUG ==========");
+    console.log("Usuario encontrado:", user.id);
+
+
+    if (passwordVersion(user.passwordHash) !== payload.pv) {
+        console.log("[RESET] La versión de contraseña no coincide");
+        console.log("==========================================\n");
+        return "INVALID_TOKEN";
+    }
+
+    const oldHash = user.passwordHash;
+
     const passwordHash = await bcrypt.hash(newPassword, 10);
-    const updated = await UsersRepository.patchUserPassword(user.id, passwordHash);
+
+    const updated = await UsersRepository.patchUserPassword(
+        user.id,
+        passwordHash
+    );
+
+    console.log("¿Se actualizó?:", updated);
+
+    const userAfterUpdate = await UsersRepository.getUserByID(user.id);
+
+    console.log(
+        "¿Cambió el hash?:",
+        userAfterUpdate?.passwordHash !== oldHash
+    );
+
+    console.log("==========================================\n");
+
     if (!updated) return "INVALID_TOKEN";
 
     return "RESET_OK";
