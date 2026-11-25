@@ -4,7 +4,6 @@ import {ICs} from "../models/ic.ts"
 import type {IC, CreateICRecord, UpdateIC, ICFilters} from "../types/ic.ts"
 
 
-// `entries` is always read from the feedback table so it can't drift from the real count.
 const liveEntries = {
     exclude: ["entries"],
     include: [[literal('(SELECT COUNT(*) FROM feedback WHERE feedback.ic_id = "ICs"."IC_id")::int'), "entries"]],
