@@ -35,7 +35,7 @@ User.belongsTo(Area, { foreignKey: "area_id" });
 User.hasMany(ProjectManager, { foreignKey: "manager_id", onDelete: "CASCADE" });
 User.hasMany(ManagerFeedback, { foreignKey: "author_id", as: "authoredManagerFeedback", onDelete: "RESTRICT" });
 User.hasMany(ManagerFeedback, { foreignKey: "manager_id", as: "receivedManagerFeedback", onDelete: "CASCADE" });
-User.hasMany(User, { as: "managers", foreignKey: "director_id", onDelete: "RESTRICT" });
+User.hasMany(User, { as: "managers", foreignKey: "director_id"});
 User.belongsTo(User, { as: "director", foreignKey: "director_id" });
 
 
