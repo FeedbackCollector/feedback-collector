@@ -74,17 +74,7 @@ export async function ensureICDirectorIdColumn(): Promise<void> {
 }
 
 export async function ensureICManagerIsNullable(): Promise<void> {
-    const queryInterface = sequelize.getQueryInterface();
-    const columns = await queryInterface.describeTable("ics");
-
-    if (columns.manager_id?.allowNull === false) {
-        await queryInterface.changeColumn("ics", "manager_id", {
-            type: DataTypes.INTEGER,
-            allowNull: true,
-            references: { model: "users", key: "id" },
-            onDelete: "RESTRICT",
-        });
-    }
+    await sequelize.query('ALTER TABLE "ics" ALTER COLUMN "manager_id" DROP NOT NULL');
 }
 
 export async function ensureICOwnerConstraint(): Promise<void> {
