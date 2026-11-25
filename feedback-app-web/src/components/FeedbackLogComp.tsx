@@ -1,6 +1,5 @@
 import { truncateText, MAX_NAME_LEN, MAX_SOURCE_LEN, MAX_EXCERPT_LEN, MAX_BODY_LEN } from '../utils/feedbackFormat';
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
-import { createPortal } from 'react-dom';
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import type { Feedback, FeedbackFilters, IC, ManagerFeedback, Project } from '../types/feedback';
 import { obtainICs } from '../service/ObtainICs';
@@ -16,8 +15,6 @@ import { useAuthStore } from '../store/authStore';
 import LoadingOverlay from './LoadingOverlay';
 import { formatPersonName } from './formatPersonName';
 import DropdownSelect from './DropdownSelect';
-import { exportFeedbackCsv } from '../service/ExportFeedback';
-import { useToastStore } from '../store/toastStore';
 
 const SEARCH_DEBOUNCE_MS = 300;
 const PAGE_SIZE = 10;
@@ -40,12 +37,6 @@ function FeedbackLogComp() {
   const user = useAuthStore((state) => state.user);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [exporting, setExporting] = useState(false);
-  const [headerActions, setHeaderActions] = useState<HTMLElement | null>(null);
-
-  useLayoutEffect(() => {
-    setHeaderActions(document.getElementById('page-header-actions'));
-  }, []);
 
   const [viewMode, setViewMode] = useState<'table' | 'list'>('table');
   const navigate = useNavigate();
@@ -286,17 +277,6 @@ function FeedbackLogComp() {
     navigate(target === 'managers' ? `/my-management/${item.subject_id}` : `/my-ics/${item.subject_id}`);
   }
 
-  async function handleExportCsv() {
-    setExporting(true);
-    try {
-      await exportFeedbackCsv(filters);
-    } catch (error) {
-      useToastStore.getState().addToast(error instanceof Error ? error.message : 'Could not export the CSV.', 'error');
-    } finally {
-      setExporting(false);
-    }
-  }
-
   const toolbar = (
     <div className="feedback-toolbar">
       {isDirector ? (
@@ -341,19 +321,6 @@ function FeedbackLogComp() {
         </button>
       </div>
     </div>
-  );
-
-  const exportButton = isDirector && target === 'ics' && headerActions && createPortal(
-    <button
-      type="button"
-      className="btn btn-secondary"
-      onClick={handleExportCsv}
-      disabled={exporting || totalItems === 0}
-      title="Export the feedback matching the current filters to CSV"
-    >
-      {exporting ? 'Exporting...' : 'Export CSV'}
-    </button>,
-    headerActions,
   );
 
   if (icsLoading) {
@@ -403,7 +370,6 @@ function FeedbackLogComp() {
 
   return (
     <>
-      {exportButton}
       <div style={{ padding: '0 20px' }}>
         <div className="box" style={{ margin: '20px 0', maxWidth: '100%' }}>
           <div className="filters-grid">

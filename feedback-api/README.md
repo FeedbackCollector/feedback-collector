@@ -15,7 +15,6 @@ This part of the project handles processing requests from the frontend, managing
 - User and role management.
 - Feedback logging and administration.
 - Management of Areas, Managers, ICs, and projects.
-- Assigning multiple approved managers to each project and limiting managers to their assigned projects and feedback.
 - Querying and filtering records.
 - Administration of information stored in the database.
 - Communication with the frontend via the API.

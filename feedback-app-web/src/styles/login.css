@@ -8,7 +8,6 @@
     --text-muted: #676E73;
     --border: #E3E6E8;
     --danger: #E12339;
-    --success: #28A745;
 }
 
 .login-page {
@@ -195,39 +194,12 @@
 
 .input-name.input-invalid,
 .input-password.input-invalid,
-.select-area.input-invalid,
-.dropdown-invalid select,
-.dropdown-invalid .select-area,
-.dropdown-invalid * {
-    border-color: var(--danger) !important;
-}
-
-.input-name.input-valid,
-.input-password.input-valid,
-.select-area.input-valid,
-.dropdown-valid select,
-.dropdown-valid .select-area,
-.dropdown-valid * {
-    border-color: var(--success) !important;
-}
-
-.input-name.input-valid:focus,
-.dropdown-valid select:focus,
-.dropdown-valid *:focus {
-    border-color: var(--success) !important;
-    box-shadow: 0 0 0 2px rgba(40, 167, 69, 0.15) !important;
+.select-area.input-invalid {
+    border-color: var(--danger);
 }
 
 .field-error {
     color: var(--danger);
-    font-size: 12px;
-    margin-top: 5px;
-    display: block;
-    text-align: left;
-}
-
-.field-valid {
-    color: var(--success);
     font-size: 12px;
     margin-top: 5px;
     display: block;

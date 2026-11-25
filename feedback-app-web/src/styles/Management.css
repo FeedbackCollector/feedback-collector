@@ -59,26 +59,12 @@
   display: flex;
   min-height: auto;
   flex-direction: column;
-  align-items: space-around;
-  justify-content: center;
+  align-items: flex-end;
+  justify-content: flex-start;
   gap: 5px;
   margin-top: 20px;
   margin-bottom: 20px;
 }
-
-.management-view-toggle {
-  display: flex;
-  align-items: center;
-  width: 100%;
-}
-
-.management-view-toggle-buttons {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-left: auto;
-}
-
 
 .management-add-button {
   display: inline-flex;
@@ -166,6 +152,11 @@
   opacity: 0.6;
 }
 
+.management-view-toggle {
+  display: flex;
+  gap: 6px;
+}
+
 .management-view-button {
   display: grid;
   width: 38px;
@@ -250,11 +241,6 @@
 .management-managers-table th:last-child,
 .management-managers-table td:last-child {
   width: 194px;
-}
-
-.management-projects-table th:last-child,
-.management-projects-table td:last-child {
-  width: 148px;
 }
 
 .management-area-select {

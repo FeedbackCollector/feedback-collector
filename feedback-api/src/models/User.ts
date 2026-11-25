@@ -26,7 +26,6 @@ export class User extends Model<InferAttributes<User>, InferCreationAttributes<U
     declare role: CreationOptional<string>; 
     declare area_id: number | null;
     declare status: CreationOptional<AccountStatus>;
-    declare director_id: CreationOptional<number | null>;
 }
 
 User.init(
@@ -37,7 +36,6 @@ User.init(
     name : { type: DataTypes.STRING(255), allowNull: false },
     role: { type: DataTypes.STRING(50), allowNull: false, defaultValue: "manager" },
     area_id: { type: DataTypes.INTEGER, allowNull:true },
-    director_id: { type: DataTypes.INTEGER, allowNull: true },
     status: {
         type: DataTypes.STRING(20),
         allowNull: false,
